@@ -1,0 +1,6 @@
+{
+  "name": "Rota da Justiça",
+  "description": "Jogo 2D investigativo e simulador de carreira jurídica brasileira, com coleta de provas, administração de tempo, progressão profissional e decisões processuais.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
