@@ -38,7 +38,7 @@ jobs:
 
       - name: Commit generated migration
         run: |
-          if git diff --quiet -- supabase/migrations/20260901030100_seed_legacy_cases.sql; then
+          if [ -z "$(git status --porcelain -- supabase/migrations/20260901030100_seed_legacy_cases.sql)" ]; then
             echo "Seed migration already up to date."
             exit 0
           fi
