@@ -2,6 +2,7 @@ import React from 'react';
 import { PlayerProfile, LegalCase } from '../types/game';
 import { GAME_CASES } from '../data/cases';
 import { CAREER_TIERS } from '../data/careers';
+import { getAvailableCasesForCareer } from '../lib/caseRules';
 import { 
   Briefcase, 
   Scale, 
@@ -40,6 +41,12 @@ export const OfficeHub: React.FC<OfficeHubProps> = ({
   onOpenOfficeModal,
 }) => {
   const currentTier = CAREER_TIERS[player.careerTier] || CAREER_TIERS.ESTAGIARIO;
+  const unlockedCases = getAvailableCasesForCareer(GAME_CASES, player.careerTier);
+  const availableCases = unlockedCases.filter((caseItem) => {
+    const isCompleted = player.history.some((historyItem) => historyItem.caseId === caseItem.id && historyItem.success);
+    const isActive = player.activeCase?.caseId === caseItem.id;
+    return !isCompleted || isActive;
+  });
 
   return (
     <div className="w-full space-y-6">
@@ -111,7 +118,7 @@ export const OfficeHub: React.FC<OfficeHubProps> = ({
             sound.playClick();
             onOpenAcademicModal();
           }}
-          className="p-4 bg-[#161618] hover:bg-[#1A1A1D] border border-[#2A2A2E] hover:border-[#C5A059]/50 rounded-xl text-left transition-all cursor-pointer shadow-md group"
+          className="p-4 bg-[#161618] hover:bg-[#1A1A1D] border border-[#2A2A2E] hover:border-[#60A5FA]/50 rounded-xl text-left transition-all cursor-pointer shadow-md group"
         >
           <div className="w-9 h-9 rounded-lg bg-[#1A1A1D] border border-[#60A5FA]/30 flex items-center justify-center text-[#60A5FA] mb-2 group-hover:scale-105 transition-transform">
             <GraduationCap size={18} />
@@ -157,87 +164,84 @@ export const OfficeHub: React.FC<OfficeHubProps> = ({
 
       {/* Available Legal Cases Section */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Briefcase size={18} className="text-[#C5A059]" />
             <h3 className="text-base sm:text-lg font-bold font-serif text-[#E0E0E0]">
               Casos Jurídicos Disponíveis para Atendimento
             </h3>
           </div>
-          <span className="text-xs text-[#888888] font-mono">
-            {GAME_CASES.length} casos no acervo
+          <span className="text-xs text-[#888888] font-mono text-right">
+            {availableCases.length} disponíveis • {GAME_CASES.length} no acervo
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {GAME_CASES.map((c) => {
-            const isCompleted = player.history.some((h) => h.caseId === c.id && h.success);
-            const isActive = player.activeCase?.caseId === c.id;
+        {availableCases.length === 0 ? (
+          <div className="p-5 rounded-xl border border-[#2A2A2E] bg-[#111113] text-sm text-[#AAAAAA]">
+            Não há novos casos liberados para o seu nível neste momento. Consulte o histórico ou avance na carreira para desbloquear novos atendimentos.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {availableCases.map((c) => {
+              const isActive = player.activeCase?.caseId === c.id;
 
-            return (
-              <div
-                key={c.id}
-                onClick={() => {
-                  sound.playPaper();
-                  onSelectCaseToView(c);
-                }}
-                className={`p-5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
-                  isActive
-                    ? 'bg-[#1A1A1D] border-[#C5A059] ring-1 ring-[#C5A059]/50 shadow-xl'
-                    : isCompleted
-                    ? 'bg-[#111113] border-[#2A2A2E] hover:border-[#3A3A42]'
-                    : 'bg-[#161618] hover:bg-[#1A1A1D] border-[#2A2A2E] hover:border-[#C5A059]/50 shadow-md'
-                }`}
-              >
-                <div>
-                  {/* Card Header */}
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#0A0A0B] text-[#C5A059] border border-[#2A2A2E]">
-                      {c.code}
+              return (
+                <div
+                  key={c.id}
+                  onClick={() => {
+                    sound.playPaper();
+                    onSelectCaseToView(c);
+                  }}
+                  className={`p-5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                    isActive
+                      ? 'bg-[#1A1A1D] border-[#C5A059] ring-1 ring-[#C5A059]/50 shadow-xl'
+                      : 'bg-[#161618] hover:bg-[#1A1A1D] border-[#2A2A2E] hover:border-[#C5A059]/50 shadow-md'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#0A0A0B] text-[#C5A059] border border-[#2A2A2E]">
+                        {c.code}
+                      </span>
+                      {isActive ? (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#C5A059] text-[#0A0A0B] font-bold uppercase tracking-wider">
+                          Em Diligência
+                        </span>
+                      ) : (
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-[#1A1A1D] text-[#888888] border border-[#2A2A2E]">
+                          {c.difficulty}
+                        </span>
+                      )}
+                    </div>
+
+                    <h4 className="font-bold text-sm sm:text-base text-[#E0E0E0] mt-2.5 line-clamp-2 leading-snug">
+                      {c.title}
+                    </h4>
+                    <span className="text-[11px] text-[#C5A059] font-mono block mt-1">
+                      {c.area}
                     </span>
-                    {isCompleted ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#34D399]/10 text-[#34D399] font-bold border border-[#34D399]/30 flex items-center gap-1">
-                        <CheckCircle2 size={11} /> Resolvido
-                      </span>
-                    ) : isActive ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#C5A059] text-[#0A0A0B] font-bold uppercase tracking-wider">
-                        Em Diligência
-                      </span>
-                    ) : (
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-[#1A1A1D] text-[#888888] border border-[#2A2A2E]">
-                        {c.difficulty}
-                      </span>
-                    )}
+
+                    <p className="text-xs text-[#AAAAAA] mt-2 line-clamp-3 leading-relaxed">
+                      {c.client.summary}
+                    </p>
                   </div>
 
-                  <h4 className="font-bold text-sm sm:text-base text-[#E0E0E0] mt-2.5 line-clamp-2 leading-snug">
-                    {c.title}
-                  </h4>
-                  <span className="text-[11px] text-[#C5A059] font-mono block mt-1">
-                    {c.area}
-                  </span>
+                  <div className="mt-4 pt-3 border-t border-[#2A2A2E] flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 font-mono text-[#34D399] font-bold">
+                      <span>R$ {c.honorariosReward.toLocaleString('pt-BR')}</span>
+                      <span className="text-[#444]">•</span>
+                      <span className="text-[#60A5FA] font-semibold">+{c.xpReward} XP</span>
+                    </div>
 
-                  <p className="text-xs text-[#AAAAAA] mt-2 line-clamp-3 leading-relaxed">
-                    {c.client.summary}
-                  </p>
-                </div>
-
-                {/* Card Footer */}
-                <div className="mt-4 pt-3 border-t border-[#2A2A2E] flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 font-mono text-[#34D399] font-bold">
-                    <span>R$ {c.honorariosReward.toLocaleString('pt-BR')}</span>
-                    <span className="text-[#444]">•</span>
-                    <span className="text-[#60A5FA] font-semibold">+{c.xpReward} XP</span>
+                    <span className="text-[#C5A059] font-semibold flex items-center gap-1 text-[11px] tracking-wide">
+                      Ver Dossiê →
+                    </span>
                   </div>
-
-                  <span className="text-[#C5A059] font-semibold flex items-center gap-1 text-[11px] tracking-wide">
-                    Ver Dossiê →
-                  </span>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Case History Section */}
