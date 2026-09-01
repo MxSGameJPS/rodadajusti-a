@@ -3,21 +3,18 @@ import { PlayerProfile, LegalCase } from '../types/game';
 import { GAME_CASES } from '../data/cases';
 import { CAREER_TIERS } from '../data/careers';
 import { getAvailableCasesForCareer } from '../lib/caseRules';
-import { 
-  Briefcase, 
-  Scale, 
-  Award, 
-  Sparkles, 
-  Coins, 
-  GraduationCap, 
-  Landmark, 
-  Building, 
-  ArrowRight, 
-  CheckCircle2, 
-  Clock, 
-  FileText,
+import {
+  Briefcase,
+  Scale,
+  Award,
+  GraduationCap,
+  Landmark,
+  Building,
+  ArrowRight,
+  Clock,
   History,
-  ShieldAlert
+  BookOpenCheck,
+  ShieldCheck,
 } from 'lucide-react';
 import { sound } from '../utils/sound';
 
@@ -29,6 +26,7 @@ interface OfficeHubProps {
   onOpenAcademicModal: () => void;
   onOpenConcursoModal: () => void;
   onOpenOfficeModal: () => void;
+  onOpenOabExam: () => void;
 }
 
 export const OfficeHub: React.FC<OfficeHubProps> = ({
@@ -39,25 +37,32 @@ export const OfficeHub: React.FC<OfficeHubProps> = ({
   onOpenAcademicModal,
   onOpenConcursoModal,
   onOpenOfficeModal,
+  onOpenOabExam,
 }) => {
   const currentTier = CAREER_TIERS[player.careerTier] || CAREER_TIERS.ESTAGIARIO;
+  const needsOabExam =
+    player.careerTier === 'ESTAGIARIO_SENIOR' &&
+    player.casesSolved >= 4 &&
+    !player.oabRegistration;
+
   const unlockedCases = getAvailableCasesForCareer(GAME_CASES, player.careerTier);
   const availableCases = unlockedCases.filter((caseItem) => {
-    const isCompleted = player.history.some((historyItem) => historyItem.caseId === caseItem.id && historyItem.success);
+    const isCompleted = player.history.some(
+      (historyItem) => historyItem.caseId === caseItem.id && historyItem.success
+    );
     const isActive = player.activeCase?.caseId === caseItem.id;
     return !isCompleted || isActive;
   });
 
   return (
     <div className="w-full space-y-6">
-      {/* Mentor Welcome Banner */}
       <div className="p-6 bg-[#161618] border border-[#2A2A2E] rounded-2xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
         <div className="flex items-start gap-4">
           <div className="w-14 h-14 rounded-xl bg-[#1A1A1D] border border-[#C5A059]/30 flex items-center justify-center text-[#C5A059] shrink-0 shadow-inner">
             <Scale size={28} />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/25 uppercase tracking-wider">
                 Gabinete Jurídico • Ramos & Associados
               </span>
@@ -69,17 +74,18 @@ export const OfficeHub: React.FC<OfficeHubProps> = ({
               Olá, {player.name || 'Doutor'}!
             </h2>
             <p className="text-xs sm:text-sm text-[#AAAAAA] mt-1 max-w-xl leading-relaxed">
-              Você está atuando como <strong className="text-[#C5A059] font-semibold">{currentTier.title}</strong>. 
-              {player.casesSolved < 2
-                ? ' Conclua 2 casos com êxito para alcançar a promoção a Estagiário Sênior.'
-                : player.casesSolved < 4
-                ? ' Conclua mais casos para conquistar a aprovação no Exame de Ordem (OAB) e virar Advogado Contratado.'
-                : ' Continue acumulando experiência jurídica para postular sociedade ou prestar concurso à Magistratura.'}
+              Você está atuando como <strong className="text-[#C5A059] font-semibold">{currentTier.title}</strong>.
+              {player.careerTier === 'ESTAGIARIO' && ' Conclua 2 casos com êxito para alcançar a promoção a Estagiário Sênior.'}
+              {player.careerTier === 'ESTAGIARIO_SENIOR' && player.casesSolved < 4 &&
+                ' Conclua 4 casos com êxito para liberar o Exame da Ordem.'}
+              {needsOabExam &&
+                ' Seus requisitos práticos foram atingidos. Agora a aprovação no Exame da Ordem é obrigatória para se tornar Advogado Contratado.'}
+              {player.careerTier !== 'ESTAGIARIO' && player.careerTier !== 'ESTAGIARIO_SENIOR' &&
+                ' Continue acumulando experiência jurídica para avançar na carreira.'}
             </p>
           </div>
         </div>
 
-        {/* Action Button if case in progress */}
         {player.activeCase ? (
           <button
             onClick={() => {
@@ -95,7 +101,64 @@ export const OfficeHub: React.FC<OfficeHubProps> = ({
         ) : null}
       </div>
 
-      {/* Quick Navigation Cards */}
+      {needsOabExam && (
+        <section className="rounded-2xl border border-[#C5A059]/45 bg-gradient-to-br from-[#C5A059]/[0.10] to-[#111113] p-5 sm:p-6 shadow-xl">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+            <div className="flex items-start gap-4">
+              <div className="w-14 h-14 rounded-xl border border-[#C5A059]/35 bg-[#0D0D0F] text-[#C5A059] flex items-center justify-center shrink-0">
+                <BookOpenCheck size={27} />
+              </div>
+              <div>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  <span className="px-2 py-1 rounded-md bg-[#C5A059]/10 border border-[#C5A059]/25 text-[#C5A059] text-[9px] font-black uppercase tracking-wider font-mono">
+                    Requisito de carreira
+                  </span>
+                  <span className="px-2 py-1 rounded-md bg-[#60A5FA]/10 border border-[#60A5FA]/25 text-[#93C5FD] text-[9px] font-black uppercase tracking-wider font-mono">
+                    Simulado real • 46º EOU • 2026
+                  </span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-serif font-black text-[#F1EFE9]">
+                  Exame da Ordem desbloqueado
+                </h3>
+                <p className="text-xs sm:text-sm text-[#C9C2B1] mt-2 max-w-2xl leading-relaxed">
+                  Você atingiu os requisitos práticos de Estagiário Sênior. Para avançar, realizará um
+                  <strong className="text-[#F2DCA9]"> simulado baseado no 46º Exame de Ordem Unificado real, aplicado em 2026</strong>,
+                  com 80 questões e correção automática.
+                </p>
+                <p className="text-[11px] text-[#8F8B81] mt-2 max-w-2xl">
+                  A aprovação e a inscrição emitida existem somente dentro do personagem do Rota da Justiça e não equivalem a credencial profissional real.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                sound.playPaper();
+                onOpenOabExam();
+              }}
+              className="w-full lg:w-auto px-6 py-3.5 rounded-xl bg-[#C5A059] hover:bg-[#D6B66F] text-[#09090A] font-black uppercase tracking-wide text-xs flex items-center justify-center gap-2 cursor-pointer shrink-0 shadow-lg shadow-[#C5A059]/15"
+            >
+              <Scale size={17} />
+              Realizar Exame da Ordem
+            </button>
+          </div>
+        </section>
+      )}
+
+      {player.oabRegistration && (
+        <section className="rounded-xl border border-[#34D399]/25 bg-[#34D399]/[0.05] p-4 flex items-start gap-3">
+          <ShieldCheck size={20} className="text-[#34D399] shrink-0 mt-0.5" />
+          <div>
+            <div className="text-[9px] uppercase tracking-wider text-[#34D399] font-black font-mono">
+              Inscrição profissional do personagem • fictícia
+            </div>
+            <div className="font-mono font-black text-[#D5FFF0] mt-1">{player.oabRegistration.code}</div>
+            <p className="text-[10px] text-[#83B5A3] mt-1">
+              Emitida após aprovação no simulado do {player.oabRegistration.examTitle}. Não corresponde a inscrição real perante a OAB.
+            </p>
+          </div>
+        </section>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <button
           onClick={() => {
@@ -162,7 +225,6 @@ export const OfficeHub: React.FC<OfficeHubProps> = ({
         </button>
       </div>
 
-      {/* Available Legal Cases Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -178,7 +240,9 @@ export const OfficeHub: React.FC<OfficeHubProps> = ({
 
         {availableCases.length === 0 ? (
           <div className="p-5 rounded-xl border border-[#2A2A2E] bg-[#111113] text-sm text-[#AAAAAA]">
-            Não há novos casos liberados para o seu nível neste momento. Consulte o histórico ou avance na carreira para desbloquear novos atendimentos.
+            {needsOabExam
+              ? 'Você concluiu os atendimentos disponíveis como Estagiário Sênior. A próxima etapa profissional exige aprovação no Exame da Ordem.'
+              : 'Não há novos casos liberados para o seu nível neste momento. Consulte o histórico ou avance na carreira para desbloquear novos atendimentos.'}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -244,7 +308,6 @@ export const OfficeHub: React.FC<OfficeHubProps> = ({
         )}
       </div>
 
-      {/* Case History Section */}
       {player.history.length > 0 && (
         <div className="space-y-3 pt-2">
           <div className="flex items-center gap-2">

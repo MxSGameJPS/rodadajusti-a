@@ -108,7 +108,7 @@ export interface LegalStrategy {
   branch: string;
   description: string;
   isOptimal: boolean;
-  scoreWeight: number; // 0 to 100
+  scoreWeight: number;
   requiredCrucialClueIds: string[];
   incompatibleClueIds?: string[];
   rationale: string;
@@ -164,7 +164,7 @@ export interface OfficeEmployee {
   name: string;
   role: 'Estagiário' | 'Advogado Júnior' | 'Secretária Executiva' | 'Pesquisador Jurisprudencial';
   salaryMonthly: number;
-  productivityBonus: number; // % bonus on case research
+  productivityBonus: number;
   avatarBg: string;
 }
 
@@ -173,7 +173,7 @@ export interface OfficeFinances {
   officeName: string;
   bankBalance: number;
   rentMonthly: number;
-  utilitiesMonthly: number; // agua, luz, internet
+  utilitiesMonthly: number;
   adminExpensesMonthly: number;
   employees: OfficeEmployee[];
   monthlyRevenueHistory: { month: string; revenue: number; expenses: number; profit: number }[];
@@ -214,6 +214,70 @@ export interface CaseHistoryRecord {
   judgeFeedback: string;
 }
 
+export interface ProfessionalExamOption {
+  id: 'A' | 'B' | 'C' | 'D' | 'E';
+  text: string;
+}
+
+export interface ProfessionalExamQuestion {
+  id: string;
+  number: number;
+  area: string;
+  prompt: string;
+  options: ProfessionalExamOption[];
+  difficulty?: string | null;
+}
+
+export interface ProfessionalExam {
+  id: string;
+  slug: string;
+  title: string;
+  examType: string;
+  editionNumber?: number | null;
+  year: number;
+  officialAppliedDate?: string | null;
+  sourceKind: 'official_reference' | 'ai_generated' | 'manual';
+  sourceLabel?: string | null;
+  questionCount: number;
+  passingScore: number;
+  durationMinutes: number;
+  simulationNotice: string;
+  disclaimer: string;
+  metadata: Record<string, unknown>;
+  questions: ProfessionalExamQuestion[];
+}
+
+export interface ProfessionalExamResult {
+  attemptId: string;
+  score: number;
+  totalQuestions: number;
+  passingScore: number;
+  passed: boolean;
+  registrationCode: string | null;
+  isSimulatedRegistration: boolean;
+  examTitle: string;
+}
+
+export interface ProfessionalExamAttemptRecord {
+  attemptId: string;
+  examSlug: string;
+  examTitle: string;
+  completedDate: string;
+  score: number;
+  totalQuestions: number;
+  passed: boolean;
+  registrationCode: string | null;
+}
+
+export interface OabRegistration {
+  code: string;
+  examSlug: string;
+  examTitle: string;
+  score: number;
+  issuedDate: string;
+  isSimulated: true;
+}
+
 export interface PlayerProfile {
   name: string;
   avatarSeed: string;
@@ -222,13 +286,16 @@ export interface PlayerProfile {
   completedCourseIds: string[];
   money: number;
   xp: number;
-  reputation: number; // 0 to 100
+  reputation: number;
   casesSolved: number;
   casesFailed: number;
   activeCase: ActiveCaseState | null;
   history: CaseHistoryRecord[];
   officeFinances: OfficeFinances;
   concursoCompletedPhases: string[];
+  professionalExamAttempts: ProfessionalExamAttemptRecord[];
+  oabRegistration: OabRegistration | null;
+  cloudCareerId?: string | null;
   gameCurrentDay: number;
   gameCurrentMonth: number;
   gameCurrentYear: number;
