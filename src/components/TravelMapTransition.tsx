@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Car, Clock3, MapPin, Navigation, SkipForward, Wallet } from 'lucide-react';
 import { LocationScene } from '../types/game';
 
@@ -28,11 +28,18 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
   onComplete,
 }) => {
   const [progress, setProgress] = useState(0);
+  const completedRef = useRef(false);
 
   const startClock = useMemo(() => 8 + caseHoursSpent, [caseHoursSpent]);
   const currentClock = startClock + destination.travelTimeHours * progress;
   const travelledHours = destination.travelTimeHours * progress;
   const travelledCost = destination.travelCost * progress;
+
+  const finishTravel = () => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    onComplete();
+  };
 
   useEffect(() => {
     const startedAt = Date.now();
@@ -43,15 +50,16 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
 
       if (next >= 1) {
         window.clearInterval(interval);
-        window.setTimeout(onComplete, 350);
+        finishTravel();
       }
     }, 50);
 
     return () => window.clearInterval(interval);
+    // onComplete is stable while the transition is mounted; the ref prevents duplicate completion.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onComplete]);
 
   const status = progress < 0.18 ? 'Saindo do local atual' : progress < 0.82 ? 'Em deslocamento' : 'Chegando ao destino';
-
   const markerX = 16 + progress * 68;
   const markerY = 72 - Math.sin(progress * Math.PI) * 35;
 
@@ -69,7 +77,7 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
 
           <button
             type="button"
-            onClick={onComplete}
+            onClick={finishTravel}
             className="flex items-center justify-center gap-2 rounded-xl border border-[#35353A] bg-[#1A1A1D] px-4 py-2 text-xs font-semibold text-[#BBBBBB] transition-colors hover:border-[#C5A059]/50 hover:text-[#E8E8E8]"
           >
             <SkipForward size={14} />
