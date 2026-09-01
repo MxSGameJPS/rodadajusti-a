@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Scale, Briefcase, Award, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { sound } from '../utils/sound';
+import { supabase } from '../lib/supabase';
+import { getSuggestedPlayerName } from '../lib/authProfile';
 
 interface NewGameModalProps {
   isOpen: boolean;
@@ -9,7 +11,40 @@ interface NewGameModalProps {
 
 export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGame }) => {
   const [playerName, setPlayerName] = useState('Gabriel Silva');
+  const [authSuggestedName, setAuthSuggestedName] = useState('');
+  const [didHydrateAuthName, setDidHydrateAuthName] = useState(false);
   const [selectedFocus, setSelectedFocus] = useState<'civil' | 'trabalho' | 'empresarial'>('civil');
+
+  useEffect(() => {
+    if (!isOpen || didHydrateAuthName || !supabase) return;
+
+    let active = true;
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (!active) return;
+
+      const suggestedName = getSuggestedPlayerName(data.user);
+      if (suggestedName) {
+        setAuthSuggestedName(suggestedName);
+        setPlayerName((currentName) =>
+          currentName === 'Gabriel Silva' ? suggestedName : currentName,
+        );
+      }
+
+      setDidHydrateAuthName(true);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [didHydrateAuthName, isOpen]);
+
+  const nameSuggestions = useMemo(() => {
+    const defaults = ['Gabriel Silva', 'Beatriz Santos', 'Matheus Oliveira', 'Larissa Mendes', 'Rodrigo Ramos'];
+    return authSuggestedName
+      ? [authSuggestedName, ...defaults.filter((name) => name !== authSuggestedName)]
+      : defaults;
+  }, [authSuggestedName]);
 
   if (!isOpen) return null;
 
@@ -19,8 +54,6 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
     sound.playGavel();
     onStartNewGame(playerName.trim());
   };
-
-  const nameSuggestions = ['Gabriel Silva', 'Beatriz Santos', 'Matheus Oliveira', 'Larissa Mendes', 'Rodrigo Ramos'];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A0A0B]/85 backdrop-blur-md overflow-y-auto">
@@ -72,6 +105,14 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
                 className="w-full bg-[#161618] border border-[#2A2A2E] rounded-xl px-4 py-3 text-[#E0E0E0] font-semibold focus:outline-none focus:border-[#C5A059] focus:ring-1 focus:ring-[#C5A059] text-sm transition-all placeholder-[#555]"
               />
             </div>
+            {authSuggestedName && (
+              <div className="flex items-center gap-2 rounded-lg border border-[#C5A059]/20 bg-[#C5A059]/[0.06] px-3 py-2 text-[11px] leading-relaxed text-[#B9A16A]">
+                <ShieldCheck size={14} className="shrink-0 text-[#C5A059]" />
+                <span>
+                  Preenchemos com o nome da sua conta. Você pode manter ou escolher outro nome para o personagem.
+                </span>
+              </div>
+            )}
             {/* Suggestions Chips */}
             <div className="flex items-center gap-1.5 flex-wrap pt-1">
               <span className="text-[11px] text-[#888888]">Sugestões:</span>
@@ -83,7 +124,11 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
                     sound.playClick();
                     setPlayerName(sug);
                   }}
-                  className="text-[11px] bg-[#161618] hover:bg-[#1A1A1D] text-[#CCCCCC] px-2 py-0.5 rounded border border-[#2A2A2E] transition-colors cursor-pointer"
+                  className={`text-[11px] px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                    sug === authSuggestedName
+                      ? 'bg-[#C5A059]/10 border-[#C5A059]/35 text-[#D8BC76] hover:bg-[#C5A059]/15'
+                      : 'bg-[#161618] hover:bg-[#1A1A1D] text-[#CCCCCC] border-[#2A2A2E]'
+                  }`}
                 >
                   {sug}
                 </button>
