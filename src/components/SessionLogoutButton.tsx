@@ -42,10 +42,13 @@ export function SessionLogoutButton() {
       onClick={handleSignOut}
       disabled={signingOut}
       title="Sair da conta"
-      className="fixed bottom-4 right-4 z-[110] flex items-center gap-2 rounded-xl border border-[#F87171]/30 bg-[#111113]/95 px-3.5 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#FCA5A5] shadow-2xl backdrop-blur-md transition-all hover:border-[#F87171]/60 hover:bg-[#221517] hover:text-white disabled:cursor-wait disabled:opacity-70 sm:bottom-5 sm:right-5"
+      aria-label="Sair da conta"
+      className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[#F87171]/25 bg-[#1A1113] px-2 text-[#FCA5A5] transition-colors hover:border-[#F87171]/55 hover:bg-[#261417] hover:text-white disabled:cursor-wait disabled:opacity-60 sm:px-2.5"
     >
-      {signingOut ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={14} />}
-      <span>{signingOut ? 'Saindo...' : 'Sair da conta'}</span>
+      {signingOut ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={13} />}
+      <span className="hidden text-[9px] font-bold uppercase tracking-[0.08em] lg:inline">
+        {signingOut ? 'Saindo...' : 'Sair'}
+      </span>
     </button>
   );
 }
