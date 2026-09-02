@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Scale, Briefcase, Award, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { supabase } from '../lib/supabase';
 import { getSuggestedPlayerName } from '../lib/authProfile';
+import { CelebrationBurst } from './CelebrationBurst/CelebrationBurst';
 
 interface NewGameModalProps {
   isOpen: boolean;
@@ -14,6 +15,8 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
   const [authSuggestedName, setAuthSuggestedName] = useState('');
   const [didHydrateAuthName, setDidHydrateAuthName] = useState(false);
   const [selectedFocus, setSelectedFocus] = useState<'civil' | 'trabalho' | 'empresarial'>('civil');
+  const [isAcceptingOffer, setIsAcceptingOffer] = useState(false);
+  const startTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!isOpen || didHydrateAuthName || !supabase) return;
@@ -39,6 +42,10 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
     };
   }, [didHydrateAuthName, isOpen]);
 
+  useEffect(() => () => {
+    if (startTimerRef.current !== null) window.clearTimeout(startTimerRef.current);
+  }, []);
+
   const nameSuggestions = useMemo(() => {
     const defaults = ['Gabriel Silva', 'Beatriz Santos', 'Matheus Oliveira', 'Larissa Mendes', 'Rodrigo Ramos'];
     return authSuggestedName
@@ -50,14 +57,42 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!playerName.trim()) return;
-    sound.playGavel();
-    onStartNewGame(playerName.trim());
+    if (!playerName.trim() || isAcceptingOffer) return;
+
+    sound.playVictory();
+    setIsAcceptingOffer(true);
+    startTimerRef.current = window.setTimeout(() => {
+      onStartNewGame(playerName.trim());
+    }, 1900);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A0A0B]/85 backdrop-blur-md overflow-y-auto">
+      {isAcceptingOffer && <CelebrationBurst intensity="strong" />}
+
       <div className="relative w-full max-w-xl bg-[#161618] border border-[#2A2A2E] rounded-2xl shadow-2xl overflow-hidden text-[#E0E0E0] my-8">
+        {isAcceptingOffer && (
+          <div className="absolute inset-0 z-[90] flex items-center justify-center p-6 bg-[#0A0A0B]/88 backdrop-blur-md" role="status" aria-live="polite">
+            <div className="w-full max-w-md text-center rounded-2xl border border-[#C5A059]/45 bg-[#111113] px-6 py-8 shadow-2xl shadow-[#C5A059]/10">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[#C5A059]/50 bg-[#C5A059]/10 text-[#C5A059] shadow-lg shadow-[#C5A059]/15">
+                <Award size={34} />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#C5A059]">
+                Oportunidade aceita
+              </span>
+              <h2 className="mt-2 font-serif text-2xl font-bold text-[#F3F0E8] sm:text-3xl">
+                Bem-vindo(a), {playerName.trim()}!
+              </h2>
+              <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-[#B7B7BC]">
+                Você agora faz parte do Ramos & Associados. Sua trajetória começa como Estagiário(a), e cada decisão poderá mudar o rumo da sua carreira jurídica.
+              </p>
+              <div className="mt-5 rounded-xl border border-[#34D399]/25 bg-[#34D399]/[0.07] px-4 py-3 text-xs font-semibold text-[#8BE7C3]">
+                Seu primeiro caso está sendo preparado. Boa sorte na sua Rota da Justiça.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Decorative Header Banner */}
         <div className="bg-[#111113] px-6 py-6 border-b border-[#2A2A2E] text-center relative">
           <div className="inline-flex p-3 rounded-xl bg-[#1A1A1D] border border-[#C5A059]/40 text-[#C5A059] mb-3 shadow-inner">
@@ -101,8 +136,9 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
                 onChange={(e) => setPlayerName(e.target.value)}
                 maxLength={32}
                 required
+                disabled={isAcceptingOffer}
                 placeholder="Ex: Gabriel Silva"
-                className="w-full bg-[#161618] border border-[#2A2A2E] rounded-xl px-4 py-3 text-[#E0E0E0] font-semibold focus:outline-none focus:border-[#C5A059] focus:ring-1 focus:ring-[#C5A059] text-sm transition-all placeholder-[#555]"
+                className="w-full bg-[#161618] border border-[#2A2A2E] rounded-xl px-4 py-3 text-[#E0E0E0] font-semibold focus:outline-none focus:border-[#C5A059] focus:ring-1 focus:ring-[#C5A059] text-sm transition-all placeholder-[#555] disabled:opacity-60"
               />
             </div>
             {authSuggestedName && (
@@ -120,11 +156,12 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
                 <button
                   key={sug}
                   type="button"
+                  disabled={isAcceptingOffer}
                   onClick={() => {
                     sound.playClick();
                     setPlayerName(sug);
                   }}
-                  className={`text-[11px] px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                  className={`text-[11px] px-2 py-0.5 rounded border transition-colors cursor-pointer disabled:cursor-default disabled:opacity-60 ${
                     sug === authSuggestedName
                       ? 'bg-[#C5A059]/10 border-[#C5A059]/35 text-[#D8BC76] hover:bg-[#C5A059]/15'
                       : 'bg-[#161618] hover:bg-[#1A1A1D] text-[#CCCCCC] border-[#2A2A2E]'
@@ -144,11 +181,12 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
               <button
                 type="button"
+                disabled={isAcceptingOffer}
                 onClick={() => {
                   sound.playClick();
                   setSelectedFocus('civil');
                 }}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer disabled:cursor-default ${
                   selectedFocus === 'civil'
                     ? 'bg-[#1A1A1D] border-[#C5A059] text-[#E0E0E0] ring-1 ring-[#C5A059]/40 shadow-sm'
                     : 'bg-[#161618] border-[#2A2A2E] text-[#888888] hover:border-[#3A3A42]'
@@ -163,11 +201,12 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
 
               <button
                 type="button"
+                disabled={isAcceptingOffer}
                 onClick={() => {
                   sound.playClick();
                   setSelectedFocus('trabalho');
                 }}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer disabled:cursor-default ${
                   selectedFocus === 'trabalho'
                     ? 'bg-[#1A1A1D] border-[#C5A059] text-[#E0E0E0] ring-1 ring-[#C5A059]/40 shadow-sm'
                     : 'bg-[#161618] border-[#2A2A2E] text-[#888888] hover:border-[#3A3A42]'
@@ -182,11 +221,12 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
 
               <button
                 type="button"
+                disabled={isAcceptingOffer}
                 onClick={() => {
                   sound.playClick();
                   setSelectedFocus('empresarial');
                 }}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer disabled:cursor-default ${
                   selectedFocus === 'empresarial'
                     ? 'bg-[#1A1A1D] border-[#C5A059] text-[#E0E0E0] ring-1 ring-[#C5A059]/40 shadow-sm'
                     : 'bg-[#161618] border-[#2A2A2E] text-[#888888] hover:border-[#3A3A42]'
@@ -220,10 +260,11 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
           {/* Start Button */}
           <button
             type="submit"
-            className="w-full py-3.5 px-6 rounded-xl bg-[#C5A059] hover:bg-[#D4B475] text-[#0A0A0B] font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-[#C5A059]/20 transition-all cursor-pointer transform active:scale-98"
+            disabled={isAcceptingOffer}
+            className="w-full py-3.5 px-6 rounded-xl bg-[#C5A059] hover:bg-[#D4B475] disabled:bg-[#8D7445] disabled:cursor-wait text-[#0A0A0B] font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-[#C5A059]/20 transition-all cursor-pointer transform active:scale-98"
           >
-            <span>Iniciar Carreira Jurídica</span>
-            <ArrowRight size={16} />
+            <span>{isAcceptingOffer ? 'Contrato aceito!' : 'Iniciar Carreira Jurídica'}</span>
+            {isAcceptingOffer ? <Award size={16} /> : <ArrowRight size={16} />}
           </button>
         </form>
       </div>
