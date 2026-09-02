@@ -11,8 +11,18 @@ function navigate(path: string) {
 function syncRoute(session: Session | null) {
   const path = window.location.pathname;
 
+  // A raiz pertence sempre à intro cinematográfica, independentemente da sessão.
+  if (path === '/') return;
+
   if (session) {
-    if (path !== '/jogo') navigate('/jogo');
+    if (path === '/login') {
+      navigate('/jogo');
+      return;
+    }
+
+    if (path !== '/jogo') {
+      navigate('/jogo');
+    }
     return;
   }
 
@@ -21,7 +31,7 @@ function syncRoute(session: Session | null) {
     return;
   }
 
-  if (path !== '/' && path !== '/login') {
+  if (path !== '/login') {
     navigate('/login');
   }
 }
