@@ -1,17 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  BalanceScale,
   Brain,
-  BriefcaseBusiness,
+  Briefcase,
   Eye,
-  Fingerprint,
   Gavel,
-  Handshake,
-  LockKeyhole,
-  MessageCircleMore,
+  Lock,
+  MessageCircle,
+  Scale,
+  Search,
   ShieldCheck,
   Sparkles,
-  UserRoundCog,
+  User,
+  Users,
   X,
 } from 'lucide-react';
 import type { PlayerProfile } from '../types/game';
@@ -33,10 +33,10 @@ import { sound } from '../utils/sound';
 
 const ATTRIBUTE_ICONS: Record<ProfessionalAttributeId, React.ReactNode> = {
   LEGAL_KNOWLEDGE: <Gavel size={19} />,
-  INVESTIGATION: <Fingerprint size={19} />,
+  INVESTIGATION: <Search size={19} />,
   PERCEPTION: <Eye size={19} />,
-  PERSUASION: <MessageCircleMore size={19} />,
-  INFLUENCE: <Handshake size={19} />,
+  PERSUASION: <MessageCircle size={19} />,
+  INFLUENCE: <Users size={19} />,
   SELF_CONTROL: <Brain size={19} />,
 };
 
@@ -126,7 +126,7 @@ export const ProfessionalProfileExperience: React.FC = () => {
         aria-label="Abrir Perfil Profissional"
       >
         <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#60A5FA]/30 bg-[#60A5FA]/10 text-[#93C5FD]">
-          <UserRoundCog size={19} />
+          <User size={19} />
         </div>
         <div className="hidden sm:block">
           <span className="block text-[8px] font-black uppercase tracking-[0.18em] text-[#7D91B3]">RPG profissional</span>
@@ -148,7 +148,7 @@ export const ProfessionalProfileExperience: React.FC = () => {
             <header className="flex items-center justify-between gap-3 border-b border-[#2A2A2E] bg-[#151517] px-4 py-4 sm:px-6">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#60A5FA]/35 bg-[#60A5FA]/10 text-[#93C5FD]">
-                  <UserRoundCog size={23} />
+                  <User size={23} />
                 </div>
                 <div className="min-w-0">
                   <span className="block text-[9px] font-black uppercase tracking-[0.2em] text-[#60A5FA]">Ficha profissional desbloqueada pela OAB</span>
@@ -211,7 +211,7 @@ export const ProfessionalProfileExperience: React.FC = () => {
 
                   <div>
                     <div className="mb-3 flex items-center gap-2">
-                      <BriefcaseBusiness size={17} className="text-[#60A5FA]" />
+                      <Briefcase size={17} className="text-[#60A5FA]" />
                       <h3 className="font-serif text-base font-black text-[#EBEBEE]">Atributos profissionais</h3>
                     </div>
 
@@ -293,7 +293,7 @@ export const ProfessionalProfileExperience: React.FC = () => {
                 <aside className="space-y-4">
                   <section className="rounded-2xl border border-[#34343A] bg-[#151517] p-5">
                     <div className="mb-4 flex items-center gap-2">
-                      <BalanceScale size={18} className="text-[#C5A059]" />
+                      <Scale size={18} className="text-[#C5A059]" />
                       <h3 className="font-serif text-base font-black text-[#EBEBEE]">Conduta</h3>
                     </div>
 
@@ -317,7 +317,7 @@ export const ProfessionalProfileExperience: React.FC = () => {
 
                       <div className="rounded-xl border border-[#F87171]/20 bg-[#F87171]/[0.04] p-4">
                         <div className="flex items-center gap-2 text-[#FCA5A5]">
-                          <LockKeyhole size={15} />
+                          <Lock size={15} />
                           <span className="text-[9px] font-black uppercase tracking-wider">Risco de exposição</span>
                         </div>
                         <strong className="mt-2 block text-sm font-black text-[#D3D3D7]">INFORMAÇÃO OCULTA</strong>
