@@ -117,6 +117,8 @@ const XP_COST_BY_LEVEL: Record<number, number> = {
   9: 1000,
 };
 
+type ProfessionalProfileOwner = Pick<PlayerProfile, 'cloudCareerId' | 'name' | 'oabRegistration'>;
+
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 export function getNextAttributeLevelCost(level: number): number | null {
@@ -124,13 +126,14 @@ export function getNextAttributeLevelCost(level: number): number | null {
   return XP_COST_BY_LEVEL[level] ?? 1000;
 }
 
-export function getProfessionalOwnerKey(player: Pick<PlayerProfile, 'cloudCareerId' | 'name'>): string {
+export function getProfessionalOwnerKey(player: ProfessionalProfileOwner): string {
   if (player.cloudCareerId) return `career:${player.cloudCareerId}`;
+  if (player.oabRegistration?.code) return `oab:${player.oabRegistration.code}`;
   const normalizedName = player.name.trim().toLowerCase().replace(/[^a-z0-9áàâãéêíóôõúç]+/gi, '-');
   return `local:${normalizedName || 'jogador'}`;
 }
 
-function getStorageKey(player: Pick<PlayerProfile, 'cloudCareerId' | 'name'>): string {
+function getStorageKey(player: ProfessionalProfileOwner): string {
   return `${PROFILE_STORAGE_PREFIX}${getProfessionalOwnerKey(player)}`;
 }
 
@@ -266,7 +269,7 @@ export function createInitialProfessionalProfile(player: PlayerProfile): Profess
   };
 }
 
-export function loadProfessionalProfile(player: Pick<PlayerProfile, 'cloudCareerId' | 'name'>): ProfessionalRpgProfile | null {
+export function loadProfessionalProfile(player: ProfessionalProfileOwner): ProfessionalRpgProfile | null {
   try {
     const raw = localStorage.getItem(getStorageKey(player));
     if (!raw) return null;
@@ -278,7 +281,7 @@ export function loadProfessionalProfile(player: Pick<PlayerProfile, 'cloudCareer
   }
 }
 
-export function saveProfessionalProfile(player: Pick<PlayerProfile, 'cloudCareerId' | 'name'>, profile: ProfessionalRpgProfile): void {
+export function saveProfessionalProfile(player: ProfessionalProfileOwner, profile: ProfessionalRpgProfile): void {
   localStorage.setItem(getStorageKey(player), JSON.stringify(profile));
   window.dispatchEvent(new CustomEvent('rota:professional-profile-updated', { detail: profile }));
 }
@@ -409,6 +412,17 @@ export function applyProfessionalConsequence(
     traits,
     modifiers,
   };
+}
+
+export function applyAndSaveProfessionalConsequence(
+  player: PlayerProfile,
+  consequence: ProfessionalConsequence,
+): ProfessionalRpgProfile | null {
+  const current = syncProfessionalProfileWithPlayer(player);
+  if (!current) return null;
+  const next = applyProfessionalConsequence(current, consequence);
+  saveProfessionalProfile(player, next);
+  return next;
 }
 
 export function getCharacterBand(value: number): string {
