@@ -3,6 +3,11 @@ import { Loader2, LogOut } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { sound } from '../utils/sound';
 
+function goToLogin() {
+  window.history.replaceState({}, '', '/login');
+  window.dispatchEvent(new PopStateEvent('popstate'));
+}
+
 export function SessionLogoutButton() {
   const [signingOut, setSigningOut] = useState(false);
 
@@ -23,6 +28,7 @@ export function SessionLogoutButton() {
     try {
       const { error } = await supabase.auth.signOut({ scope: 'local' });
       if (error) throw error;
+      goToLogin();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível encerrar a sessão.';
       window.alert(message);
