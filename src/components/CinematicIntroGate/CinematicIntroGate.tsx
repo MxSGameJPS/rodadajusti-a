@@ -6,7 +6,6 @@ type CinematicIntroGateProps = {
   children: ReactNode;
 };
 
-const INTRO_SESSION_KEY = 'rota_da_justica_cinematic_intro_seen';
 const INTRO_VIDEO_PATH = '/videos/rota-da-justica-intro.mp4';
 const ENTER_DELAY_MS = 5000;
 
@@ -14,14 +13,6 @@ function navigate(path: string, replace = false) {
   if (replace) window.history.replaceState({}, '', path);
   else window.history.pushState({}, '', path);
   window.dispatchEvent(new PopStateEvent('popstate'));
-}
-
-function introWasSeen() {
-  try {
-    return window.sessionStorage.getItem(INTRO_SESSION_KEY) === '1';
-  } catch {
-    return false;
-  }
 }
 
 export function CinematicIntroGate({ children }: CinematicIntroGateProps) {
@@ -33,9 +24,8 @@ export function CinematicIntroGate({ children }: CinematicIntroGateProps) {
     () => new URLSearchParams(window.location.search).get('intro') === '1',
     [pathname],
   );
-  const seen = introWasSeen();
+
   const isIntroRoute = pathname === '/' || forceIntro;
-  const shouldRedirectSeenIntro = pathname === '/' && seen && !forceIntro;
 
   useEffect(() => {
     const handleRouteChange = () => setPathname(window.location.pathname);
@@ -44,13 +34,7 @@ export function CinematicIntroGate({ children }: CinematicIntroGateProps) {
   }, []);
 
   useEffect(() => {
-    if (shouldRedirectSeenIntro) {
-      navigate('/login', true);
-    }
-  }, [shouldRedirectSeenIntro]);
-
-  useEffect(() => {
-    if (!isIntroRoute || shouldRedirectSeenIntro) return;
+    if (!isIntroRoute) return;
 
     setShowEnter(false);
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -61,26 +45,10 @@ export function CinematicIntroGate({ children }: CinematicIntroGateProps) {
 
     const timer = window.setTimeout(() => setShowEnter(true), ENTER_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [isIntroRoute, shouldRedirectSeenIntro]);
+  }, [isIntroRoute]);
 
   function handleEnter() {
-    try {
-      window.sessionStorage.setItem(INTRO_SESSION_KEY, '1');
-    } catch {
-      // sessionStorage pode estar bloqueado; a entrada continua normalmente.
-    }
     navigate('/login');
-  }
-
-  if (shouldRedirectSeenIntro) {
-    return (
-      <div className={styles.root}>
-        <div className={styles.fallback} aria-hidden="true">
-          <div className={styles.fallbackGlowOne} />
-          <div className={styles.fallbackGlowTwo} />
-        </div>
-      </div>
-    );
   }
 
   if (!isIntroRoute) return <>{children}</>;
