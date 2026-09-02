@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import type { ProfessionalExam, ProfessionalExamResult } from '../types/game';
 
 export const DEFAULT_OAB_EXAM_SLUG = 'oab-46-2026-tipo-1';
+export type ProfessionalExamMode = 'full' | 'quick';
 
 export async function loadProfessionalExam(slug = DEFAULT_OAB_EXAM_SLUG): Promise<ProfessionalExam> {
   if (!supabase) {
@@ -26,6 +27,7 @@ export async function submitProfessionalExam(params: {
   answers: Record<string, string>;
   durationSeconds: number;
   careerId?: string | null;
+  mode?: ProfessionalExamMode;
 }): Promise<ProfessionalExamResult> {
   if (!supabase) {
     throw new Error('Supabase não está configurado neste ambiente.');
@@ -36,6 +38,7 @@ export async function submitProfessionalExam(params: {
     p_answers: params.answers,
     p_duration_seconds: Math.max(0, Math.floor(params.durationSeconds)),
     p_career_id: params.careerId || null,
+    p_mode: params.mode || 'full',
   });
 
   if (error) {
