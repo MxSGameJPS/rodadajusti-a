@@ -186,6 +186,24 @@ export interface CaseLogEntry {
   type: 'viagem' | 'pista' | 'depoimento' | 'analise' | 'alerta';
 }
 
+export interface SocialJuridicoAction {
+  id: string;
+  featureId: 'sj_evidence_shield' | 'sj_digital_signature' | 'sj_extrajudicial_notice' | 'sj_crm';
+  targetId?: string;
+  label: string;
+  scoreBonus: number;
+  timeCostHours: number;
+  timestampGameHours: number;
+}
+
+export interface SocialJuridicoToolUse {
+  featureId: SocialJuridicoAction['featureId'];
+  targetId?: string;
+  label: string;
+  scoreBonus: number;
+  timeCostHours: number;
+}
+
 export interface ActiveCaseState {
   caseId: string;
   hoursSpent: number;
@@ -197,6 +215,7 @@ export interface ActiveCaseState {
   logs: CaseLogEntry[];
   selectedStrategyId: string | null;
   selectedEvidenceIds: string[];
+  socialJuridicoActions: SocialJuridicoAction[];
 }
 
 export interface CaseHistoryRecord {
@@ -212,6 +231,7 @@ export interface CaseHistoryRecord {
   hoursUsed: number;
   totalAllowedHours: number;
   judgeFeedback: string;
+  socialJuridicoBonus?: number;
 }
 
 export interface ProfessionalExamOption {
