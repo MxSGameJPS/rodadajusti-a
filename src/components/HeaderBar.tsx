@@ -10,12 +10,18 @@ import {
   Landmark,
   Building,
   ChevronRight,
-  Scale,
+  Laptop,
 } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { SessionLogoutButton } from './SessionLogoutButton';
 
 const OPEN_SOCIAL_JURIDICO_EVENT = 'rota:open-social-juridico';
+const SOCIAL_JURIDICO_TIERS = new Set([
+  'ADVOGADO_CONTRATADO',
+  'ADVOGADO_SENIOR',
+  'SOCIO_ESCRITORIO',
+  'DONO_ESCRITORIO',
+]);
 
 interface HeaderBarProps {
   player: PlayerProfile;
@@ -39,6 +45,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onToggleSound,
 }) => {
   const currentTier: CareerTier = CAREER_TIERS[player.careerTier] || CAREER_TIERS.ESTAGIARIO;
+  const canUseSocialJuridico = SOCIAL_JURIDICO_TIERS.has(player.careerTier);
 
   const tierKeys = Object.keys(CAREER_TIERS) as (keyof typeof CAREER_TIERS)[];
   const currentTierIndex = tierKeys.indexOf(player.careerTier);
@@ -94,16 +101,18 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             </span>
           </button>
 
-          <button
-            type="button"
-            onClick={openSocialJuridico}
-            title="Abrir Terminal Social Jurídico"
-            aria-label="Abrir Terminal Social Jurídico"
-            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-[#C5A059]/20 bg-[#C5A059]/5 px-2 text-[#C5A059] transition-colors hover:border-[#C5A059]/45 hover:bg-[#C5A059]/10 sm:px-2.5"
-          >
-            <Scale size={13} />
-            <span className="hidden text-[9px] font-bold uppercase tracking-[0.08em] md:inline">Social Jurídico</span>
-          </button>
+          {canUseSocialJuridico && (
+            <button
+              type="button"
+              onClick={openSocialJuridico}
+              title="Abrir Notebook Social Jurídico"
+              aria-label="Abrir Notebook Social Jurídico"
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-[#C5A059]/25 bg-[#C5A059]/10 px-2 text-[#C5A059] transition-colors hover:border-[#C5A059]/50 hover:bg-[#C5A059]/15 sm:px-2.5"
+            >
+              <Laptop size={14} />
+              <span className="hidden text-[9px] font-bold uppercase tracking-[0.08em] md:inline">Notebook SJ</span>
+            </button>
+          )}
 
           <SessionLogoutButton />
         </div>

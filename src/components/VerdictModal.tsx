@@ -1,19 +1,18 @@
 import React from 'react';
 import { LegalCase, CaseHistoryRecord, PlayerProfile, CareerTierId } from '../types/game';
 import { CAREER_TIERS } from '../data/careers';
-import { 
-  Scale, 
-  Award, 
-  Sparkles, 
-  Coins, 
-  Clock, 
-  ArrowRight, 
-  CheckCircle2, 
-  XCircle, 
-  AlertTriangle,
-  FileCheck
+import {
+  Scale,
+  Award,
+  Sparkles,
+  Coins,
+  Clock,
+  ArrowRight,
+  CheckCircle2,
+  Laptop,
 } from 'lucide-react';
 import { sound } from '../utils/sound';
+import { CelebrationBurst } from './CelebrationBurst/CelebrationBurst';
 
 interface VerdictModalProps {
   isOpen: boolean;
@@ -25,9 +24,21 @@ interface VerdictModalProps {
   onNextCaseOrHub: () => void;
 }
 
+const PROMOTION_MESSAGES: Partial<Record<CareerTierId, string>> = {
+  ESTAGIARIO_SENIOR:
+    'Seu trabalho começou a ser reconhecido dentro do escritório. Agora você recebe mais responsabilidade, casos mais desafiadores e está um passo mais perto da advocacia profissional.',
+  ADVOGADO_CONTRATADO:
+    'A fase de estágio ficou para trás. Uma nova etapa profissional começa, com mais autonomia, responsabilidade e oportunidades na sua carreira jurídica.',
+  ADVOGADO_SENIOR:
+    'Sua experiência e seus resultados colocaram você entre os profissionais de confiança do escritório. Os casos mais complexos agora fazem parte da sua rotina.',
+  SOCIO_ESCRITORIO:
+    'Você deixou de ser apenas parte da equipe e passou a participar das decisões que definem o futuro do escritório. Esta é uma conquista de carreira memorável.',
+  MAGISTRADO_SUBSTITUTO:
+    'Uma nova perspectiva da Justiça se abre diante de você. A partir de agora, suas decisões passam a ter impacto direto na vida de outras pessoas.',
+};
+
 export const VerdictModal: React.FC<VerdictModalProps> = ({
   isOpen,
-  onClose,
   result,
   currentCase,
   player,
@@ -38,11 +49,15 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
 
   const isWin = result.success;
   const promotedTierObj = promotedToTier ? CAREER_TIERS[promotedToTier] : null;
+  const promotionMessage = promotedToTier
+    ? PROMOTION_MESSAGES[promotedToTier] || 'Sua dedicação abriu uma nova etapa na sua trajetória jurídica.'
+    : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A0A0B]/90 backdrop-blur-lg overflow-y-auto">
+      {isWin && <CelebrationBurst intensity={promotedTierObj ? 'strong' : 'normal'} />}
+
       <div className="relative w-full max-w-2xl bg-[#161618] border border-[#2A2A2E] rounded-2xl shadow-2xl overflow-hidden text-[#E0E0E0] my-6">
-        {/* Top Court Banner */}
         <div
           className={`p-6 text-center border-b relative overflow-hidden bg-[#111113] ${
             isWin ? 'border-b-[#34D399]/40' : 'border-b-[#F87171]/40'
@@ -70,7 +85,13 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
             {currentCase.title}
           </p>
 
-          {/* Official Stamp badge */}
+          {isWin && (
+            <div className="mx-auto mt-4 flex max-w-md items-center justify-center gap-2 rounded-xl border border-[#34D399]/25 bg-[#34D399]/[0.07] px-4 py-2.5 text-xs font-semibold text-[#8BE7C3]">
+              <CheckCircle2 size={16} className="shrink-0" />
+              <span>Parabéns! Você conduziu o caso com sucesso e conquistou mais um resultado importante para sua carreira.</span>
+            </div>
+          )}
+
           <div className="mt-4 inline-block">
             <div
               className={`px-4 py-1.5 rounded-lg font-mono font-bold text-xs border ${
@@ -84,26 +105,27 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
           </div>
         </div>
 
-        {/* Career Promotion Announcement Banner (if achieved) */}
         {promotedTierObj && (
-          <div className="p-4 bg-[#C5A059] text-[#0A0A0B] px-6 py-3 flex items-center justify-between shadow-lg">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-[#0A0A0B]/20 text-[#0A0A0B]">
-                <Award size={22} />
+          <div className="border-b border-[#C5A059]/35 bg-gradient-to-r from-[#C5A059] via-[#D9B96E] to-[#C5A059] px-6 py-5 text-[#0A0A0B] shadow-lg">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 rounded-xl bg-[#0A0A0B]/15 p-3 text-[#0A0A0B] shadow-inner">
+                <Award size={28} />
               </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider block">
-                  ★ Promoção de Carreira Desbloqueada!
+              <div className="min-w-0">
+                <span className="block text-[10px] font-extrabold uppercase tracking-[0.22em]">
+                  ★ Nova etapa da sua carreira
                 </span>
-                <strong className="text-sm sm:text-base font-extrabold">
-                  {player.name} foi promovido(a) a {promotedTierObj.title}!
+                <strong className="mt-1 block font-serif text-lg font-extrabold sm:text-xl">
+                  Parabéns, {player.name}! Você foi promovido(a) a {promotedTierObj.title}!
                 </strong>
+                <p className="mt-2 max-w-xl text-xs font-medium leading-relaxed text-[#1C1810]/80 sm:text-sm">
+                  {promotionMessage}
+                </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Sentence Text & Judge's Reasoning */}
         <div className="p-6 space-y-4 text-xs sm:text-sm bg-[#0A0A0B]">
           <div className="p-4 bg-[#161618] rounded-xl border border-[#2A2A2E] space-y-2">
             <div className="flex items-center justify-between text-[#888888] text-xs">
@@ -117,9 +139,7 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
             </p>
           </div>
 
-          {/* Rewards Grid */}
           <div className="grid grid-cols-3 gap-3 text-center">
-            {/* Dinheiro */}
             <div className="p-3 bg-[#161618] rounded-xl border border-[#2A2A2E]">
               <Coins size={18} className="mx-auto text-[#34D399] mb-1" />
               <span className="text-[10px] text-[#888888] uppercase tracking-wider block font-mono">Honorários</span>
@@ -128,7 +148,6 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
               </span>
             </div>
 
-            {/* XP */}
             <div className="p-3 bg-[#161618] rounded-xl border border-[#2A2A2E]">
               <Sparkles size={18} className="mx-auto text-[#60A5FA] mb-1" />
               <span className="text-[10px] text-[#888888] uppercase tracking-wider block font-mono">Experiência</span>
@@ -137,7 +156,6 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
               </span>
             </div>
 
-            {/* Reputação */}
             <div className="p-3 bg-[#161618] rounded-xl border border-[#2A2A2E]">
               <Award size={18} className="mx-auto text-[#C5A059] mb-1" />
               <span className="text-[10px] text-[#888888] uppercase tracking-wider block font-mono">Reputação</span>
@@ -147,7 +165,20 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
             </div>
           </div>
 
-          {/* Time Analysis */}
+          {(result.socialJuridicoBonus || 0) > 0 && (
+            <div className="flex items-start gap-3 rounded-xl border border-[#C5A059]/30 bg-[#C5A059]/[0.07] p-3.5">
+              <div className="rounded-lg bg-[#C5A059]/15 p-2 text-[#C5A059]">
+                <Laptop size={17} />
+              </div>
+              <div>
+                <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-[#C5A059]">Apoio tecnológico utilizado</span>
+                <p className="mt-1 text-xs leading-relaxed text-[#CFC4AA]">
+                  As ferramentas simuladas do Notebook Social Jurídico contribuíram com <strong className="text-[#F1D79D]">+{result.socialJuridicoBonus} pontos</strong> para a preparação do caso. O limite máximo de apoio tecnológico é de 10 pontos por processo.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="p-3 bg-[#161618] rounded-xl border border-[#2A2A2E] flex items-center justify-between text-xs text-[#888888]">
             <div className="flex items-center gap-1.5">
               <Clock size={14} className="text-[#C5A059]" />
@@ -159,7 +190,6 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
           </div>
         </div>
 
-        {/* Footer Next Case Action */}
         <div className="p-5 bg-[#111113] border-t border-[#2A2A2E] flex items-center justify-end">
           <button
             onClick={() => {
