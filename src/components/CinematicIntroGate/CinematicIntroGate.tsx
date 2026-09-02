@@ -1,20 +1,21 @@
-import React, { useEffect, useState, type ReactNode } from 'react';
-import { ArrowRight, Scale } from 'lucide-react';
-import styles from './CinematicIntroGate.module.css';
+import React, { useEffect, useState, type ReactNode } from "react";
+import { ArrowRight, Scale } from "lucide-react";
+import styles from "./CinematicIntroGate.module.css";
 
 type CinematicIntroGateProps = {
   children: ReactNode;
 };
 
-const INTRO_SESSION_KEY = 'rota_da_justica_cinematic_intro_seen';
-const INTRO_VIDEO_PATH = '/videos/rota-da-justica-intro.mp4';
+const INTRO_SESSION_KEY = "rota_da_justica_cinematic_intro_seen";
+const INTRO_VIDEO_PATH = "/videos/rota-da-justica-intro.mp4";
 const ENTER_DELAY_MS = 5000;
 
 function shouldSkipIntroOnBoot() {
   try {
-    const forceIntro = new URLSearchParams(window.location.search).get('intro') === '1';
+    const forceIntro =
+      new URLSearchParams(window.location.search).get("intro") === "1";
     if (forceIntro) return false;
-    return window.sessionStorage.getItem(INTRO_SESSION_KEY) === '1';
+    return window.sessionStorage.getItem(INTRO_SESSION_KEY) === "1";
   } catch {
     return false;
   }
@@ -28,7 +29,9 @@ export function CinematicIntroGate({ children }: CinematicIntroGateProps) {
   useEffect(() => {
     if (entered) return;
 
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const reduceMotion = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     if (reduceMotion) {
       setShowEnter(true);
       return;
@@ -40,7 +43,7 @@ export function CinematicIntroGate({ children }: CinematicIntroGateProps) {
 
   function handleEnter() {
     try {
-      window.sessionStorage.setItem(INTRO_SESSION_KEY, '1');
+      window.sessionStorage.setItem(INTRO_SESSION_KEY, "1");
     } catch {
       // sessionStorage pode estar bloqueado; a entrada continua normalmente.
     }
@@ -56,7 +59,6 @@ export function CinematicIntroGate({ children }: CinematicIntroGateProps) {
           className={styles.video}
           autoPlay
           muted
-          loop
           playsInline
           preload="auto"
           aria-hidden="true"
@@ -80,16 +82,27 @@ export function CinematicIntroGate({ children }: CinematicIntroGateProps) {
           <Scale size={24} strokeWidth={1.55} />
         </div>
 
-        <div className={styles.kicker}>UMA EXPERIÊNCIA DE CARREIRA JURÍDICA</div>
+        <div className={styles.kicker}>
+          UMA EXPERIÊNCIA DE CARREIRA JURÍDICA
+        </div>
         <h1>Rota da Justiça</h1>
         <p>Investigue. Decida. Construa sua trajetória.</p>
 
-        <div className={`${styles.enterSlot} ${showEnter ? styles.enterSlotVisible : ''}`}>
-          <button type="button" className={styles.enterButton} onClick={handleEnter} disabled={!showEnter}>
+        <div
+          className={`${styles.enterSlot} ${showEnter ? styles.enterSlotVisible : ""}`}
+        >
+          <button
+            type="button"
+            className={styles.enterButton}
+            onClick={handleEnter}
+            disabled={!showEnter}
+          >
             <span>ENTRAR</span>
             <ArrowRight size={18} />
           </button>
-          <span className={styles.enterHint}>Sua carreira começa com uma decisão.</span>
+          <span className={styles.enterHint}>
+            Sua carreira começa com uma decisão.
+          </span>
         </div>
       </div>
 
