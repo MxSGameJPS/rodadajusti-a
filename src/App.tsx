@@ -13,6 +13,7 @@ import {
   CareerTierId,
   ProfessionalExam,
   ProfessionalExamResult,
+  SocialJuridicoToolUse,
 } from './types/game';
 import { GAME_CASES } from './data/cases';
 import { CAREER_TIERS, ACADEMIC_COURSES } from './data/careers';
@@ -30,6 +31,7 @@ import { AcademicModal } from './components/AcademicModal';
 import { ConcursoModal } from './components/ConcursoModal';
 import { OfficeManagementModal } from './components/OfficeManagementModal';
 import { OabExamModal } from './components/OabExamModal';
+import { SocialJuridicoExperience } from './components/SocialJuridicoExperience';
 import { sound } from './utils/sound';
 
 const STORAGE_KEY = 'rota_da_justica_save_v1';
@@ -72,6 +74,14 @@ function normalizeSavedPlayer(saved: Partial<PlayerProfile>): PlayerProfile {
   return {
     ...INITIAL_PLAYER_STATE,
     ...saved,
+    activeCase: saved.activeCase
+      ? {
+          ...saved.activeCase,
+          socialJuridicoActions: Array.isArray(saved.activeCase.socialJuridicoActions)
+            ? saved.activeCase.socialJuridicoActions
+            : [],
+        }
+      : null,
     completedCourseIds: Array.isArray(saved.completedCourseIds) ? saved.completedCourseIds : [],
     history: Array.isArray(saved.history) ? saved.history : [],
     concursoCompletedPhases: Array.isArray(saved.concursoCompletedPhases)
@@ -170,6 +180,7 @@ export default function App() {
       ],
       selectedStrategyId: null,
       selectedEvidenceIds: [],
+      socialJuridicoActions: [],
     };
 
     setPlayer((prev) => ({ ...prev, activeCase: initialState }));
@@ -295,6 +306,53 @@ export default function App() {
     });
   };
 
+  const handleUseSocialJuridicoTool = (tool: SocialJuridicoToolUse) => {
+    setPlayer((prev) => {
+      if (!prev.activeCase) return prev;
+
+      const existingActions = Array.isArray(prev.activeCase.socialJuridicoActions)
+        ? prev.activeCase.socialJuridicoActions
+        : [];
+      const duplicate = existingActions.some((action) =>
+        action.featureId === tool.featureId && (tool.targetId ? action.targetId === tool.targetId : !action.targetId),
+      );
+      if (duplicate) return prev;
+
+      const safeTimeCost = Math.max(0, Number(tool.timeCostHours) || 0);
+      const nextHours = prev.activeCase.hoursSpent + safeTimeCost;
+      const actionId = `sj-${tool.featureId}-${Date.now()}`;
+
+      return {
+        ...prev,
+        activeCase: {
+          ...prev.activeCase,
+          hoursSpent: nextHours,
+          socialJuridicoActions: [
+            ...existingActions,
+            {
+              id: actionId,
+              featureId: tool.featureId,
+              targetId: tool.targetId,
+              label: tool.label,
+              scoreBonus: Math.max(0, Number(tool.scoreBonus) || 0),
+              timeCostHours: safeTimeCost,
+              timestampGameHours: nextHours,
+            },
+          ],
+          logs: [
+            ...prev.activeCase.logs,
+            {
+              id: `log-${actionId}`,
+              timestampGameHours: nextHours,
+              message: `Social Jurídico: ${tool.label}${safeTimeCost > 0 ? ` (+${safeTimeCost}h)` : ''}`,
+              type: 'analise',
+            },
+          ],
+        },
+      };
+    });
+  };
+
   const handleSubmitPetition = (strategyId: string, selectedEvidenceIds: string[]) => {
     if (!player.activeCase || !activeCaseData) return;
 
@@ -317,6 +375,15 @@ export default function App() {
 
     if (player.activeCase.hoursSpent <= activeCaseData.deadlineHours) totalScore += 10;
     else totalScore += 2;
+
+    const socialJuridicoBonus = Math.min(
+      10,
+      (player.activeCase.socialJuridicoActions || []).reduce(
+        (sum, action) => sum + Math.max(0, action.scoreBonus || 0),
+        0,
+      ),
+    );
+    totalScore += socialJuridicoBonus;
 
     const isSuccess = totalScore >= activeCaseData.minimumPassingScore;
     const verdict: 'PROCEDENTE' | 'PARCIALMENTE PROCEDENTE' | 'IMPROCEDENTE' = isSuccess
@@ -374,6 +441,7 @@ export default function App() {
       hoursUsed: player.activeCase.hoursSpent,
       totalAllowedHours: activeCaseData.deadlineHours,
       judgeFeedback: feedback,
+      socialJuridicoBonus,
     };
 
     setVerdictCase(activeCaseData);
@@ -667,6 +735,12 @@ export default function App() {
         onClose={() => setIsOabExamOpen(false)}
         player={player}
         onComplete={handleOabExamComplete}
+      />
+
+      <SocialJuridicoExperience
+        player={player}
+        currentCase={activeCaseData}
+        onUseTool={handleUseSocialJuridicoTool}
       />
     </div>
   );
