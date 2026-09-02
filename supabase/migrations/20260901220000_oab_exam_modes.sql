@@ -1,8 +1,34 @@
 -- Rota da Justiça — modos completo e rápido para o simulado da OAB
--- O modo rápido usa 20 das 80 questões, distribuídas ao longo da prova,
--- com tempo e nota de corte proporcionais. A correção continua server-side.
+-- Completo: 80 questões, 3h, corte 50, recompensa JR$ 10.000.
+-- Rápido: 20 questões, 75min, corte 12, recompensa JR$ 2.000.
+-- A correção e a concessão da recompensa permanecem server-side.
 
 begin;
+
+insert into public.game_currencies(id, name, symbol, currency_type, status, is_active, metadata)
+values (
+  'jures',
+  'Jures Reais',
+  'JR$',
+  'common',
+  'published',
+  true,
+  '{"system":true,"purpose":"game_currency"}'::jsonb
+)
+on conflict (id) do update
+set name = excluded.name,
+    symbol = excluded.symbol,
+    status = 'published',
+    is_active = true,
+    updated_at = now();
+
+-- O catálogo também passa a refletir as regras oficiais do modo completo do jogo.
+update public.exams
+set passing_score = 50,
+    duration_minutes = 180,
+    updated_at = now()
+where slug = 'oab-46-2026-tipo-1'
+  and exam_type = 'oab_first_phase';
 
 create or replace function public.submit_exam_attempt(
   p_exam_slug text,
@@ -20,7 +46,9 @@ declare
   v_uid uuid := auth.uid();
   v_exam public.exams%rowtype;
   v_career public.careers%rowtype;
+  v_career_id uuid := p_career_id;
   v_has_career boolean := false;
+  v_was_oab_passed boolean := false;
   v_mode text := lower(trim(coalesce(p_mode, 'full')));
   v_score integer := 0;
   v_total integer := 0;
@@ -35,6 +63,8 @@ declare
   v_new_master_level integer := null;
   v_new_doctorate_level integer := null;
   v_new_career_stage text := null;
+  v_reward_amount bigint := 0;
+  v_reward_granted boolean := false;
 begin
   if v_uid is null then raise exception 'AUTH_REQUIRED'; end if;
   if p_answers is null or jsonb_typeof(p_answers) <> 'object' then raise exception 'ANSWERS_MUST_BE_OBJECT'; end if;
@@ -51,16 +81,33 @@ begin
     raise exception 'QUICK_MODE_ONLY_FOR_OAB';
   end if;
 
-  if v_mode = 'quick' and v_exam.question_count <> 80 then
-    raise exception 'QUICK_MODE_REQUIRES_80_QUESTIONS';
+  if v_exam.exam_type = 'oab_first_phase' and v_exam.question_count <> 80 then
+    raise exception 'OAB_MODE_REQUIRES_80_QUESTIONS';
   end if;
 
-  if p_career_id is not null then
+  if v_career_id is not null then
     select * into v_career
     from public.careers
-    where id = p_career_id and user_id = v_uid;
+    where id = v_career_id and user_id = v_uid;
     if v_career.id is null then raise exception 'CAREER_NOT_OWNED'; end if;
     v_has_career := true;
+  else
+    -- O front legado ainda pode não carregar cloudCareerId. Nesse caso,
+    -- usa a carreira mais recentemente jogada do próprio usuário.
+    select * into v_career
+    from public.careers
+    where user_id = v_uid
+    order by last_played_at desc nulls last, created_at desc
+    limit 1;
+
+    if v_career.id is not null then
+      v_career_id := v_career.id;
+      v_has_career := true;
+    end if;
+  end if;
+
+  if v_has_career then
+    v_was_oab_passed := coalesce(v_career.oab_exam_passed, false);
   end if;
 
   if v_exam.exam_type in ('mestrado','doutorado','concurso_juiz','concurso_desembargador') and not v_has_career then
@@ -77,24 +124,42 @@ begin
     if v_career.doctorate_level < 4 then raise exception 'DOCTORATE_LEVEL_4_REQUIRED'; end if;
   end if;
 
-  if v_mode = 'quick' then
-    v_expected_total := 20;
-    v_passing_score := ceil(v_exam.passing_score::numeric * 20 / v_exam.question_count)::integer;
-    v_duration_limit_seconds := ceil((v_exam.duration_minutes * 60)::numeric * 20 / v_exam.question_count)::integer;
+  if v_exam.exam_type = 'oab_first_phase' then
+    if v_mode = 'quick' then
+      v_expected_total := 20;
+      v_passing_score := 12;
+      v_duration_limit_seconds := 75 * 60;
 
-    for v_q in
-      select id, question_number, correct_option
-      from public.exam_questions
-      where exam_id = v_exam.id
-        and mod(question_number - 1, 4) = 0
-      order by question_number
-      limit 20
-    loop
-      v_total := v_total + 1;
-      v_answer := upper(coalesce(p_answers ->> (v_q.id::text), ''));
-      if v_answer = v_q.correct_option then v_score := v_score + 1; end if;
-    end loop;
+      for v_q in
+        select id, question_number, correct_option
+        from public.exam_questions
+        where exam_id = v_exam.id
+          and mod(question_number - 1, 4) = 0
+        order by question_number
+        limit 20
+      loop
+        v_total := v_total + 1;
+        v_answer := upper(coalesce(p_answers ->> (v_q.id::text), ''));
+        if v_answer = v_q.correct_option then v_score := v_score + 1; end if;
+      end loop;
+    else
+      v_expected_total := 80;
+      v_passing_score := 50;
+      v_duration_limit_seconds := 3 * 60 * 60;
+
+      for v_q in
+        select id, question_number, correct_option
+        from public.exam_questions
+        where exam_id = v_exam.id
+        order by question_number
+      loop
+        v_total := v_total + 1;
+        v_answer := upper(coalesce(p_answers ->> (v_q.id::text), ''));
+        if v_answer = v_q.correct_option then v_score := v_score + 1; end if;
+      end loop;
+    end if;
   else
+    -- Demais avaliações continuam usando a própria configuração publicada.
     v_expected_total := v_exam.question_count;
     v_passing_score := v_exam.passing_score;
     v_duration_limit_seconds := v_exam.duration_minutes * 60;
@@ -118,8 +183,8 @@ begin
     exam_id, user_id, career_id, started_at, submitted_at,
     duration_seconds, score, total_questions, passed, answers, metadata
   ) values (
-    v_exam.id, v_uid, p_career_id,
-    now() - make_interval(secs => least(p_duration_seconds, 86400)),
+    v_exam.id, v_uid, v_career_id,
+    now() - make_interval(secs => least(p_duration_seconds, v_duration_limit_seconds)),
     now(), least(p_duration_seconds, v_duration_limit_seconds), v_score, v_total, v_passed, p_answers,
     jsonb_build_object(
       'source','game',
@@ -149,7 +214,7 @@ begin
           user_id, career_id, registration_type, registration_code,
           source_exam_id, exam_score, is_simulated, metadata
         ) values (
-          v_uid, p_career_id, 'OAB_SIMULADA', v_registration_code,
+          v_uid, v_career_id, 'OAB_SIMULADA', v_registration_code,
           v_exam.id, v_score, true,
           jsonb_build_object(
             'disclaimer','Registro fictício do personagem dentro do Rota da Justiça. Não equivale a inscrição profissional real na OAB.',
@@ -170,16 +235,49 @@ begin
             oab_registration_code = coalesce(oab_registration_code,v_registration_code),
             oab_exam_passed_at = coalesce(oab_exam_passed_at,now()),
             last_played_at = now()
-        where id = p_career_id and user_id = v_uid;
+        where id = v_career_id and user_id = v_uid;
+        v_new_career_stage := 'ADVOGADO_CONTRATADO';
+
+        -- A recompensa é concedida apenas na primeira aprovação da OAB nessa carreira.
+        if not v_was_oab_passed then
+          v_reward_amount := case when v_mode = 'quick' then 2000 else 10000 end;
+
+          insert into public.player_wallets(career_id, currency_id, balance)
+          values (v_career_id, 'jures', v_reward_amount)
+          on conflict (career_id, currency_id)
+          do update set
+            balance = public.player_wallets.balance + excluded.balance,
+            updated_at = now();
+
+          insert into public.wallet_transactions(
+            career_id, currency_id, amount, transaction_type,
+            reference_type, reference_id, metadata
+          ) values (
+            v_career_id,
+            'jures',
+            v_reward_amount,
+            'reward',
+            'oab_exam_attempt',
+            v_attempt_id::text,
+            jsonb_build_object(
+              'examSlug',v_exam.slug,
+              'examMode',v_mode,
+              'score',v_score,
+              'totalQuestions',v_total,
+              'passingScore',v_passing_score
+            )
+          );
+
+          v_reward_granted := true;
+        end if;
       end if;
-      v_new_career_stage := 'ADVOGADO_CONTRATADO';
 
     elsif v_exam.exam_type = 'mestrado' then
       update public.careers
       set master_level = greatest(master_level, v_exam.target_level),
           academic_degree = 'MESTRE',
           last_played_at = now()
-      where id = p_career_id and user_id = v_uid;
+      where id = v_career_id and user_id = v_uid;
       v_new_master_level := v_exam.target_level;
 
     elsif v_exam.exam_type = 'doutorado' then
@@ -187,19 +285,19 @@ begin
       set doctorate_level = greatest(doctorate_level, v_exam.target_level),
           academic_degree = 'DOUTOR',
           last_played_at = now()
-      where id = p_career_id and user_id = v_uid;
+      where id = v_career_id and user_id = v_uid;
       v_new_doctorate_level := v_exam.target_level;
 
     elsif v_exam.exam_type = 'concurso_juiz' then
       update public.careers
       set career_stage = 'MAGISTRADO_SUBSTITUTO', last_played_at = now()
-      where id = p_career_id and user_id = v_uid;
+      where id = v_career_id and user_id = v_uid;
       v_new_career_stage := 'MAGISTRADO_SUBSTITUTO';
 
     elsif v_exam.exam_type = 'concurso_desembargador' then
       update public.careers
       set career_stage = 'DESEMBARGADOR', last_played_at = now()
-      where id = p_career_id and user_id = v_uid;
+      where id = v_career_id and user_id = v_uid;
       v_new_career_stage := 'DESEMBARGADOR';
     end if;
 
@@ -207,7 +305,7 @@ begin
       insert into public.career_events (
         career_id, user_id, event_type, title, description, metadata
       ) values (
-        p_career_id,
+        v_career_id,
         v_uid,
         upper(v_exam.exam_type) || '_PASSED',
         'Aprovação: ' || v_exam.title,
@@ -220,6 +318,8 @@ begin
           'totalQuestions',v_total,
           'passingScore',v_passing_score,
           'mode',v_mode,
+          'rewardAmount',v_reward_amount,
+          'rewardCurrency','jures',
           'targetLevel',v_exam.target_level
         )
       );
@@ -238,6 +338,10 @@ begin
     'examType', v_exam.exam_type,
     'examMode', v_mode,
     'durationLimitSeconds', v_duration_limit_seconds,
+    'rewardAmount', v_reward_amount,
+    'rewardCurrency', 'jures',
+    'rewardSymbol', 'JR$',
+    'rewardGranted', v_reward_granted,
     'targetLevel', v_exam.target_level,
     'newMasterLevel', v_new_master_level,
     'newDoctorateLevel', v_new_doctorate_level,
