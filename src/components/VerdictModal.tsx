@@ -9,6 +9,7 @@ import {
   Clock,
   ArrowRight,
   CheckCircle2,
+  Laptop,
 } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { CelebrationBurst } from './CelebrationBurst/CelebrationBurst';
@@ -57,7 +58,6 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
       {isWin && <CelebrationBurst intensity={promotedTierObj ? 'strong' : 'normal'} />}
 
       <div className="relative w-full max-w-2xl bg-[#161618] border border-[#2A2A2E] rounded-2xl shadow-2xl overflow-hidden text-[#E0E0E0] my-6">
-        {/* Top Court Banner */}
         <div
           className={`p-6 text-center border-b relative overflow-hidden bg-[#111113] ${
             isWin ? 'border-b-[#34D399]/40' : 'border-b-[#F87171]/40'
@@ -92,7 +92,6 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
             </div>
           )}
 
-          {/* Official Stamp badge */}
           <div className="mt-4 inline-block">
             <div
               className={`px-4 py-1.5 rounded-lg font-mono font-bold text-xs border ${
@@ -106,7 +105,6 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
           </div>
         </div>
 
-        {/* Career Promotion Announcement Banner (if achieved) */}
         {promotedTierObj && (
           <div className="border-b border-[#C5A059]/35 bg-gradient-to-r from-[#C5A059] via-[#D9B96E] to-[#C5A059] px-6 py-5 text-[#0A0A0B] shadow-lg">
             <div className="flex items-start gap-4">
@@ -128,7 +126,6 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
           </div>
         )}
 
-        {/* Sentence Text & Judge's Reasoning */}
         <div className="p-6 space-y-4 text-xs sm:text-sm bg-[#0A0A0B]">
           <div className="p-4 bg-[#161618] rounded-xl border border-[#2A2A2E] space-y-2">
             <div className="flex items-center justify-between text-[#888888] text-xs">
@@ -142,9 +139,7 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
             </p>
           </div>
 
-          {/* Rewards Grid */}
           <div className="grid grid-cols-3 gap-3 text-center">
-            {/* Dinheiro */}
             <div className="p-3 bg-[#161618] rounded-xl border border-[#2A2A2E]">
               <Coins size={18} className="mx-auto text-[#34D399] mb-1" />
               <span className="text-[10px] text-[#888888] uppercase tracking-wider block font-mono">Honorários</span>
@@ -153,7 +148,6 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
               </span>
             </div>
 
-            {/* XP */}
             <div className="p-3 bg-[#161618] rounded-xl border border-[#2A2A2E]">
               <Sparkles size={18} className="mx-auto text-[#60A5FA] mb-1" />
               <span className="text-[10px] text-[#888888] uppercase tracking-wider block font-mono">Experiência</span>
@@ -162,7 +156,6 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
               </span>
             </div>
 
-            {/* Reputação */}
             <div className="p-3 bg-[#161618] rounded-xl border border-[#2A2A2E]">
               <Award size={18} className="mx-auto text-[#C5A059] mb-1" />
               <span className="text-[10px] text-[#888888] uppercase tracking-wider block font-mono">Reputação</span>
@@ -172,7 +165,20 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
             </div>
           </div>
 
-          {/* Time Analysis */}
+          {(result.socialJuridicoBonus || 0) > 0 && (
+            <div className="flex items-start gap-3 rounded-xl border border-[#C5A059]/30 bg-[#C5A059]/[0.07] p-3.5">
+              <div className="rounded-lg bg-[#C5A059]/15 p-2 text-[#C5A059]">
+                <Laptop size={17} />
+              </div>
+              <div>
+                <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-[#C5A059]">Apoio tecnológico utilizado</span>
+                <p className="mt-1 text-xs leading-relaxed text-[#CFC4AA]">
+                  As ferramentas simuladas do Notebook Social Jurídico contribuíram com <strong className="text-[#F1D79D]">+{result.socialJuridicoBonus} pontos</strong> para a preparação do caso. O limite máximo de apoio tecnológico é de 10 pontos por processo.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="p-3 bg-[#161618] rounded-xl border border-[#2A2A2E] flex items-center justify-between text-xs text-[#888888]">
             <div className="flex items-center gap-1.5">
               <Clock size={14} className="text-[#C5A059]" />
@@ -184,7 +190,6 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
           </div>
         </div>
 
-        {/* Footer Next Case Action */}
         <div className="p-5 bg-[#111113] border-t border-[#2A2A2E] flex items-center justify-end">
           <button
             onClick={() => {
