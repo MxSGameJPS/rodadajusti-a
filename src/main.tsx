@@ -5,6 +5,7 @@ import { AuthGate } from './components/AuthGate';
 import { AuthRouteSync } from './components/AuthRouteSync';
 import { CinematicIntroGate } from './components/CinematicIntroGate/CinematicIntroGate';
 import { DisciplinaryDefenseExperienceV2 } from './components/DisciplinaryDefenseExperienceV2';
+import { EthicalDilemmaExperience } from './components/EthicalDilemmaExperience';
 import { ProfessionalProfileExperience } from './components/ProfessionalProfileExperience';
 import { hydrateCaseCatalog } from './lib/caseRepository';
 import './index.css';
@@ -19,6 +20,7 @@ async function bootstrap() {
         <AuthGate>
           <App />
           <ProfessionalProfileExperience />
+          <EthicalDilemmaExperience />
           <DisciplinaryDefenseExperienceV2 />
         </AuthGate>
       </CinematicIntroGate>
