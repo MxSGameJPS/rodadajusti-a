@@ -4,7 +4,6 @@ import App from './App.tsx';
 import { AuthGate } from './components/AuthGate';
 import { AuthRouteSync } from './components/AuthRouteSync';
 import { CinematicIntroGate } from './components/CinematicIntroGate/CinematicIntroGate';
-import { SocialJuridicoExperience } from './components/SocialJuridicoExperience';
 import { hydrateCaseCatalog } from './lib/caseRepository';
 import './index.css';
 
@@ -17,7 +16,6 @@ async function bootstrap() {
       <CinematicIntroGate>
         <AuthGate>
           <App />
-          <SocialJuridicoExperience />
         </AuthGate>
       </CinematicIntroGate>
     </StrictMode>,
