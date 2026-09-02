@@ -1,12 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Briefcase, ExternalLink, FileText, Scale, ShieldCheck, Sparkles, User, X } from 'lucide-react';
 import { sound } from '../utils/sound';
 
 const HOME_URL = 'https://socialjuridico.com.br/?utm_source=rota-da-justica&utm_medium=game&utm_campaign=terminal_social_juridico';
 const LAWYER_URL = 'https://socialjuridico.com.br/sou-advogado?utm_source=rota-da-justica&utm_medium=game&utm_campaign=terminal_social_juridico';
+const OPEN_SOCIAL_JURIDICO_EVENT = 'rota:open-social-juridico';
 
 export const SocialJuridicoExperience: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const openFromHeader = () => setIsOpen(true);
+    window.addEventListener(OPEN_SOCIAL_JURIDICO_EVENT, openFromHeader);
+    return () => window.removeEventListener(OPEN_SOCIAL_JURIDICO_EVENT, openFromHeader);
+  }, []);
 
   const openExternal = (url: string) => {
     sound.playClick();
@@ -22,7 +29,7 @@ export const SocialJuridicoExperience: React.FC = () => {
           sound.playClick();
           setIsOpen(true);
         }}
-        className="fixed bottom-4 right-4 z-[70] max-w-[calc(100vw-2rem)] rounded-2xl border border-[#C5A059]/50 bg-[#111113]/95 px-4 py-3 text-left shadow-2xl backdrop-blur-md transition-all hover:border-[#C5A059] hover:bg-[#161618]"
+        className="fixed bottom-6 right-6 z-[70] hidden max-w-[320px] rounded-2xl border border-[#C5A059]/50 bg-[#111113]/95 px-4 py-3 text-left shadow-2xl backdrop-blur-md transition-all hover:border-[#C5A059] hover:bg-[#161618] 2xl:block"
       >
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#C5A059] text-[#0A0A0B]">
@@ -37,16 +44,16 @@ export const SocialJuridicoExperience: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-[#0A0A0B]/90 p-4 backdrop-blur-md">
-          <div className="my-6 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-[#C5A059]/30 bg-[#111113] text-[#E0E0E0] shadow-2xl">
-            <div className="flex items-center justify-between border-b border-[#2A2A2E] bg-[#161618] px-5 py-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#C5A059]/40 bg-[#0A0A0B] text-[#C5A059]">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-[#0A0A0B]/90 p-2 backdrop-blur-md sm:p-4">
+          <div className="my-3 flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-[#C5A059]/30 bg-[#111113] text-[#E0E0E0] shadow-2xl sm:my-6 sm:max-h-[90vh]">
+            <div className="flex items-center justify-between border-b border-[#2A2A2E] bg-[#161618] px-4 py-3 sm:px-5 sm:py-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#C5A059]/40 bg-[#0A0A0B] text-[#C5A059] sm:h-11 sm:w-11">
                   <Scale size={22} />
                 </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#C5A059]">Rota da Justiça</span>
-                  <h2 className="text-lg font-bold font-serif">Terminal Social Jurídico</h2>
+                <div className="min-w-0">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#C5A059] sm:text-[10px]">Rota da Justiça</span>
+                  <h2 className="truncate font-serif text-base font-bold sm:text-lg">Terminal Social Jurídico</h2>
                 </div>
               </div>
               <button
@@ -55,19 +62,20 @@ export const SocialJuridicoExperience: React.FC = () => {
                   sound.playClick();
                   setIsOpen(false);
                 }}
-                className="rounded-lg border border-[#2A2A2E] bg-[#1A1A1D] p-2 text-[#888888] transition-colors hover:text-[#E0E0E0]"
+                aria-label="Fechar Terminal Social Jurídico"
+                className="shrink-0 rounded-lg border border-[#2A2A2E] bg-[#1A1A1D] p-2 text-[#888888] transition-colors hover:text-[#E0E0E0]"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="flex-1 space-y-5 overflow-y-auto p-5 sm:p-6">
-              <div className="rounded-2xl border border-[#C5A059]/30 bg-[#C5A059]/10 p-5">
+            <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:space-y-5 sm:p-6">
+              <div className="rounded-2xl border border-[#C5A059]/30 bg-[#C5A059]/10 p-4 sm:p-5">
                 <div className="mb-2 flex items-center gap-2 text-[#C5A059]">
                   <Sparkles size={17} />
-                  <span className="text-[10px] font-bold uppercase tracking-[0.16em]">Da simulação para a vida profissional</span>
+                  <span className="text-[9px] font-bold uppercase tracking-[0.14em] sm:text-[10px] sm:tracking-[0.16em]">Da simulação para a vida profissional</span>
                 </div>
-                <p className="text-sm leading-relaxed text-[#D6D6D6]">
+                <p className="text-xs leading-relaxed text-[#D6D6D6] sm:text-sm">
                   No Rota da Justiça você investiga casos fictícios, administra prazos e constrói sua carreira. O Social Jurídico faz parte desse universo como a ponte entre tecnologia, pessoas e profissionais do Direito.
                 </p>
               </div>
@@ -98,18 +106,18 @@ export const SocialJuridicoExperience: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 border-t border-[#2A2A2E] bg-[#0D0D0E] p-4 sm:flex-row sm:justify-end">
+            <div className="flex flex-col gap-2 border-t border-[#2A2A2E] bg-[#0D0D0E] p-3 sm:flex-row sm:justify-end sm:p-4">
               <button
                 type="button"
                 onClick={() => openExternal(HOME_URL)}
-                className="flex items-center justify-center gap-2 rounded-xl border border-[#2A2A2E] bg-[#1A1A1D] px-5 py-3 text-xs font-bold text-[#E0E0E0] transition-colors hover:border-[#C5A059]/50"
+                className="flex items-center justify-center gap-2 rounded-xl border border-[#2A2A2E] bg-[#1A1A1D] px-4 py-3 text-xs font-bold text-[#E0E0E0] transition-colors hover:border-[#C5A059]/50 sm:px-5"
               >
                 Conhecer o Social Jurídico <ExternalLink size={14} />
               </button>
               <button
                 type="button"
                 onClick={() => openExternal(LAWYER_URL)}
-                className="flex items-center justify-center gap-2 rounded-xl bg-[#C5A059] px-5 py-3 text-xs font-bold uppercase tracking-wider text-[#0A0A0B] transition-colors hover:bg-[#D4B475]"
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#C5A059] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#0A0A0B] transition-colors hover:bg-[#D4B475] sm:px-5"
               >
                 Sou advogado <ExternalLink size={14} />
               </button>
