@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import { AuthGate } from './components/AuthGate';
 import { AuthRouteSync } from './components/AuthRouteSync';
+import { CareerIntroGate } from './components/CareerIntroGate/CareerIntroGate';
 import { CinematicIntroGate } from './components/CinematicIntroGate/CinematicIntroGate';
 import { DisciplinaryDefenseExperienceV2 } from './components/DisciplinaryDefenseExperienceV2';
 import { EthicalDilemmaExperience } from './components/EthicalDilemmaExperience';
@@ -19,11 +20,13 @@ async function bootstrap() {
       <AuthRouteSync />
       <CinematicIntroGate>
         <AuthGate>
-          <App />
-          <ProfessionalProfileExperience />
-          <EthicalDilemmaExperience />
-          <MisconductConsequenceExperience />
-          <DisciplinaryDefenseExperienceV2 />
+          <CareerIntroGate>
+            <App />
+            <ProfessionalProfileExperience />
+            <EthicalDilemmaExperience />
+            <MisconductConsequenceExperience />
+            <DisciplinaryDefenseExperienceV2 />
+          </CareerIntroGate>
         </AuthGate>
       </CinematicIntroGate>
     </StrictMode>,
