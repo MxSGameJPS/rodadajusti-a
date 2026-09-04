@@ -4,6 +4,7 @@ import { sound } from '../utils/sound';
 import { supabase } from '../lib/supabase';
 import { getSuggestedPlayerName } from '../lib/authProfile';
 import { CelebrationBurst } from './CelebrationBurst/CelebrationBurst';
+import { OfficeWelcomeDialog } from './OfficeWelcomeDialog';
 
 interface NewGameModalProps {
   isOpen: boolean;
@@ -11,6 +12,8 @@ interface NewGameModalProps {
 }
 
 type InitialFocus = 'civil' | 'consumidor' | 'empresarial';
+
+const OFFICE_WELCOME_PENDING_KEY = 'rota_office_welcome_pending_v1';
 
 const FOCUS_OPTIONS: Array<{
   id: InitialFocus;
@@ -34,15 +37,29 @@ const FOCUS_OPTIONS: Array<{
   },
 ];
 
+function readPendingWelcomeName() {
+  try {
+    const raw = localStorage.getItem(OFFICE_WELCOME_PENDING_KEY);
+    if (!raw) return '';
+
+    const parsed = JSON.parse(raw) as { playerName?: string };
+    return typeof parsed.playerName === 'string' ? parsed.playerName.trim() : '';
+  } catch {
+    return '';
+  }
+}
+
 export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGame }) => {
-  const [playerName, setPlayerName] = useState('Novo Personagem');
-  const [didHydrateAuthName, setDidHydrateAuthName] = useState(!supabase);
+  const pendingWelcomeName = readPendingWelcomeName();
+  const [playerName, setPlayerName] = useState(pendingWelcomeName || 'Novo Personagem');
+  const [didHydrateAuthName, setDidHydrateAuthName] = useState(!supabase || Boolean(pendingWelcomeName));
   const [selectedFocus, setSelectedFocus] = useState<InitialFocus>('civil');
   const [isAcceptingOffer, setIsAcceptingOffer] = useState(false);
+  const [isOfficeWelcomeOpen, setIsOfficeWelcomeOpen] = useState(Boolean(pendingWelcomeName));
   const startTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!isOpen || didHydrateAuthName || !supabase) return;
+    if (!isOpen || didHydrateAuthName || isOfficeWelcomeOpen || !supabase) return;
 
     let active = true;
 
@@ -57,7 +74,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
     return () => {
       active = false;
     };
-  }, [didHydrateAuthName, isOpen]);
+  }, [didHydrateAuthName, isOfficeWelcomeOpen, isOpen]);
 
   useEffect(
     () => () => {
@@ -68,6 +85,8 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
 
   if (!isOpen) return null;
 
+  const normalizedPlayerName = playerName.trim() || 'Novo Personagem';
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (isAcceptingOffer) return;
@@ -75,9 +94,40 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
     sound.playVictory();
     setIsAcceptingOffer(true);
     startTimerRef.current = window.setTimeout(() => {
-      onStartNewGame(playerName.trim() || 'Novo Personagem');
+      try {
+        localStorage.setItem(
+          OFFICE_WELCOME_PENDING_KEY,
+          JSON.stringify({ playerName: normalizedPlayerName }),
+        );
+      } catch {
+        // O onboarding continua funcionando mesmo sem persistência local.
+      }
+
+      setIsAcceptingOffer(false);
+      setIsOfficeWelcomeOpen(true);
     }, 1900);
   };
+
+  const handleWelcomeComplete = () => {
+    try {
+      localStorage.removeItem(OFFICE_WELCOME_PENDING_KEY);
+    } catch {
+      // ignore
+    }
+
+    setIsOfficeWelcomeOpen(false);
+    onStartNewGame(normalizedPlayerName);
+  };
+
+  if (isOfficeWelcomeOpen) {
+    return (
+      <OfficeWelcomeDialog
+        isOpen
+        playerName={normalizedPlayerName}
+        onComplete={handleWelcomeComplete}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-[#050506]/92 px-3 py-5 backdrop-blur-md sm:px-6 sm:py-8">
