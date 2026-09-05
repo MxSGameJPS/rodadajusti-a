@@ -7,6 +7,21 @@ import type {
   SupervisorReview,
 } from '../types/game';
 
+export interface OfficeTaskChallengeOption {
+  id: string;
+  label: string;
+}
+
+export interface OfficeTaskChallengeStep {
+  id: string;
+  context: string;
+  prompt: string;
+  options: OfficeTaskChallengeOption[];
+  correctOptionId: string;
+  successFeedback: string;
+  retryFeedback: string;
+}
+
 export interface OfficeStageTask {
   id: string;
   stage: 'ESTAGIARIO' | 'ESTAGIARIO_SENIOR';
@@ -22,6 +37,7 @@ export interface OfficeStageTask {
     deadlineManagement?: number;
     supervisorTrust?: number;
   };
+  challengeSteps: OfficeTaskChallengeStep[];
 }
 
 export interface PromotionRequirement {
@@ -63,6 +79,34 @@ export const OFFICE_STAGE_TASKS: OfficeStageTask[] = [
     xpReward: 55,
     moneyReward: 120,
     deltas: { diligence: 3, deadlineManagement: 4, supervisorTrust: 2 },
+    challengeSteps: [
+      {
+        id: 'prazos-01',
+        context: 'A agenda tem três compromissos: uma peça vence hoje às 18h e ainda aguarda documento do cliente; uma reunião interna é amanhã; uma pesquisa sem prazo definido foi solicitada para a semana.',
+        prompt: 'Qual item deve receber prioridade imediata?',
+        options: [
+          { id: 'a', label: 'A reunião interna de amanhã, porque envolve toda a equipe.' },
+          { id: 'b', label: 'A peça que vence hoje, confirmando também o documento pendente.' },
+          { id: 'c', label: 'A pesquisa sem prazo, para adiantar trabalho futuro.' },
+        ],
+        correctOptionId: 'b',
+        successFeedback: 'Correto. Você identificou o risco mais imediato e vinculou o prazo à pendência que pode impedir a entrega.',
+        retryFeedback: 'O escritório precisa priorizar primeiro aquilo que pode perder utilidade hoje. Reavalie o impacto do vencimento.',
+      },
+      {
+        id: 'prazos-02',
+        context: 'Ao conferir a agenda, você percebe que o compromisso foi anotado, mas não há confirmação de quem ficará responsável pela conferência final.',
+        prompt: 'Qual é a conduta mais segura?',
+        options: [
+          { id: 'a', label: 'Presumir que o advogado responsável já viu a agenda.' },
+          { id: 'b', label: 'Apagar o compromisso e cadastrá-lo novamente depois.' },
+          { id: 'c', label: 'Registrar a pendência e confirmar imediatamente o responsável pela entrega.' },
+        ],
+        correctOptionId: 'c',
+        successFeedback: 'Boa. Agenda sem responsável definido ainda é risco. Você fechou a lacuna antes que ela virasse problema.',
+        retryFeedback: 'Não basta o prazo estar cadastrado. Pense em como garantir que alguém assumiu efetivamente a responsabilidade.',
+      },
+    ],
   },
   {
     id: 'intern-jurisprudencia',
@@ -73,6 +117,34 @@ export const OFFICE_STAGE_TASKS: OfficeStageTask[] = [
     xpReward: 70,
     moneyReward: 140,
     deltas: { technique: 4, diligence: 2, supervisorTrust: 2 },
+    challengeSteps: [
+      {
+        id: 'juris-01',
+        context: 'Você encontrou três julgados. Um tem palavras muito parecidas com o caso, mas trata de contexto jurídico diferente. Outro enfrenta diretamente a mesma controvérsia, embora use termos menos semelhantes. O terceiro é uma notícia sobre julgamento.',
+        prompt: 'Qual material merece maior peso na pesquisa?',
+        options: [
+          { id: 'a', label: 'O julgado que enfrenta diretamente a mesma controvérsia jurídica.' },
+          { id: 'b', label: 'O julgado com mais palavras iguais ao relato do cliente.' },
+          { id: 'c', label: 'A notícia, porque é mais fácil de resumir.' },
+        ],
+        correctOptionId: 'a',
+        successFeedback: 'Exato. A utilidade vem da razão jurídica aplicável ao problema, não apenas de coincidência de palavras.',
+        retryFeedback: 'Procure o material que realmente resolve a controvérsia jurídica semelhante, e não apenas o que parece parecido visualmente.',
+      },
+      {
+        id: 'juris-02',
+        context: 'O Dr. Roberto pediu uma síntese de uma página. Você tem cinco decisões potencialmente úteis.',
+        prompt: 'Como entregar uma pesquisa profissional?',
+        options: [
+          { id: 'a', label: 'Copiar longos trechos de todas as decisões sem comentar.' },
+          { id: 'b', label: 'Selecionar os precedentes mais pertinentes e explicar, em poucas linhas, por que ajudam ou limitam a tese.' },
+          { id: 'c', label: 'Entregar somente os links e deixar a leitura para o supervisor.' },
+        ],
+        correctOptionId: 'b',
+        successFeedback: 'Correto. Pesquisa útil economiza tempo do supervisor e mostra o raciocínio por trás da seleção.',
+        retryFeedback: 'A tarefa não é apenas localizar decisões; é transformar a pesquisa em informação útil para quem vai decidir a estratégia.',
+      },
+    ],
   },
   {
     id: 'intern-documentos',
@@ -83,6 +155,34 @@ export const OFFICE_STAGE_TASKS: OfficeStageTask[] = [
     xpReward: 50,
     moneyReward: 110,
     deltas: { diligence: 4, supervisorTrust: 2 },
+    challengeSteps: [
+      {
+        id: 'docs-01',
+        context: 'A pasta do cliente contém duas cópias idênticas de um comprovante, um documento legível e um arquivo sem identificação clara.',
+        prompt: 'Qual é a melhor primeira organização?',
+        options: [
+          { id: 'a', label: 'Manter tudo como está para não correr risco de apagar nada.' },
+          { id: 'b', label: 'Separar duplicidades, identificar o documento válido e marcar o arquivo duvidoso para conferência.' },
+          { id: 'c', label: 'Excluir todo arquivo que não esteja perfeitamente nomeado.' },
+        ],
+        correctOptionId: 'b',
+        successFeedback: 'Certo. Você preservou o que importa, reduziu ruído e deixou a dúvida claramente sinalizada para conferência.',
+        retryFeedback: 'Organização não significa apagar indiscriminadamente nem aceitar duplicidade. O objetivo é clareza e rastreabilidade.',
+      },
+      {
+        id: 'docs-02',
+        context: 'Ao final da triagem, falta justamente um documento mencionado pelo cliente como essencial ao fato principal.',
+        prompt: 'O que deve constar na entrega ao supervisor?',
+        options: [
+          { id: 'a', label: 'Nada. É melhor não destacar o que está faltando.' },
+          { id: 'b', label: 'Uma pendência objetiva informando qual documento ainda precisa ser solicitado e por quê.' },
+          { id: 'c', label: 'Um documento substituto criado a partir do relato do cliente.' },
+        ],
+        correctOptionId: 'b',
+        successFeedback: 'Perfeito. A lacuna ficou visível antes da petição e poderá ser sanada pelo escritório.',
+        retryFeedback: 'Uma pasta organizada também precisa deixar claro o que ainda não existe. Nunca se inventa documento para preencher lacuna.',
+      },
+    ],
   },
   {
     id: 'intern-minuta',
@@ -93,6 +193,34 @@ export const OFFICE_STAGE_TASKS: OfficeStageTask[] = [
     xpReward: 80,
     moneyReward: 160,
     deltas: { technique: 4, diligence: 2, supervisorTrust: 3 },
+    challengeSteps: [
+      {
+        id: 'minuta-01',
+        context: 'Você recebeu relato do cliente, documentos básicos e a orientação jurídica do advogado responsável.',
+        prompt: 'Qual estrutura torna a minuta mais fácil de revisar?',
+        options: [
+          { id: 'a', label: 'Misturar fatos, argumentos e pedidos em ordem cronológica livre.' },
+          { id: 'b', label: 'Separar fatos relevantes, fundamentos jurídicos e pedidos de forma lógica.' },
+          { id: 'c', label: 'Começar pelos pedidos e deixar os fatos para o final.' },
+        ],
+        correctOptionId: 'b',
+        successFeedback: 'Boa estrutura. O supervisor consegue conferir se cada fundamento conversa com os fatos e com o que foi pedido.',
+        retryFeedback: 'Pense na revisão: a peça precisa permitir que outra pessoa identifique rapidamente fatos, fundamento e conclusão.',
+      },
+      {
+        id: 'minuta-02',
+        context: 'Existe uma informação importante no relato do cliente, mas ela ainda não está comprovada pelos documentos disponíveis.',
+        prompt: 'Como tratar isso na minuta?',
+        options: [
+          { id: 'a', label: 'Apresentar como fato incontroverso para fortalecer a peça.' },
+          { id: 'b', label: 'Omitir definitivamente a informação do dossiê.' },
+          { id: 'c', label: 'Sinalizar a informação e a necessidade de confirmação/prova antes da versão final.' },
+        ],
+        correctOptionId: 'c',
+        successFeedback: 'Correto. Você não transformou uma alegação ainda não comprovada em certeza documental.',
+        retryFeedback: 'Minuta supervisionada também serve para apontar riscos. Não trate como comprovado aquilo que ainda depende de confirmação.',
+      },
+    ],
   },
   {
     id: 'senior-instrucao-probatoria',
@@ -103,6 +231,34 @@ export const OFFICE_STAGE_TASKS: OfficeStageTask[] = [
     xpReward: 95,
     moneyReward: 210,
     deltas: { technique: 2, diligence: 5, supervisorTrust: 3 },
+    challengeSteps: [
+      {
+        id: 'instrucao-01',
+        context: 'A tese depende de três fatos centrais. Dois estão bem documentados; o terceiro aparece apenas em uma mensagem sem contexto completo.',
+        prompt: 'Qual é a conclusão mais responsável antes do protocolo?',
+        options: [
+          { id: 'a', label: 'A instrução está completa porque já existem várias páginas no dossiê.' },
+          { id: 'b', label: 'Existe uma lacuna relevante; é preciso buscar confirmação do terceiro fato ou ajustar a estratégia.' },
+          { id: 'c', label: 'Basta anexar a mensagem e deixar o juiz descobrir o contexto.' },
+        ],
+        correctOptionId: 'b',
+        successFeedback: 'Isso. Quantidade de documentos não substitui prova do fato que realmente sustenta a tese.',
+        retryFeedback: 'Auditoria probatória exige comparar cada ponto importante da tese com aquilo que efetivamente o demonstra.',
+      },
+      {
+        id: 'instrucao-02',
+        context: 'Você encontra dois documentos com datas incompatíveis entre si, ambos aparentemente relevantes.',
+        prompt: 'Qual deve ser o próximo passo?',
+        options: [
+          { id: 'a', label: 'Anexar os dois sem comentar para aumentar o volume probatório.' },
+          { id: 'b', label: 'Escolher o que favorece o cliente e ocultar o outro.' },
+          { id: 'c', label: 'Interromper a conclusão, verificar a origem e esclarecer a inconsistência antes de usar o material.' },
+        ],
+        correctOptionId: 'c',
+        successFeedback: 'Perfeito. Inconsistência detectada antes do protocolo é problema controlável; depois, pode comprometer a credibilidade da prova.',
+        retryFeedback: 'Como Sênior, sua função é justamente impedir que contradições não verificadas avancem para o processo.',
+      },
+    ],
   },
   {
     id: 'senior-audiencia',
@@ -113,6 +269,34 @@ export const OFFICE_STAGE_TASKS: OfficeStageTask[] = [
     xpReward: 105,
     moneyReward: 230,
     deltas: { technique: 4, deadlineManagement: 3, supervisorTrust: 3 },
+    challengeSteps: [
+      {
+        id: 'audiencia-01',
+        context: 'O dossiê tem dez fatos, mas apenas três estão realmente controvertidos entre as partes.',
+        prompt: 'Como deve começar o roteiro?',
+        options: [
+          { id: 'a', label: 'Pelos três fatos controvertidos e pelo objetivo de esclarecimento de cada um.' },
+          { id: 'b', label: 'Por perguntas genéricas sobre toda a vida das partes.' },
+          { id: 'c', label: 'Por uma lista aleatória de perguntas para evitar previsibilidade.' },
+        ],
+        correctOptionId: 'a',
+        successFeedback: 'Correto. O roteiro passa a ter finalidade: esclarecer exatamente o que ainda está em disputa.',
+        retryFeedback: 'Audiência eficiente não é quantidade de perguntas; é foco nos fatos que precisam ser esclarecidos.',
+      },
+      {
+        id: 'audiencia-02',
+        context: 'Uma pergunta do roteiro já pressupõe que a testemunha concorda com um fato que ainda está em disputa.',
+        prompt: 'Qual ajuste é mais adequado?',
+        options: [
+          { id: 'a', label: 'Manter a pergunta porque ela conduz à resposta desejada.' },
+          { id: 'b', label: 'Reformular de modo claro, buscando o fato sem embutir a conclusão na própria pergunta.' },
+          { id: 'c', label: 'Apagar todas as perguntas sobre esse tema.' },
+        ],
+        correctOptionId: 'b',
+        successFeedback: 'Boa. A pergunta passa a buscar informação em vez de apenas confirmar uma narrativa pronta.',
+        retryFeedback: 'O roteiro deve ajudar a esclarecer fatos, não apenas induzir respostas que parecem convenientes.',
+      },
+    ],
   },
   {
     id: 'senior-minuta-complexa',
@@ -123,6 +307,34 @@ export const OFFICE_STAGE_TASKS: OfficeStageTask[] = [
     xpReward: 120,
     moneyReward: 260,
     deltas: { technique: 5, diligence: 2, supervisorTrust: 4 },
+    challengeSteps: [
+      {
+        id: 'complexa-01',
+        context: 'A minuta possui três pedidos, mas somente dois têm indicação clara da prova que os sustenta.',
+        prompt: 'Antes de enviar ao supervisor, o que você deve fazer?',
+        options: [
+          { id: 'a', label: 'Manter os três pedidos; a fundamentação jurídica basta.' },
+          { id: 'b', label: 'Verificar a base fática/probatória do terceiro pedido e justificar sua manutenção ou retirá-lo.' },
+          { id: 'c', label: 'Adicionar um quarto pedido para equilibrar a peça.' },
+        ],
+        correctOptionId: 'b',
+        successFeedback: 'Correto. A autonomia do Sênior aparece quando ele consegue explicar por que cada pedido está no processo.',
+        retryFeedback: 'Uma peça complexa não melhora com mais pedidos; melhora quando cada conclusão tem suporte identificável.',
+      },
+      {
+        id: 'complexa-02',
+        context: 'Há duas estratégias juridicamente possíveis. Uma é mais agressiva, mas depende de prova ainda frágil; a outra é mais conservadora e está bem sustentada pelo dossiê.',
+        prompt: 'Como apresentar isso ao Dr. Roberto?',
+        options: [
+          { id: 'a', label: 'Escolher a mais agressiva sem mencionar o risco.' },
+          { id: 'b', label: 'Apresentar as duas opções, apontar o risco probatório e justificar a recomendação.' },
+          { id: 'c', label: 'Evitar tomar posição e pedir que ele faça toda a análise.' },
+        ],
+        correctOptionId: 'b',
+        successFeedback: 'Exatamente. Sênior não é quem decide sozinho tudo; é quem consegue entregar análise, risco e recomendação fundamentada.',
+        retryFeedback: 'Autonomia profissional inclui comunicar riscos e justificar a decisão proposta, não escondê-los nem transferir toda análise ao supervisor.',
+      },
+    ],
   },
   {
     id: 'senior-preparatorio-oab',
@@ -133,6 +345,34 @@ export const OFFICE_STAGE_TASKS: OfficeStageTask[] = [
     xpReward: 130,
     moneyReward: 0,
     deltas: { technique: 4, ethics: 2, supervisorTrust: 3 },
+    challengeSteps: [
+      {
+        id: 'oab-interna-01',
+        context: 'Durante a preparação de um caso, aparece um documento que favorece muito o cliente, mas sua origem não pode ser confirmada.',
+        prompt: 'Qual é a postura profissional adequada?',
+        options: [
+          { id: 'a', label: 'Usar o documento porque ele favorece a tese.' },
+          { id: 'b', label: 'Verificar autenticidade e origem antes de considerar seu uso processual.' },
+          { id: 'c', label: 'Alterar o arquivo para eliminar os sinais de dúvida.' },
+        ],
+        correctOptionId: 'b',
+        successFeedback: 'Correto. Técnica sem integridade probatória não é bom exercício profissional.',
+        retryFeedback: 'A preparação para a OAB dentro do jogo também mede responsabilidade ética. Prova duvidosa precisa ser verificada, não aproveitada cegamente.',
+      },
+      {
+        id: 'oab-interna-02',
+        context: 'Você percebe que não sabe responder com segurança uma questão técnica importante da peça que está revisando.',
+        prompt: 'Qual atitude demonstra maturidade profissional?',
+        options: [
+          { id: 'a', label: 'Inventar uma resposta plausível para não parecer inseguro.' },
+          { id: 'b', label: 'Pesquisar fonte confiável e, se necessário, levar a dúvida ao supervisor antes da conclusão.' },
+          { id: 'c', label: 'Ignorar a questão e finalizar a peça.' },
+        ],
+        correctOptionId: 'b',
+        successFeedback: 'Boa. Saber identificar limite, pesquisar e validar é parte da competência profissional que o exame pretende consolidar.',
+        retryFeedback: 'Maturidade não é fingir certeza. É reconhecer a dúvida e resolvê-la antes que vire erro profissional.',
+      },
+    ],
   },
 ];
 
