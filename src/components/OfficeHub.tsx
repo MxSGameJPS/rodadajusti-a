@@ -3,6 +3,7 @@ import { PlayerProfile, LegalCase } from '../types/game';
 import { GAME_CASES } from '../data/cases';
 import { CAREER_TIERS } from '../data/careers';
 import { getAvailableCasesForCareer } from '../lib/caseRules';
+import { getOabPreparationStatus } from '../lib/internCareerEngine';
 import {
   Briefcase,
   Scale,
@@ -198,6 +199,11 @@ export const OfficeHub: React.FC<OfficeHubProps> = ({
     player.careerTier === 'ESTAGIARIO_SENIOR' &&
     player.casesSolved >= 4 &&
     !player.oabRegistration;
+  const oabPreparation = getOabPreparationStatus({
+    casesSolved: player.casesSolved,
+    performance: player.officePerformance,
+    discipline: player.officeDiscipline,
+  });
 
   const guidanceOwnerKey = useMemo(
     () => normalizeGuidanceOwner(player),
@@ -320,11 +326,12 @@ export const OfficeHub: React.FC<OfficeHubProps> = ({
               </h2>
               <p className="text-xs sm:text-sm text-[#AAAAAA] mt-1 max-w-xl leading-relaxed">
                 Você está atuando como <strong className="text-[#C5A059] font-semibold">{currentTier.title}</strong>.
-                {player.careerTier === 'ESTAGIARIO' && ' Conclua 2 casos com êxito para alcançar a promoção a Estagiário Sênior.'}
+                {player.careerTier === 'ESTAGIARIO' &&
+                  ' Sua promoção agora depende do conjunto da atuação: casos, experiência, tarefas supervisionadas, diligência e confiança do Dr. Roberto.'}
                 {player.careerTier === 'ESTAGIARIO_SENIOR' && player.casesSolved < 4 &&
-                  ' Conclua 4 casos com êxito para liberar o Exame da Ordem.'}
+                  ' A autonomia aumentou. Consolide sua técnica, cumpra responsabilidades de Sênior e avance até o marco do Exame da Ordem.'}
                 {needsOabExam &&
-                  ' Seus requisitos práticos foram atingidos. Agora a aprovação no Exame da Ordem é obrigatória para se tornar Advogado Contratado.'}
+                  ' O marco do Exame da Ordem foi liberado. A avaliação interna do escritório continua indicando o seu nível de preparação antes da prova.'}
                 {player.careerTier !== 'ESTAGIARIO' && player.careerTier !== 'ESTAGIARIO_SENIOR' &&
                   ' Continue acumulando experiência jurídica para avançar na carreira.'}
               </p>
@@ -356,7 +363,7 @@ export const OfficeHub: React.FC<OfficeHubProps> = ({
                 <div>
                   <div className="flex flex-wrap gap-2 mb-2">
                     <span className="px-2 py-1 rounded-md bg-[#C5A059]/10 border border-[#C5A059]/25 text-[#C5A059] text-[9px] font-black uppercase tracking-wider font-mono">
-                      Requisito de carreira
+                      Marco de carreira
                     </span>
                     <span className="px-2 py-1 rounded-md bg-[#60A5FA]/10 border border-[#60A5FA]/25 text-[#93C5FD] text-[9px] font-black uppercase tracking-wider font-mono">
                       Simulado real • 46º EOU • 2026
@@ -366,9 +373,14 @@ export const OfficeHub: React.FC<OfficeHubProps> = ({
                     Exame da Ordem desbloqueado
                   </h3>
                   <p className="text-xs sm:text-sm text-[#C9C2B1] mt-2 max-w-2xl leading-relaxed">
-                    Você atingiu os requisitos práticos de Estagiário Sênior. Para avançar, realizará um
+                    Você atingiu o marco prático mínimo de Estagiário Sênior. Para avançar, realizará um
                     <strong className="text-[#F2DCA9]"> simulado baseado no 46º Exame de Ordem Unificado real, aplicado em 2026</strong>,
                     com 80 questões e correção automática.
+                  </p>
+                  <p className={`text-[11px] mt-2 max-w-2xl ${oabPreparation.ready ? 'text-[#7FC5A7]' : 'text-[#C2A96E]'}`}>
+                    {oabPreparation.ready
+                      ? 'Avaliação interna: o Dr. Roberto considera sua preparação profissional adequada para enfrentar a prova.'
+                      : `Avaliação interna: preparação em ${oabPreparation.progressPercent}%. Você pode tentar o exame, mas o escritório recomenda concluir mais responsabilidades de Sênior.`}
                   </p>
                   <p className="text-[11px] text-[#8F8B81] mt-2 max-w-2xl">
                     A aprovação e a inscrição emitida existem somente dentro do personagem do Rota da Justiça e não equivalem a credencial profissional real.
@@ -474,7 +486,7 @@ export const OfficeHub: React.FC<OfficeHubProps> = ({
           {availableCases.length === 0 ? (
             <div className="p-5 rounded-xl border border-[#2A2A2E] bg-[#111113] text-sm text-[#AAAAAA]">
               {needsOabExam
-                ? 'Você concluiu os atendimentos disponíveis como Estagiário Sênior. A próxima etapa profissional exige aprovação no Exame da Ordem.'
+                ? 'Você concluiu os atendimentos disponíveis como Estagiário Sênior. O Exame da Ordem já está disponível como próximo marco formal da carreira.'
                 : 'Não há novos casos liberados para o seu nível neste momento. Consulte o histórico ou avance na carreira para desbloquear novos atendimentos.'}
             </div>
           ) : (
