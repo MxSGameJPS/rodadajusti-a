@@ -1,8 +1,14 @@
-import type { PlayerProfile } from '../types/game';
+import type { CareerTierId, PlayerProfile } from '../types/game';
 import { getProfessionalOwnerKey } from './professionalRpg';
 
 const PLAYER_SAVE_KEY = 'rota_da_justica_save_v1';
 const EMPLOYMENT_STORAGE_PREFIX = 'rota_professional_employment_v1:';
+const LAWYER_TIERS = new Set<CareerTierId>([
+  'ADVOGADO_CONTRATADO',
+  'ADVOGADO_SENIOR',
+  'SOCIO_ESCRITORIO',
+  'DONO_ESCRITORIO',
+]);
 
 export const PROFESSIONAL_EMPLOYMENT_UPDATED_EVENT = 'rota:professional-employment-updated';
 
@@ -66,6 +72,10 @@ function patchWorkingPlayer(patch: Partial<PlayerProfile>) {
   }
 }
 
+function resolveCareerTierAfterOnboarding(player: PlayerProfile): CareerTierId {
+  return LAWYER_TIERS.has(player.careerTier) ? player.careerTier : 'ADVOGADO_CONTRATADO';
+}
+
 export function readProfessionalEmploymentState(
   player: PlayerProfile | null | undefined,
 ): ProfessionalEmploymentState | null {
@@ -123,7 +133,6 @@ export function signProfessionalEmploymentContract(player: PlayerProfile, signed
   };
 
   saveProfessionalEmploymentState(player, next);
-  patchWorkingPlayer({ careerTier: 'ADVOGADO_CONTRATADO' });
   return next;
 }
 
@@ -137,7 +146,7 @@ export function completeProfessionalEmploymentOnboarding(player: PlayerProfile) 
   };
 
   saveProfessionalEmploymentState(player, next);
-  patchWorkingPlayer({ careerTier: 'ADVOGADO_CONTRATADO' });
+  patchWorkingPlayer({ careerTier: resolveCareerTierAfterOnboarding(player) });
   return next;
 }
 
