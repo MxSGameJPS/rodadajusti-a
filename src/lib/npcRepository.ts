@@ -1,4 +1,5 @@
 import type { DialogueOption, LocationScene } from '../types/game';
+import { getLegacyNpcAssignmentTemplates } from '../data/legacyNpcAssignments';
 import { isSupabaseConfigured, supabase } from './supabase';
 
 const NPC_CACHE_PREFIX = 'rota_da_justica_case_npcs_cache_v1:';
@@ -249,12 +250,75 @@ function writeCache(caseId: string, assignments: PersistentNpcAssignment[]) {
   }
 }
 
+function npcMatchesLegacyKeys(npc: NpcRow, keys: string[]): boolean {
+  const identities = new Set([
+    normalizeSlug(npc.slug),
+    normalizeSlug(npc.name),
+  ]);
+
+  return keys.some((key) => identities.has(normalizeSlug(key)));
+}
+
+function applyLegacyCompatibility(
+  caseId: string,
+  relations: CaseNpcRow[],
+  npcs: NpcRow[],
+): CaseNpcRow[] {
+  const templates = getLegacyNpcAssignmentTemplates(caseId);
+  if (templates.length === 0) return relations;
+
+  const effective = [...relations];
+
+  templates.forEach((template, index) => {
+    const npc = npcs.find((candidate) => npcMatchesLegacyKeys(candidate, template.npcKeys));
+    if (!npc) {
+      console.warn(
+        `[Rota da Justiça] NPC legado não encontrado para ${caseId}: ${template.npcKeys.join(' / ')}.`,
+      );
+      return;
+    }
+
+    const existingIndex = effective.findIndex((relation) => relation.npc_id === npc.id);
+    if (existingIndex >= 0) {
+      const existing = effective[existingIndex];
+      const currentConfiguration = asRecord(existing.configuration);
+      const locations = resolveLocations(currentConfiguration);
+
+      // Relação criada no Admin tem prioridade. Só completamos relações antigas
+      // que já existiam, mas ainda não diziam em qual diligência o NPC aparece.
+      if (locations.locationIds.length === 0 && locations.locationCategories.length === 0) {
+        effective[existingIndex] = {
+          ...existing,
+          configuration: {
+            ...template.configuration,
+            ...currentConfiguration,
+          },
+        };
+      }
+      return;
+    }
+
+    effective.push({
+      id: `legacy-${normalizeSlug(caseId)}-${normalizeSlug(npc.slug || npc.name)}-${index + 1}`,
+      case_id: caseId,
+      npc_id: npc.id,
+      role_in_case: template.roleInCase,
+      is_required: template.isRequired,
+      sort_order: template.sortOrder,
+      configuration: template.configuration,
+    });
+  });
+
+  return effective;
+}
+
 export function isNpcAvailableAtLocation(
   assignment: PersistentNpcAssignment,
   location: LocationScene,
 ): boolean {
-  // Regra deliberada: NPC persistente nunca aparece automaticamente.
-  // O rota-admin precisa vinculá-lo explicitamente a um local ou categoria.
+  // Regra deliberada: NPC persistente nunca aparece automaticamente por cargo.
+  // Relações novas vêm do rota-admin; casos antigos usam apenas o mapa explícito
+  // de compatibilidade definido em legacyNpcAssignments.ts.
   if (assignment.locationIds.length === 0 && assignment.locationCategories.length === 0) {
     return false;
   }
@@ -271,6 +335,7 @@ export async function loadCaseNpcAssignments(caseId: string): Promise<Persistent
   }
 
   try {
+    const legacyTemplates = getLegacyNpcAssignmentTemplates(caseId);
     const { data: relations, error: relationError } = await supabase
       .from('case_npcs')
       .select('id,case_id,npc_id,role_in_case,is_required,sort_order,configuration')
@@ -278,25 +343,38 @@ export async function loadCaseNpcAssignments(caseId: string): Promise<Persistent
       .order('sort_order', { ascending: true });
 
     if (relationError) throw relationError;
-    if (!Array.isArray(relations) || relations.length === 0) {
+
+    const relationRows = Array.isArray(relations) ? relations as CaseNpcRow[] : [];
+    if (relationRows.length === 0 && legacyTemplates.length === 0) {
       writeCache(caseId, []);
       return [];
     }
 
-    const npcIds = unique(relations.map((item) => asString(item.npc_id)).filter(Boolean));
-    if (npcIds.length === 0) return [];
-
-    const { data: npcs, error: npcError } = await supabase
+    const npcIds = unique(relationRows.map((item) => asString(item.npc_id)).filter(Boolean));
+    let npcQuery = supabase
       .from('npcs')
       .select('id,slug,name,role_type,profession,specialization,jurisdiction,professional_profile,personality,dialogue_library,knowledge,metadata')
-      .in('id', npcIds)
       .eq('status', 'published')
       .eq('is_active', true);
 
+    // Casos já migrados continuam buscando apenas os NPCs vinculados. Para os
+    // legados, consultamos o pequeno catálogo publicado para localizar Henrique
+    // e Luana mesmo antes de existir uma linha física em case_npcs.
+    if (legacyTemplates.length === 0) {
+      if (npcIds.length === 0) {
+        writeCache(caseId, []);
+        return [];
+      }
+      npcQuery = npcQuery.in('id', npcIds);
+    }
+
+    const { data: npcs, error: npcError } = await npcQuery;
     if (npcError) throw npcError;
 
-    const npcById = new Map((npcs || []).map((npc) => [npc.id, npc as NpcRow]));
-    const normalized = (relations as CaseNpcRow[])
+    const npcRows = (npcs || []) as NpcRow[];
+    const effectiveRelations = applyLegacyCompatibility(caseId, relationRows, npcRows);
+    const npcById = new Map(npcRows.map((npc) => [npc.id, npc]));
+    const normalized = effectiveRelations
       .map((relation) => {
         const npc = npcById.get(relation.npc_id);
         return npc ? normalizeAssignment(relation, npc) : null;
