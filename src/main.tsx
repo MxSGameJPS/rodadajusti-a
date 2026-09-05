@@ -10,16 +10,32 @@ import { DisciplinaryDefenseExperienceV2 } from './components/DisciplinaryDefens
 import { EthicalDilemmaExperience } from './components/EthicalDilemmaExperience';
 import { MisconductConsequenceExperience } from './components/MisconductConsequenceExperience';
 import { PostOabEmploymentExperience } from './components/PostOabEmploymentExperience/PostOabEmploymentExperience';
+import { ProfessionalDemoRoute } from './components/ProfessionalDemoRoute/ProfessionalDemoRoute';
 import { ProfessionalPhone } from './components/ProfessionalPhone/ProfessionalPhone';
 import { ProfessionalProfileEmploymentGate } from './components/ProfessionalProfileEmploymentGate';
 import { ProfessionalTreatmentGate } from './components/ProfessionalTreatmentGate';
 import { hydrateCaseCatalog } from './lib/caseRepository';
 import './index.css';
 
+function isProfessionalDemoRoute() {
+  return window.location.pathname === '/demo/advogado' || window.location.pathname === '/demo/contratacao';
+}
+
 async function bootstrap() {
   await hydrateCaseCatalog();
 
-  createRoot(document.getElementById('root')!).render(
+  const root = createRoot(document.getElementById('root')!);
+
+  if (isProfessionalDemoRoute()) {
+    root.render(
+      <StrictMode>
+        <ProfessionalDemoRoute />
+      </StrictMode>,
+    );
+    return;
+  }
+
+  root.render(
     <StrictMode>
       <AccountSaveBoundary>
         <AuthRouteSync />
