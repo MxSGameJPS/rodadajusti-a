@@ -9,7 +9,8 @@ import {
   isPublicExamEligible,
   isSpecialCareerEligible,
 } from '../lib/progressionRules';
-import { X, Award, CheckCircle2, Lock, Scale, Landmark, GraduationCap, Crown } from 'lucide-react';
+import { getInternPromotionStatus, normalizeOfficePerformance } from '../lib/internCareerEngine';
+import { X, Award, CheckCircle2, Lock, Scale, Landmark, GraduationCap, Crown, ClipboardCheck } from 'lucide-react';
 import { sound } from '../utils/sound';
 
 interface CareerModalProps {
@@ -27,6 +28,13 @@ export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, playe
   const extendedPlayer = player as PlayerProfile & { masterLevel?: number; doctorateLevel?: number };
   const masterLevel = Number(extendedPlayer.masterLevel || 0);
   const doctorateLevel = Number(extendedPlayer.doctorateLevel || 0);
+  const performance = normalizeOfficePerformance(player.officePerformance);
+  const internPromotion = getInternPromotionStatus({
+    casesSolved: player.casesSolved,
+    xp: player.xp,
+    performance,
+    discipline: player.officeDiscipline,
+  });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A0A0B]/85 backdrop-blur-md overflow-y-auto">
@@ -55,11 +63,47 @@ export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, playe
               <div className="mt-2 flex flex-wrap gap-2">{[...CAREER_LEVEL_SUMMARY.internship.levels, ...CAREER_LEVEL_SUMMARY.advocacy.levels].map((label) => <span key={label} className="px-2 py-1 rounded border border-[#2A2A2E] bg-[#161618]">{label}</span>)}</div>
             </div>
 
+            {player.careerTier === 'ESTAGIARIO' && (
+              <div className="rounded-xl border border-[#C5A059]/30 bg-[#C5A059]/[0.06] p-4">
+                <div className="flex items-start gap-3">
+                  <ClipboardCheck size={18} className="mt-0.5 shrink-0 text-[#C5A059]" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <span className="text-[9px] font-black uppercase tracking-[0.14em] text-[#C5A059]">Avaliação para Estagiário Sênior</span>
+                        <h4 className="mt-1 text-sm font-bold text-[#E6E1D8]">{internPromotion.progressPercent}% dos requisitos cumpridos</h4>
+                      </div>
+                      <span className="rounded-md border border-[#C5A059]/25 bg-[#0D0D0F] px-2 py-1 font-mono text-[10px] text-[#D5BE82]">Confiança {performance.supervisorTrust}/100</span>
+                    </div>
+                    <p className="mt-2 text-[11px] leading-relaxed text-[#A9A294]">A promoção deixou de ser automática por quantidade de casos. O Dr. Roberto considera prática, tarefas supervisionadas, diligência, confiança e situação disciplinar.</p>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      {internPromotion.requirements.map((requirement) => (
+                        <div key={requirement.id} className="flex items-center justify-between gap-2 rounded-lg border border-[#29282A] bg-[#0D0D0F] px-3 py-2">
+                          <span className="flex min-w-0 items-center gap-2 text-[10px] text-[#B8B3A9]">
+                            {requirement.met ? <CheckCircle2 size={13} className="shrink-0 text-[#34D399]" /> : <Lock size={12} className="shrink-0 text-[#77777D]" />}
+                            <span className="truncate">{requirement.label}</span>
+                          </span>
+                          <strong className={`shrink-0 font-mono text-[9px] ${requirement.met ? 'text-[#79D9B2]' : 'text-[#85858B]'}`}>{requirement.current}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-3">
               {tiers.filter(t => t.category === 'advocacia' || t.category === 'gestao').map((tier) => {
                 const isCurrent = player.careerTier === tier.id;
-                const unlocked = player.casesSolved >= tier.minCasesSolved && player.xp >= tier.minXp && player.reputation >= tier.minReputation;
-                return <CareerTierCard key={tier.id} title={tier.title} description={tier.description} current={isCurrent} unlocked={unlocked} salary={tier.salaryBaseMonthly} requirements={`${tier.minCasesSolved} casos • ${tier.minXp} XP • ${tier.minReputation}% reputação`} perks={tier.perks}/>;
+                const isSeniorTier = tier.id === 'ESTAGIARIO_SENIOR';
+                const alreadyPastIntern = player.careerTier !== 'ESTAGIARIO';
+                const unlocked = isSeniorTier
+                  ? alreadyPastIntern || internPromotion.eligible
+                  : player.casesSolved >= tier.minCasesSolved && player.xp >= tier.minXp && player.reputation >= tier.minReputation;
+                const requirements = isSeniorTier
+                  ? '2 casos • 350 XP • 2 tarefas • diligência 58 • confiança 58 • vínculo ativo'
+                  : `${tier.minCasesSolved} casos • ${tier.minXp} XP • ${tier.minReputation}% reputação`;
+                return <CareerTierCard key={tier.id} title={tier.title} description={tier.description} current={isCurrent} unlocked={unlocked} salary={tier.salaryBaseMonthly} requirements={requirements} perks={tier.perks}/>;
               })}
             </div>
           </section>
