@@ -99,6 +99,20 @@ function savePhoneState(player: PlayerProfile, state: PhoneConversationState) {
   }
 }
 
+function sameRelevantPlayer(left: PlayerProfile | null, right: PlayerProfile) {
+  if (!left) return false;
+  return (
+    left.cloudCareerId === right.cloudCareerId &&
+    left.name === right.name &&
+    left.careerTier === right.careerTier &&
+    left.activeCase?.caseId === right.activeCase?.caseId &&
+    left.activeCase?.hoursSpent === right.activeCase?.hoursSpent &&
+    left.gameCurrentDay === right.gameCurrentDay &&
+    left.gameCurrentMonth === right.gameCurrentMonth &&
+    left.gameCurrentYear === right.gameCurrentYear
+  );
+}
+
 function autoReply(contactId: ContactId, hasActiveCase: boolean) {
   if (contactId === 'ROBERTO') {
     return hasActiveCase
@@ -168,7 +182,7 @@ export const ProfessionalPhone: React.FC = () => {
         return;
       }
 
-      setPlayer(current);
+      setPlayer((existing) => (sameRelevantPlayer(existing, current) ? existing : current));
       setPhoneState((existing) => existing || readPhoneState(current));
     };
 
@@ -189,7 +203,7 @@ export const ProfessionalPhone: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!player || !phoneState || phoneState.handledWelcomeCall || welcomeTimerRef.current !== null) return;
+    if (!player || !phoneState || phoneState.handledWelcomeCall || welcomeTimerRef.current !== null) return undefined;
 
     welcomeTimerRef.current = window.setTimeout(() => {
       setIncomingContactId('MARIANA');
@@ -202,7 +216,24 @@ export const ProfessionalPhone: React.FC = () => {
         welcomeTimerRef.current = null;
       }
     };
-  }, [player, phoneState]);
+  }, [player?.cloudCareerId, player?.name, phoneState?.handledWelcomeCall]);
+
+  useEffect(() => {
+    if (!player || !phoneState || !activeCase || !player.activeCase) return;
+    const notificationId = `case-assigned-${player.activeCase.caseId}`;
+    if (phoneState.messages.some((message) => message.id === notificationId)) return;
+
+    const notification: PhoneMessage = {
+      id: notificationId,
+      contactId: 'MARIANA',
+      direction: 'IN',
+      text: `O Dr. Roberto atribuiu o caso ${activeCase.code} a você. Ele já está ativo no seu CRM do Social Jurídico. Cliente: ${activeCase.client.name}.`,
+      sentAt: clockNow(),
+    };
+    const next = { ...phoneState, messages: [...phoneState.messages, notification] };
+    setPhoneState(next);
+    savePhoneState(player, next);
+  }, [activeCase?.id, phoneState, player]);
 
   useEffect(() => {
     if (callStatus !== 'CONNECTED') return undefined;
@@ -271,9 +302,10 @@ export const ProfessionalPhone: React.FC = () => {
     if (!text || !selectedContact.available) return;
 
     sound.playClick();
+    const replyContactId = selectedContactId;
     const outgoing: PhoneMessage = {
       id: `msg-out-${Date.now()}`,
-      contactId: selectedContactId,
+      contactId: replyContactId,
       direction: 'OUT',
       text,
       sentAt: clockNow(),
@@ -287,9 +319,9 @@ export const ProfessionalPhone: React.FC = () => {
         if (!current) return current;
         const incoming: PhoneMessage = {
           id: `msg-in-${Date.now()}`,
-          contactId: selectedContactId,
+          contactId: replyContactId,
           direction: 'IN',
-          text: autoReply(selectedContactId, Boolean(activeCase)),
+          text: autoReply(replyContactId, Boolean(activeCase)),
           sentAt: clockNow(),
         };
         const replied = { ...current, messages: [...current.messages, incoming] };
