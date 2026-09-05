@@ -12,6 +12,7 @@ import {
   X
 } from 'lucide-react';
 import { sound } from '../utils/sound';
+import { PersistentNpcDiligence } from './PersistentNpcDiligence';
 
 interface LocationSceneProps {
   currentCase: LegalCase;
@@ -91,7 +92,7 @@ export const LocationScene: React.FC<LocationSceneProps> = ({
               }}
               className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[11px] font-bold uppercase tracking-wider ${activeTab === 'dialogos' ? 'bg-[#C5A059] text-[#0A0A0B]' : 'text-[#888888] hover:text-[#E0E0E0]'}`}
             >
-              <MessageSquare size={13} /> Interrogar ({currentLocation.characters.length})
+              <MessageSquare size={13} /> Conversas
             </button>
             <button
               type="button"
@@ -122,79 +123,88 @@ export const LocationScene: React.FC<LocationSceneProps> = ({
           </div>
 
           {activeTab === 'dialogos' && (
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-12">
-              {currentLocation.characters.length > 1 && (
-                <div className="space-y-2 md:col-span-4">
-                  <span className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-[#888888]">Pessoas no local</span>
-                  {currentLocation.characters.map((character) => (
-                    <button
-                      key={character.id}
-                      type="button"
-                      onClick={() => {
-                        sound.playClick();
-                        setSelectedCharacterId(character.id);
-                        setActiveSpeech(null);
-                      }}
-                      className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all ${selectedCharacter?.id === character.id ? 'border-[#C5A059] bg-[#1A1A1D]' : 'border-[#2A2A2E] bg-[#111113] hover:border-[#3A3A42]'}`}
-                    >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#2A2A2E] bg-[#1A1A1D] font-bold text-[#C5A059]">{character.name.charAt(0)}</div>
-                      <div className="min-w-0">
-                        <h4 className="truncate text-sm font-bold text-[#E0E0E0]">{character.name}</h4>
-                        <p className="truncate text-[11px] text-[#888888]">{character.role}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+            <div className="space-y-5">
+              <PersistentNpcDiligence
+                currentCase={currentCase}
+                currentLocation={currentLocation}
+                activeState={activeState}
+                onAskQuestion={onAskQuestion}
+              />
 
-              <div className={`${currentLocation.characters.length > 1 ? 'md:col-span-8' : 'md:col-span-12'} space-y-4`}>
-                {selectedCharacter ? (
-                  <>
-                    <div className="flex items-start gap-4 rounded-xl border border-[#2A2A2E] bg-[#161618] p-4">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#C5A059] text-lg font-bold text-[#0A0A0B]">{selectedCharacter.name.charAt(0)}</div>
-                      <div className="w-full space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-base font-bold text-[#E0E0E0]">{selectedCharacter.name}</h3>
-                          <span className="rounded border border-[#2A2A2E] bg-[#1A1A1D] px-2 py-0.5 text-[10px] font-semibold text-[#C5A059]">{selectedCharacter.role}</span>
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-12">
+                {currentLocation.characters.length > 1 && (
+                  <div className="space-y-2 md:col-span-4">
+                    <span className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-[#888888]">Personagens deste caso</span>
+                    {currentLocation.characters.map((character) => (
+                      <button
+                        key={character.id}
+                        type="button"
+                        onClick={() => {
+                          sound.playClick();
+                          setSelectedCharacterId(character.id);
+                          setActiveSpeech(null);
+                        }}
+                        className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all ${selectedCharacter?.id === character.id ? 'border-[#C5A059] bg-[#1A1A1D]' : 'border-[#2A2A2E] bg-[#111113] hover:border-[#3A3A42]'}`}
+                      >
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#2A2A2E] bg-[#1A1A1D] font-bold text-[#C5A059]">{character.name.charAt(0)}</div>
+                        <div className="min-w-0">
+                          <h4 className="truncate text-sm font-bold text-[#E0E0E0]">{character.name}</h4>
+                          <p className="truncate text-[11px] text-[#888888]">{character.role}</p>
                         </div>
-                        <div className="rounded-lg border border-[#222226] bg-[#0D0D0E] p-3.5 text-xs italic leading-relaxed text-[#CCCCCC]">“{activeSpeech || selectedCharacter.initialDialogue}”</div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#888888]"><HelpCircle size={14} className="text-[#C5A059]" /> Formular perguntas</span>
-                      {selectedCharacter.dialogueOptions.map((option) => {
-                        const isAsked = activeState.askedDialogueIds.includes(option.id);
-                        return (
-                          <button
-                            key={option.id}
-                            type="button"
-                            onClick={() => {
-                              setActiveSpeech(option.answer);
-                              if (isAsked) {
-                                sound.playPaper();
-                                return;
-                              }
-                              onAskQuestion(selectedCharacter, option);
-                            }}
-                            className={`flex w-full items-start justify-between gap-3 rounded-xl border p-3.5 text-left transition-all ${isAsked ? 'border-[#222226] bg-[#111113] text-[#AAAAAA] hover:bg-[#161618]' : 'border-[#2A2A2E] bg-[#161618] text-[#E0E0E0] hover:border-[#C5A059]/50 hover:bg-[#1A1A1D]'}`}
-                          >
-                            <div className="flex items-start gap-2.5">
-                              <span className="font-bold text-[#C5A059]">▶</span>
-                              <div>
-                                <p className="text-xs font-semibold leading-snug sm:text-sm">{option.question}</p>
-                                {isAsked && <span className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] text-[#34D399]"><CheckCircle2 size={11} /> Rever resposta sem custo de tempo</span>}
-                              </div>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-1 font-mono text-[11px] text-[#888888]"><Clock size={12} className="text-[#C5A059]" /> {isAsked ? 'revisão' : `+${option.timeCostMinutes} min`}</div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                ) : (
-                  <div className="rounded-xl border border-dashed border-[#2A2A2E] p-8 text-center text-xs text-[#666666]">Nenhuma pessoa disponível para depoimento neste local.</div>
+                      </button>
+                    ))}
+                  </div>
                 )}
+
+                <div className={`${currentLocation.characters.length > 1 ? 'md:col-span-8' : 'md:col-span-12'} space-y-4`}>
+                  {selectedCharacter ? (
+                    <>
+                      <div className="flex items-start gap-4 rounded-xl border border-[#2A2A2E] bg-[#161618] p-4">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#C5A059] text-lg font-bold text-[#0A0A0B]">{selectedCharacter.name.charAt(0)}</div>
+                        <div className="w-full space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-base font-bold text-[#E0E0E0]">{selectedCharacter.name}</h3>
+                            <span className="rounded border border-[#2A2A2E] bg-[#1A1A1D] px-2 py-0.5 text-[10px] font-semibold text-[#C5A059]">{selectedCharacter.role}</span>
+                          </div>
+                          <div className="rounded-lg border border-[#222226] bg-[#0D0D0E] p-3.5 text-xs italic leading-relaxed text-[#CCCCCC]">“{activeSpeech || selectedCharacter.initialDialogue}”</div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#888888]"><HelpCircle size={14} className="text-[#C5A059]" /> Formular perguntas</span>
+                        {selectedCharacter.dialogueOptions.map((option) => {
+                          const isAsked = activeState.askedDialogueIds.includes(option.id);
+                          return (
+                            <button
+                              key={option.id}
+                              type="button"
+                              onClick={() => {
+                                setActiveSpeech(option.answer);
+                                if (isAsked) {
+                                  sound.playPaper();
+                                  return;
+                                }
+                                onAskQuestion(selectedCharacter, option);
+                              }}
+                              className={`flex w-full items-start justify-between gap-3 rounded-xl border p-3.5 text-left transition-all ${isAsked ? 'border-[#222226] bg-[#111113] text-[#AAAAAA] hover:bg-[#161618]' : 'border-[#2A2A2E] bg-[#161618] text-[#E0E0E0] hover:border-[#C5A059]/50 hover:bg-[#1A1A1D]'}`}
+                            >
+                              <div className="flex items-start gap-2.5">
+                                <span className="font-bold text-[#C5A059]">▶</span>
+                                <div>
+                                  <p className="text-xs font-semibold leading-snug sm:text-sm">{option.question}</p>
+                                  {isAsked && <span className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] text-[#34D399]"><CheckCircle2 size={11} /> Rever resposta sem custo de tempo</span>}
+                                </div>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-1 font-mono text-[11px] text-[#888888]"><Clock size={12} className="text-[#C5A059]" /> {isAsked ? 'revisão' : `+${option.timeCostMinutes} min`}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-[#2A2A2E] p-8 text-center text-xs text-[#666666]">Nenhum personagem específico deste caso está disponível para depoimento neste local.</div>
+                  )}
+                </div>
               </div>
             </div>
           )}
