@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { TravelMapTransition } from './TravelMapTransition';
-import { resolveCollectedClueIds } from '../lib/evidenceProgress';
+import { resolveCollectedClueIds, resolveUnlockedLocationIds } from '../lib/evidenceProgress';
 
 interface InvestigationMapProps {
   currentCase: LegalCase;
@@ -40,6 +40,7 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
   const hoursLeft = Math.max(0, currentCase.deadlineHours - activeState.hoursSpent);
   const isTimeRunningOut = hoursLeft <= 12;
   const collectedClueIds = new Set(resolveCollectedClueIds(currentCase, activeState));
+  const unlockedLocationIds = new Set(resolveUnlockedLocationIds(currentCase, activeState));
 
   const getIcon = (iconName: string, className: string) => {
     switch (iconName) {
@@ -137,13 +138,13 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
               <span className="font-bold tracking-widest uppercase text-[#C5A059]">Mapa de Diligências e Locais da Investigação</span>
             </div>
             <span className="text-[11px] text-[#888888] font-mono">
-              {activeState.unlockedLocationIds.length} de {currentCase.locations.length} locais mapeados
+              {unlockedLocationIds.size} de {currentCase.locations.length} locais mapeados
             </span>
           </div>
 
           <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {currentCase.locations.map((location) => {
-              const isUnlocked = activeState.unlockedLocationIds.includes(location.id);
+              const isUnlocked = unlockedLocationIds.has(location.id);
               const isCurrent = activeState.currentLocationId === location.id;
               const cluesInThisLocation = currentCase.availableClues.filter((clue) => clue.locationFoundId === location.id);
               const discoveredCluesCount = cluesInThisLocation.filter((clue) => collectedClueIds.has(clue.id)).length;
