@@ -5,7 +5,7 @@ import { isSupabaseConfigured, supabase } from './supabase';
 import { normalizeCaseCatalog } from './caseRules';
 import { isLegalCase, validateLegalCase } from './caseValidation';
 
-const CASE_CACHE_KEY = 'rota_da_justica_cases_cache_v1';
+const CASE_CACHE_KEY = 'rota_da_justica_cases_cache_v2';
 
 interface CaseRow {
   id: string;
@@ -20,6 +20,7 @@ interface CaseRow {
   reputation_reward: number;
   min_career_tier: LegalCase['minCareerTier'];
   content: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
 }
 
 function getLegacyCatalog(): LegalCase[] {
@@ -52,6 +53,7 @@ function cacheCatalog(cases: LegalCase[]): void {
 
 function rowToCandidate(row: CaseRow): unknown {
   const content = row.content && typeof row.content === 'object' ? row.content : {};
+  const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
   return {
     id: row.id,
     code: row.code,
@@ -70,6 +72,7 @@ function rowToCandidate(row: CaseRow): unknown {
     availableClues: content.availableClues,
     strategies: content.strategies,
     minimumPassingScore: content.minimumPassingScore,
+    reactiveWorld: metadata.reactiveWorld,
   };
 }
 
@@ -84,7 +87,7 @@ export async function loadCaseCatalog(): Promise<LegalCase[]> {
     const { data, error } = await supabase
       .from('cases')
       .select(
-        'id, code, title, area, difficulty, difficulty_stars, deadline_hours, honorarios_reward, xp_reward, reputation_reward, min_career_tier, content, sort_order, version',
+        'id, code, title, area, difficulty, difficulty_stars, deadline_hours, honorarios_reward, xp_reward, reputation_reward, min_career_tier, content, metadata, sort_order, version',
       )
       .eq('is_active', true)
       .eq('status', 'published')
