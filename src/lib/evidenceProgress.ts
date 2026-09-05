@@ -124,3 +124,50 @@ export function resolveCollectedClues(currentCase: LegalCase, activeState: Activ
   const ids = new Set(resolveCollectedClueIds(currentCase, activeState));
   return currentCase.availableClues.filter((clue) => ids.has(clue.id));
 }
+
+/**
+ * Resolve os locais que já deveriam estar acessíveis a partir do progresso real.
+ *
+ * Casos publicados pelo rota-admin podem usar requiredClueOrDialogToUnlock sem
+ * repetir unlocksLocationId em cada interação. O runtime precisa então liberar o
+ * local assim que a pista/diálogo exigido tiver sido concluído. A reconciliação
+ * também aproveita as provas recuperadas de saves anteriores, evitando que uma
+ * regeneração do caso deixe o jogador preso em um mapa impossível de avançar.
+ */
+export function resolveUnlockedLocationIds(currentCase: LegalCase, activeState: ActiveCaseState): string[] {
+  const validLocationIds = new Set(currentCase.locations.map((location) => location.id));
+  const collectedClueIds = new Set(resolveCollectedClueIds(currentCase, activeState));
+  const completedDialogueIds = new Set<string>();
+  const unlocked = new Set<string>();
+
+  for (const locationId of activeState.unlockedLocationIds) {
+    if (validLocationIds.has(locationId)) unlocked.add(locationId);
+  }
+
+  for (const location of currentCase.locations) {
+    if (location.unlockedByDefault) unlocked.add(location.id);
+
+    for (const character of location.characters) {
+      for (const option of character.dialogueOptions) {
+        if (!dialogueWasAsked(activeState, option)) continue;
+        completedDialogueIds.add(option.id);
+        if (option.unlocksLocationId && validLocationIds.has(option.unlocksLocationId)) {
+          unlocked.add(option.unlocksLocationId);
+        }
+      }
+    }
+  }
+
+  for (const location of currentCase.locations) {
+    const requirement = location.requiredClueOrDialogToUnlock;
+    if (!requirement) continue;
+
+    if (collectedClueIds.has(requirement) || completedDialogueIds.has(requirement)) {
+      unlocked.add(location.id);
+    }
+  }
+
+  return currentCase.locations
+    .filter((location) => unlocked.has(location.id))
+    .map((location) => location.id);
+}
