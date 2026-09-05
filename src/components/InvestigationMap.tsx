@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { LegalCase, ActiveCaseState, LocationScene } from '../types/game';
 import {
   Clock,
@@ -15,11 +15,20 @@ import {
   ArrowRight,
   AlertTriangle,
   FileCheck,
-  Scale
+  Scale,
+  Activity,
 } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { TravelMapTransition } from './TravelMapTransition';
 import { resolveCollectedClueIds, resolveUnlockedLocationIds } from '../lib/evidenceProgress';
+import {
+  getCaseReactiveOutcome,
+  getPendingCaseEvent,
+  resolveCaseEventChoice,
+  type UnexpectedCaseEvent,
+  type UnexpectedCaseEventChoice,
+} from '../lib/reactiveWorldStore';
+import { UnexpectedCaseEventModal } from './UnexpectedCaseEventModal';
 
 interface InvestigationMapProps {
   currentCase: LegalCase;
@@ -37,10 +46,24 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
   onOpenCourtroom,
 }) => {
   const [travelTarget, setTravelTarget] = useState<LocationScene | null>(null);
-  const hoursLeft = Math.max(0, currentCase.deadlineHours - activeState.hoursSpent);
+  const [pendingEvent, setPendingEvent] = useState<UnexpectedCaseEvent | null>(null);
+
+  const reactiveOutcome = getCaseReactiveOutcome(currentCase.id);
+  const effectiveHoursSpent = activeState.hoursSpent + reactiveOutcome.timePenaltyHours;
+  const hoursLeft = Math.max(0, currentCase.deadlineHours - effectiveHoursSpent);
   const isTimeRunningOut = hoursLeft <= 12;
   const collectedClueIds = new Set(resolveCollectedClueIds(currentCase, activeState));
   const unlockedLocationIds = new Set(resolveUnlockedLocationIds(currentCase, activeState));
+  const investigationActionCount = activeState.askedDialogueIds.length + activeState.inspectedSpotIds.length + (activeState.socialJuridicoActions?.length || 0);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const nextEvent = getPendingCaseEvent(currentCase, activeState);
+      if (nextEvent) setPendingEvent(nextEvent);
+    }, 320);
+
+    return () => window.clearTimeout(timer);
+  }, [currentCase.id, investigationActionCount, activeState.hoursSpent]);
 
   const getIcon = (iconName: string, className: string) => {
     switch (iconName) {
@@ -71,6 +94,11 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
     onTravelToLocation(destination);
   };
 
+  const resolveUnexpectedEvent = (choice: UnexpectedCaseEventChoice) => {
+    if (!pendingEvent) return;
+    resolveCaseEventChoice(pendingEvent, choice);
+  };
+
   return (
     <>
       <div className="w-full space-y-4">
@@ -81,6 +109,11 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
                 {currentCase.code}
               </span>
               <span className="text-xs text-[#888888] font-semibold tracking-wide">{currentCase.area}</span>
+              {reactiveOutcome.events.length > 0 && (
+                <span className="inline-flex items-center gap-1 rounded border border-[#F59E0B]/25 bg-[#F59E0B]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#E6B85E]">
+                  <Activity size={10} /> {reactiveOutcome.events.length} intercorrência(s)
+                </span>
+              )}
             </div>
             <h2 className="text-base sm:text-lg font-bold font-serif text-[#E0E0E0] mt-1">
               {currentCase.title}
@@ -101,7 +134,10 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
               <Clock size={16} className={isTimeRunningOut ? 'text-[#F87171]' : 'text-[#C5A059]'} />
               <div>
                 <span className="text-[9px] text-[#888888] uppercase tracking-wider block -mb-0.5">Prazo Restante</span>
-                <span>{hoursLeft}h restantes ({activeState.hoursSpent}h decorridas)</span>
+                <span>{hoursLeft}h restantes ({effectiveHoursSpent}h decorridas)</span>
+                {reactiveOutcome.timePenaltyHours > 0 && (
+                  <span className="block text-[9px] font-normal text-[#A78754]">inclui {reactiveOutcome.timePenaltyHours}h consumidas por intercorrências</span>
+                )}
               </div>
             </div>
 
@@ -237,10 +273,17 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
         <TravelMapTransition
           origin={currentLocation}
           destination={travelTarget}
-          caseHoursSpent={activeState.hoursSpent}
+          caseHoursSpent={effectiveHoursSpent}
           onComplete={completeTravel}
         />
       )}
+
+      <UnexpectedCaseEventModal
+        isOpen={!!pendingEvent}
+        event={pendingEvent}
+        onResolve={resolveUnexpectedEvent}
+        onCloseAfterResolution={() => setPendingEvent(null)}
+      />
     </>
   );
 };
