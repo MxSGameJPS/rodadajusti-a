@@ -3,6 +3,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
+  HeartHandshake,
   MapPinPlus,
   MessageCircleMore,
   Search,
@@ -22,6 +23,12 @@ import {
   loadCaseNpcAssignments,
   type PersistentNpcAssignment,
 } from '../lib/npcRepository';
+import {
+  getNpcRelationship,
+  getRelationshipLabel,
+  recordNpcInteraction,
+  relationshipDeltaFromDialogue,
+} from '../lib/reactiveWorldStore';
 import { sound } from '../utils/sound';
 
 interface PersistentNpcDiligenceProps {
@@ -53,6 +60,7 @@ export const PersistentNpcDiligence: React.FC<PersistentNpcDiligenceProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedNpcId, setSelectedNpcId] = useState<string | null>(null);
   const [activeOptionId, setActiveOptionId] = useState<string | null>(null);
+  const [relationshipRevision, setRelationshipRevision] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +91,14 @@ export const PersistentNpcDiligence: React.FC<PersistentNpcDiligenceProps> = ({
 
   const selectedNpc = availableNpcs.find((npc) => npc.assignmentId === selectedNpcId) || null;
   const selectedOption = selectedNpc?.dialogueOptions.find((option) => option.id === activeOptionId) || null;
+  const selectedRelationship = useMemo(() => {
+    if (!selectedNpc) return null;
+    return getNpcRelationship(
+      `persistent-npc:${selectedNpc.npcId}`,
+      selectedNpc.name,
+      selectedNpc.roleInCase || selectedNpc.profession,
+    );
+  }, [selectedNpc, relationshipRevision]);
 
   if (isLoading || availableNpcs.length === 0) return null;
 
@@ -107,7 +123,18 @@ export const PersistentNpcDiligence: React.FC<PersistentNpcDiligenceProps> = ({
       return;
     }
 
-    onAskQuestion(toCharacter(npc), option);
+    const character = toCharacter(npc);
+    const deltas = relationshipDeltaFromDialogue(option);
+    recordNpcInteraction({
+      npcKey: character.id,
+      name: npc.name,
+      role: npc.roleInCase || npc.profession,
+      caseId: currentCase.id,
+      memory: `No caso ${currentCase.code}, você perguntou: “${option.question}”`,
+      ...deltas,
+    });
+    setRelationshipRevision((current) => current + 1);
+    onAskQuestion(character, option);
   };
 
   const revealedClue = selectedOption?.revealsClueId
@@ -133,7 +160,7 @@ export const PersistentNpcDiligence: React.FC<PersistentNpcDiligenceProps> = ({
                 </span>
               </div>
               <p className="mt-0.5 text-[11px] text-[#8F8A82]">
-                Só aparecem aqui os NPCs associados a este caso e a esta diligência pelo Admin.
+                Esses personagens lembram de interações anteriores e a relação profissional continua entre casos.
               </p>
             </div>
           </div>
@@ -148,11 +175,16 @@ export const PersistentNpcDiligence: React.FC<PersistentNpcDiligenceProps> = ({
             const interactionCount = npc.dialogueOptions.filter((option) =>
               activeState.askedDialogueIds.includes(option.id),
             ).length;
+            const relationship = getNpcRelationship(
+              `persistent-npc:${npc.npcId}`,
+              npc.name,
+              npc.roleInCase || npc.profession,
+            );
 
             return (
               <article
                 key={npc.assignmentId}
-                className="group flex min-h-[180px] flex-col justify-between overflow-hidden rounded-xl border border-[#2A2A2E] bg-[#121214] shadow-lg transition hover:border-[#C5A059]/45 hover:bg-[#161618]"
+                className="group flex min-h-[190px] flex-col justify-between overflow-hidden rounded-xl border border-[#2A2A2E] bg-[#121214] shadow-lg transition hover:border-[#C5A059]/45 hover:bg-[#161618]"
               >
                 <div className="flex min-w-0 gap-3 p-4">
                   <div className="relative flex h-24 w-20 shrink-0 items-end justify-center overflow-hidden rounded-xl border border-[#2E2D31] bg-[#0C0C0D]">
@@ -180,9 +212,12 @@ export const PersistentNpcDiligence: React.FC<PersistentNpcDiligenceProps> = ({
                     <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-[#9B968E]">
                       {npc.profession}{npc.specialization ? ` • ${npc.specialization}` : ''}
                     </p>
+                    <span className="mt-2 inline-flex items-center gap-1 rounded-md border border-[#C5A059]/20 bg-[#C5A059]/[0.07] px-2 py-1 text-[9px] font-bold text-[#CDBA8B]">
+                      <HeartHandshake size={11} /> {getRelationshipLabel(relationship)} • confiança {relationship.trust}
+                    </span>
                     {interactionCount > 0 && (
-                      <span className="mt-2 inline-flex items-center gap-1 rounded-md border border-[#34D399]/20 bg-[#34D399]/10 px-2 py-1 font-mono text-[9px] font-bold text-[#6EE7B7]">
-                        <CheckCircle2 size={11} /> {interactionCount} interação(ões)
+                      <span className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-[#34D399]/20 bg-[#34D399]/10 px-2 py-1 font-mono text-[9px] font-bold text-[#6EE7B7]">
+                        <CheckCircle2 size={11} /> {interactionCount} interação(ões) neste caso
                       </span>
                     )}
                   </div>
@@ -238,6 +273,12 @@ export const PersistentNpcDiligence: React.FC<PersistentNpcDiligenceProps> = ({
                   </p>
                   {selectedNpc.jurisdiction && (
                     <p className="mt-1 text-[10px] uppercase tracking-wider text-[#77726C]">{selectedNpc.jurisdiction}</p>
+                  )}
+                  {selectedRelationship && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="rounded-full border border-[#C5A059]/25 bg-[#C5A059]/10 px-2.5 py-1 text-[9px] font-bold text-[#D8C493]">{getRelationshipLabel(selectedRelationship)}</span>
+                      <span className="rounded-full border border-[#2F2E32] bg-[#111113]/80 px-2.5 py-1 font-mono text-[9px] text-[#A39D94]">Confiança {selectedRelationship.trust} • Respeito {selectedRelationship.respect}</span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -325,7 +366,9 @@ export const PersistentNpcDiligence: React.FC<PersistentNpcDiligenceProps> = ({
                 </div>
 
                 <div className="border-t border-[#2A2A2E] bg-[#0C0C0D] px-5 py-3 text-[10px] leading-relaxed text-[#706B65] sm:px-7">
-                  As respostas e efeitos pertencem ao vínculo deste NPC com o caso atual. Relação profissional persistente entre NPC e jogador será ampliada nas próximas etapas.
+                  {selectedRelationship && selectedRelationship.memories.length > 0
+                    ? `Este NPC lembra de ${selectedRelationship.memories.length} interação(ões) relevante(s) com você. A relação profissional continuará sendo usada quando ele aparecer em outros casos.`
+                    : 'Este NPC ainda está formando uma impressão profissional sobre você. As próximas interações ficarão registradas para aparições futuras.'}
                 </div>
               </div>
             </div>

@@ -6,6 +6,7 @@ import type {
   SupervisorReviewSeverity,
 } from '../types/game';
 import { resolveCollectedClueIds } from './evidenceProgress';
+import { getCaseReactiveOutcome } from './reactiveWorldStore';
 
 export type JudicialDecision = {
   score: number;
@@ -69,6 +70,26 @@ function buildJudgeFeedback(
   return 'Vistos. A parte autora não logrou demonstrar, com prova suficiente e adequada, os fatos indispensáveis à pretensão formulada. As lacunas da instrução e da estratégia processual impedem o reconhecimento do direito nos termos requeridos. JULGO IMPROCEDENTE o pedido.';
 }
 
+function appendReactiveFeedback(base: string, eventModifier: number, hearingModifier: number) {
+  const notes: string[] = [];
+
+  if (eventModifier >= 4) {
+    notes.push('As intercorrências surgidas durante a preparação foram administradas com cautela e contribuíram para preservar a coerência da tese.');
+  } else if (eventModifier <= -4) {
+    notes.push('Decisões tomadas diante de intercorrências conhecidas fragilizaram a preparação do processo e reduziram a confiabilidade da estratégia apresentada.');
+  }
+
+  if (hearingModifier >= 5) {
+    notes.push('Em audiência, a atuação foi objetiva, tecnicamente coerente e aderente aos elementos efetivamente constantes dos autos.');
+  } else if (hearingModifier <= -4) {
+    notes.push('A condução da audiência apresentou respostas inadequadas e reduziu a força persuasiva do conjunto probatório, embora o julgamento permaneça vinculado ao conteúdo integral dos autos.');
+  } else if (hearingModifier !== 0) {
+    notes.push('A atuação em audiência teve impacto moderado sobre a apreciação final da causa.');
+  }
+
+  return notes.length > 0 ? `${base} ${notes.join(' ')}` : base;
+}
+
 function determineSupervisorConsequence(
   issues: JudicialIssueCode[],
   missingRequiredCount: number,
@@ -109,7 +130,11 @@ export function evaluatePetition({
   selectedEvidenceIds,
   socialJuridicoBonus,
 }: EvaluatePetitionInput): JudicialDecision {
-  const deadlineMissed = strategyId === '__PRAZO_FATAL_PERDIDO__' || activeState.hoursSpent > currentCase.deadlineHours;
+  const reactiveOutcome = getCaseReactiveOutcome(currentCase.id);
+  const eventModifier = clamp(reactiveOutcome.scoreModifier, -12, 12);
+  const hearingModifier = clamp(reactiveOutcome.hearing?.scoreModifier || 0, -8, 8);
+  const effectiveHoursSpent = activeState.hoursSpent + reactiveOutcome.timePenaltyHours;
+  const deadlineMissed = strategyId === '__PRAZO_FATAL_PERDIDO__' || effectiveHoursSpent > currentCase.deadlineHours;
   const chosenStrategy = currentCase.strategies.find((strategy) => strategy.id === strategyId) || null;
   const resolvedDiscoveredIds = resolveCollectedClueIds(currentCase, activeState);
   const discoveredSet = new Set(resolvedDiscoveredIds);
@@ -179,13 +204,15 @@ export function evaluatePetition({
   const investigationScore = Math.round((crucialInvestigationCoverage * 10) + (generalInvestigationCoverage * 5));
   const deadlineScore = deadlineMissed ? 0 : 5;
 
-  let score = strategyScore + evidenceScore + investigationScore + deadlineScore + socialJuridicoBonus;
+  let score = strategyScore + evidenceScore + investigationScore + deadlineScore + socialJuridicoBonus + eventModifier + hearingModifier;
 
   if (deadlineMissed) score = Math.min(score, 5);
   if (issues.includes('NO_INVESTIGATION') || issues.includes('NO_EVIDENCE')) score = Math.min(score, 20);
   if (requiredClues.length > 0 && selectedRequired.length === 0) score = Math.min(score, 39);
   if (falseEvidence.length > 0) score = Math.min(score, falseEvidence.length > 1 ? 39 : 59);
   if (incompatibleEvidence.length > 0) score = Math.min(score, 64);
+  if (hearingModifier <= -5) score = Math.min(score, 69);
+  if (reactiveOutcome.professionalRisk >= 6) score = Math.min(score, 72);
   score = clamp(Math.round(score), 0, 100);
 
   const success = !deadlineMissed && score >= currentCase.minimumPassingScore;
@@ -221,12 +248,13 @@ export function evaluatePetition({
   };
 
   const consequence = determineSupervisorConsequence(issues, missingRequired.length, requiredClues.length);
+  const baseFeedback = buildJudgeFeedback(currentCase, assessment, verdict);
 
   return {
     score,
     success,
     verdict,
-    feedback: buildJudgeFeedback(currentCase, assessment, verdict),
+    feedback: appendReactiveFeedback(baseFeedback, eventModifier, hearingModifier),
     assessment,
     supervisorSeverity: success ? null : consequence.severity,
     shouldIssueWarning: !success && consequence.warning,
