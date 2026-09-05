@@ -9,9 +9,15 @@ type CinematicIntroGateProps = {
 const INTRO_VIDEO_PATH = '/videos/rota-da-justica-intro.mp4';
 const ENTER_DELAY_MS = 5000;
 
+function preservedPreviewQuery() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('preview') === 'advogado' ? '?preview=advogado' : '';
+}
+
 function navigate(path: string, replace = false) {
-  if (replace) window.history.replaceState({}, '', path);
-  else window.history.pushState({}, '', path);
+  const target = `${path}${preservedPreviewQuery()}`;
+  if (replace) window.history.replaceState({}, '', target);
+  else window.history.pushState({}, '', target);
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
