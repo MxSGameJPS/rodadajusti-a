@@ -34,8 +34,17 @@ import { ConcursoModal } from './components/ConcursoModal';
 import { OfficeManagementModal } from './components/OfficeManagementModal';
 import { OabExamModal } from './components/OabExamModal';
 import { SocialJuridicoExperience } from './components/SocialJuridicoExperience';
+import { InternshipCareerPanel } from './components/InternshipCareerPanel';
+import { InternPromotionCeremonyModal } from './components/InternPromotionCeremonyModal';
 import { evaluatePetition } from './lib/judicialDecisionEngine';
 import { buildSupervisorReview } from './lib/officeDisciplineEngine';
+import {
+  DEFAULT_OFFICE_PERFORMANCE,
+  applyCasePerformance,
+  completeOfficeTask,
+  getInternPromotionStatus,
+  normalizeOfficePerformance,
+} from './lib/internCareerEngine';
 import { sound } from './utils/sound';
 
 const STORAGE_KEY = 'rota_da_justica_save_v1';
@@ -68,6 +77,7 @@ const INITIAL_PLAYER_STATE: PlayerProfile = {
     employmentStatus: 'ACTIVE',
     incidents: [],
   },
+  officePerformance: DEFAULT_OFFICE_PERFORMANCE,
   concursoCompletedPhases: [],
   professionalExamAttempts: [],
   oabRegistration: null,
@@ -118,6 +128,7 @@ function normalizeSavedPlayer(saved: Partial<PlayerProfile>): PlayerProfile {
         ? saved.officeDiscipline!.incidents
         : [],
     },
+    officePerformance: normalizeOfficePerformance(saved.officePerformance),
   };
 }
 
@@ -149,6 +160,7 @@ export default function App() {
   const [verdictCase, setVerdictCase] = useState<LegalCase | null>(null);
   const [promotedTierAnnouncement, setPromotedTierAnnouncement] = useState<CareerTierId | null>(null);
   const [pendingSupervisorReview, setPendingSupervisorReview] = useState<SupervisorReview | null>(null);
+  const [isInternPromotionCeremonyOpen, setIsInternPromotionCeremonyOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -177,6 +189,7 @@ export default function App() {
         employmentStatus: 'ACTIVE',
         incidents: [],
       },
+      officePerformance: { ...DEFAULT_OFFICE_PERFORMANCE, completedTaskIds: [], evaluations: [] },
     };
     setPlayer(freshProfile);
     setIsNewGameModalOpen(false);
@@ -375,6 +388,48 @@ export default function App() {
     });
   };
 
+  const handleCompleteOfficeTask = (taskId: string) => {
+    if (player.activeCase) return;
+
+    const completedDate = `${String(player.gameCurrentDay).padStart(2, '0')}/${String(player.gameCurrentMonth).padStart(2, '0')}/${player.gameCurrentYear}`;
+    const { performance, task } = completeOfficeTask({
+      current: player.officePerformance,
+      careerTier: player.careerTier,
+      taskId,
+      completedDate,
+    });
+
+    if (!task) return;
+
+    const nextXp = player.xp + task.xpReward;
+    const nextMoney = player.money + task.moneyReward;
+    let nextTier = player.careerTier;
+
+    if (player.careerTier === 'ESTAGIARIO') {
+      const promotion = getInternPromotionStatus({
+        casesSolved: player.casesSolved,
+        xp: nextXp,
+        performance,
+        discipline: player.officeDiscipline,
+      });
+      if (promotion.eligible) nextTier = 'ESTAGIARIO_SENIOR';
+    }
+
+    setPlayer((prev) => ({
+      ...prev,
+      xp: nextXp,
+      money: nextMoney,
+      careerTier: nextTier,
+      officePerformance: performance,
+      gameCurrentDay: prev.gameCurrentDay + 1,
+    }));
+
+    if (nextTier === 'ESTAGIARIO_SENIOR' && player.careerTier === 'ESTAGIARIO') {
+      setPromotedTierAnnouncement('ESTAGIARIO_SENIOR');
+      setIsInternPromotionCeremonyOpen(true);
+    }
+  };
+
   const handleSubmitPetition = (strategyId: string, selectedEvidenceIds: string[]) => {
     if (!player.activeCase || !activeCaseData) return;
 
@@ -427,6 +482,16 @@ export default function App() {
 
     const newSolvedCount = decision.success ? player.casesSolved + 1 : player.casesSolved;
     const newFailedCount = !decision.success ? player.casesFailed + 1 : player.casesFailed;
+    const nextXp = player.xp + earnedXp;
+    const nextOfficePerformance = applyCasePerformance({
+      current: player.officePerformance,
+      assessment: decision.assessment,
+      success: decision.success,
+      supervisorReview,
+      caseId: activeCaseData.id,
+      caseTitle: activeCaseData.title,
+      completedDate,
+    });
 
     let newTier = player.careerTier;
     let promotionAnnouncement: CareerTierId | null = null;
@@ -437,9 +502,17 @@ export default function App() {
     } else if (newSolvedCount >= 9 && player.careerTier === 'ADVOGADO_CONTRATADO') {
       newTier = 'ADVOGADO_SENIOR';
       promotionAnnouncement = 'ADVOGADO_SENIOR';
-    } else if (newSolvedCount >= 2 && player.careerTier === 'ESTAGIARIO') {
-      newTier = 'ESTAGIARIO_SENIOR';
-      promotionAnnouncement = 'ESTAGIARIO_SENIOR';
+    } else if (player.careerTier === 'ESTAGIARIO') {
+      const promotion = getInternPromotionStatus({
+        casesSolved: newSolvedCount,
+        xp: nextXp,
+        performance: nextOfficePerformance,
+        discipline: nextDiscipline,
+      });
+      if (promotion.eligible) {
+        newTier = 'ESTAGIARIO_SENIOR';
+        promotionAnnouncement = 'ESTAGIARIO_SENIOR';
+      }
     }
 
     const resultRecord: CaseHistoryRecord = {
@@ -467,7 +540,7 @@ export default function App() {
     setPlayer((prev) => ({
       ...prev,
       money: prev.money + earnedMoney,
-      xp: prev.xp + earnedXp,
+      xp: nextXp,
       reputation: Math.max(0, Math.min(100, prev.reputation + earnedReputation)),
       casesSolved: newSolvedCount,
       casesFailed: newFailedCount,
@@ -475,6 +548,7 @@ export default function App() {
       activeCase: null,
       history: [resultRecord, ...prev.history],
       officeDiscipline: nextDiscipline,
+      officePerformance: nextOfficePerformance,
       gameCurrentDay: prev.gameCurrentDay + 3,
     }));
   };
@@ -633,16 +707,19 @@ export default function App() {
 
         <main className="flex-1 p-3 sm:p-5 flex flex-col">
           {currentView === 'HUB' && (
-            <OfficeHub
-              player={player}
-              onSelectCaseToView={(c) => setSelectedCaseToBrief(c)}
-              onResumeActiveCase={() => setCurrentView('INVESTIGATION_MAP')}
-              onOpenCareerModal={() => setIsCareerModalOpen(true)}
-              onOpenAcademicModal={() => setIsAcademicModalOpen(true)}
-              onOpenConcursoModal={() => setIsConcursoModalOpen(true)}
-              onOpenOfficeModal={() => setIsOfficeModalOpen(true)}
-              onOpenOabExam={() => setIsOabExamOpen(true)}
-            />
+            <>
+              <InternshipCareerPanel player={player} onCompleteTask={handleCompleteOfficeTask} />
+              <OfficeHub
+                player={player}
+                onSelectCaseToView={(c) => setSelectedCaseToBrief(c)}
+                onResumeActiveCase={() => setCurrentView('INVESTIGATION_MAP')}
+                onOpenCareerModal={() => setIsCareerModalOpen(true)}
+                onOpenAcademicModal={() => setIsAcademicModalOpen(true)}
+                onOpenConcursoModal={() => setIsConcursoModalOpen(true)}
+                onOpenOfficeModal={() => setIsOfficeModalOpen(true)}
+                onOpenOabExam={() => setIsOabExamOpen(true)}
+              />
+            </>
           )}
 
           {currentView === 'INVESTIGATION_MAP' && activeCaseData && player.activeCase && (
@@ -695,6 +772,7 @@ export default function App() {
           onClose={() => setIsCourtroomOpen(false)}
           currentCase={activeCaseData}
           activeState={player.activeCase}
+          careerTier={player.careerTier}
           onSubmitPetition={handleSubmitPetition}
         />
       )}
@@ -705,6 +783,7 @@ export default function App() {
           onClose={() => {
             setVerdictResult(null);
             setVerdictCase(null);
+            setPromotedTierAnnouncement(null);
           }}
           result={verdictResult}
           currentCase={verdictCase}
@@ -712,10 +791,16 @@ export default function App() {
           promotedToTier={promotedTierAnnouncement}
           onNextCaseOrHub={() => {
             const review = verdictResult.supervisorReview || null;
+            const promotion = promotedTierAnnouncement;
             setVerdictResult(null);
             setVerdictCase(null);
+            setPromotedTierAnnouncement(null);
             setCurrentView('HUB');
-            if (review) setPendingSupervisorReview(review);
+            if (promotion === 'ESTAGIARIO_SENIOR') {
+              setIsInternPromotionCeremonyOpen(true);
+            } else if (review) {
+              setPendingSupervisorReview(review);
+            }
           }}
         />
       )}
@@ -724,6 +809,12 @@ export default function App() {
         isOpen={!!pendingSupervisorReview}
         review={pendingSupervisorReview}
         onClose={() => setPendingSupervisorReview(null)}
+      />
+
+      <InternPromotionCeremonyModal
+        isOpen={isInternPromotionCeremonyOpen}
+        playerName={player.name || 'Colega'}
+        onClose={() => setIsInternPromotionCeremonyOpen(false)}
       />
 
       <CareerModal
