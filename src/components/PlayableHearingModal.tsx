@@ -1,7 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Gavel, Scale, UserRound, X } from 'lucide-react';
 import type { ActiveCaseState, Clue, LegalCase } from '../types/game';
-import type { PlayableHearingAnswer, PlayableHearingResult } from '../lib/reactiveWorldStore';
+import {
+  getCaseSpecificHearingConfig,
+  type PlayableHearingAnswer,
+  type PlayableHearingResult,
+} from '../lib/reactiveWorldStore';
 import { sound } from '../utils/sound';
 
 interface HearingChoice {
@@ -110,6 +114,31 @@ function buildEvidenceChoices(bestClue: Clue | null, selectedClues: Clue[]): Hea
 }
 
 function buildRounds(currentCase: LegalCase, activeState: ActiveCaseState, selectedEvidenceIds: string[]): HearingRound[] {
+  const specific = getCaseSpecificHearingConfig(currentCase);
+  if (specific?.rounds?.length) {
+    return specific.rounds.map((round) => {
+      const relatedClue = round.relatedClueId
+        ? currentCase.availableClues.find((clue) => clue.id === round.relatedClueId) || null
+        : null;
+      const relatedClueMissing = relatedClue && !selectedEvidenceIds.includes(relatedClue.id);
+      return {
+        id: `admin-${round.id}`,
+        speaker: round.speaker,
+        title: round.title,
+        prompt: relatedClueMissing
+          ? `${round.prompt} Atenção: “${relatedClue.title}” existe na investigação, mas não foi anexada aos autos por você.`
+          : round.prompt,
+        choices: round.choices.map((choice) => ({
+          id: choice.id,
+          label: choice.label,
+          explanation: choice.explanation,
+          impact: choice.impact,
+          correct: choice.impact > 0,
+        })),
+      };
+    });
+  }
+
   const selectedClues = currentCase.availableClues.filter((clue) => selectedEvidenceIds.includes(clue.id));
   const bestClue = strongestSelectedClue(currentCase, selectedEvidenceIds);
   const questionedCharacter = firstQuestionedCharacter(currentCase, activeState);
@@ -247,6 +276,7 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
   onCancel,
   onComplete,
 }) => {
+  const hearingConfig = getCaseSpecificHearingConfig(currentCase);
   const rounds = useMemo(
     () => buildRounds(currentCase, activeState, selectedEvidenceIds),
     [currentCase, activeState, selectedEvidenceIds],
@@ -288,12 +318,15 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
   const finish = () => {
     const totalImpact = answers.reduce((sum, answer) => sum + answer.impact, 0);
     const positive = answers.filter((answer) => answer.impact > 0).length;
-    const performancePercent = Math.max(0, Math.min(100, Math.round(((totalImpact + 12) / 20) * 100)));
-    const summary = totalImpact >= 6
+    const minPossible = rounds.reduce((sum, item) => sum + Math.min(...item.choices.map((choice) => choice.impact)), 0);
+    const maxPossible = rounds.reduce((sum, item) => sum + Math.max(...item.choices.map((choice) => choice.impact)), 0);
+    const range = Math.max(1, maxPossible - minPossible);
+    const performancePercent = Math.max(0, Math.min(100, Math.round(((totalImpact - minPossible) / range) * 100)));
+    const summary = performancePercent >= 75
       ? 'Sua condução foi técnica, objetiva e coerente com o que realmente estava nos autos.'
-      : totalImpact >= 2
+      : performancePercent >= 55
         ? 'A audiência foi conduzida de forma razoável, embora algumas decisões tenham reduzido a força da apresentação oral.'
-        : totalImpact >= -2
+        : performancePercent >= 35
           ? 'A audiência teve oscilações importantes. Parte da estratégia foi preservada, mas houve respostas que enfraqueceram a apresentação.'
           : 'A condução da audiência criou riscos adicionais e reduziu a credibilidade da tese perante o Juízo.';
 
@@ -317,8 +350,8 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#C5A059]/35 bg-[#C5A059]/10 text-[#C5A059]"><Gavel size={22} /></div>
             <div>
               <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[#C5A059]">Audiência de instrução • {currentCase.code}</span>
-              <h2 className="mt-1 font-serif text-xl font-black text-[#F1EEE7]">{currentCase.title}</h2>
-              <p className="mt-1 text-xs text-[#8F8A83]">Suas decisões em audiência passam a integrar a avaliação do magistrado.</p>
+              <h2 className="mt-1 font-serif text-xl font-black text-[#F1EEE7]">{hearingConfig?.title || currentCase.title}</h2>
+              <p className="mt-1 text-xs leading-relaxed text-[#8F8A83]">{hearingConfig?.intro || 'Suas decisões em audiência passam a integrar a avaliação do magistrado.'}</p>
             </div>
           </div>
 

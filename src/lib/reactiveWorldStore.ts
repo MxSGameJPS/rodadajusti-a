@@ -80,7 +80,51 @@ export interface UnexpectedCaseEvent {
   title: string;
   description: string;
   sourceLabel: string;
+  relatedClueId?: string | null;
+  triggerMinActions: number;
+  triggerDeadlineRatio: number | null;
   choices: UnexpectedCaseEventChoice[];
+}
+
+export interface CaseSpecificHearingChoice {
+  id: string;
+  label: string;
+  explanation: string;
+  impact: number;
+}
+
+export interface CaseSpecificHearingRound {
+  id: string;
+  speaker: string;
+  title: string;
+  prompt: string;
+  relatedClueId?: string | null;
+  choices: CaseSpecificHearingChoice[];
+}
+
+export interface CaseSpecificHearingConfig {
+  enabled: boolean;
+  title: string;
+  intro: string;
+  rounds: CaseSpecificHearingRound[];
+}
+
+export interface CaseReactiveWorldConfig {
+  version: 1;
+  events: Array<{
+    id: string;
+    eyebrow: string;
+    title: string;
+    description: string;
+    sourceLabel: string;
+    relatedClueId?: string | null;
+    trigger?: {
+      minActions?: number;
+      deadlineRatio?: number | null;
+    };
+    choices: UnexpectedCaseEventChoice[];
+  }>;
+  hearing: CaseSpecificHearingConfig | null;
 }
 
 interface ReactiveWorldState {
@@ -249,7 +293,17 @@ function actionCount(activeState: ActiveCaseState) {
   );
 }
 
-function caseEvents(currentCase: LegalCase, attemptKey: string): UnexpectedCaseEvent[] {
+export function getCaseReactiveWorldConfig(currentCase: LegalCase): CaseReactiveWorldConfig | null {
+  const raw = (currentCase as LegalCase & { reactiveWorld?: CaseReactiveWorldConfig | null }).reactiveWorld;
+  if (!raw || raw.version !== 1 || !Array.isArray(raw.events)) return null;
+  return raw;
+}
+
+export function getCaseSpecificHearingConfig(currentCase: LegalCase) {
+  return getCaseReactiveWorldConfig(currentCase)?.hearing || null;
+}
+
+function genericCaseEvents(currentCase: LegalCase, attemptKey: string): UnexpectedCaseEvent[] {
   return [
     {
       id: `${currentCase.id}:client-new-info`,
@@ -259,6 +313,8 @@ function caseEvents(currentCase: LegalCase, attemptKey: string): UnexpectedCaseE
       title: `${currentCase.client.name} acrescentou uma informação que não estava no primeiro relato`,
       description: 'O cliente entrou em contato dizendo que lembrou de um fato que pode alterar a leitura do caso. O dado ainda não foi confirmado por documento ou por outra fonte.',
       sourceLabel: 'Cliente',
+      triggerMinActions: 2,
+      triggerDeadlineRatio: null,
       choices: [
         {
           id: 'verify-first',
@@ -297,6 +353,8 @@ function caseEvents(currentCase: LegalCase, attemptKey: string): UnexpectedCaseE
       title: 'Uma pessoa importante para a instrução demonstrou receio de colaborar',
       description: 'Depois das primeiras diligências, uma fonte que poderia contribuir com o esclarecimento dos fatos passou a evitar contato. A forma de abordagem pode preservar ou destruir a cooperação.',
       sourceLabel: 'Diligência',
+      triggerMinActions: 4,
+      triggerDeadlineRatio: null,
       choices: [
         {
           id: 'respectful-contact',
@@ -335,6 +393,8 @@ function caseEvents(currentCase: LegalCase, attemptKey: string): UnexpectedCaseE
       title: 'Surgiu um documento novo apresentado pela parte contrária',
       description: 'A informação chegou perto da fase de protocolo. Ela pode ser irrelevante, autêntica ou capaz de enfraquecer parte da tese. Você precisa decidir quanto tempo investir na análise.',
       sourceLabel: 'Parte contrária',
+      triggerMinActions: 6,
+      triggerDeadlineRatio: 0.55,
       choices: [
         {
           id: 'deep-review',
@@ -368,6 +428,27 @@ function caseEvents(currentCase: LegalCase, attemptKey: string): UnexpectedCaseE
   ];
 }
 
+function caseEvents(currentCase: LegalCase, attemptKey: string): UnexpectedCaseEvent[] {
+  const config = getCaseReactiveWorldConfig(currentCase);
+  if (!config || config.events.length === 0) return genericCaseEvents(currentCase, attemptKey);
+
+  return config.events.map((event, index) => ({
+    id: `${currentCase.id}:admin:${event.id}`,
+    caseId: currentCase.id,
+    attemptKey,
+    eyebrow: event.eyebrow,
+    title: event.title,
+    description: event.description,
+    sourceLabel: event.sourceLabel,
+    relatedClueId: event.relatedClueId || null,
+    triggerMinActions: Math.max(1, Math.round(event.trigger?.minActions ?? ((index + 1) * 2))),
+    triggerDeadlineRatio: typeof event.trigger?.deadlineRatio === 'number'
+      ? Math.max(0, Math.min(1, event.trigger.deadlineRatio))
+      : null,
+    choices: event.choices,
+  }));
+}
+
 export function getPendingCaseEvent(currentCase: LegalCase, activeState: ActiveCaseState) {
   const attemptKey = getCaseAttemptKey(currentCase.id, activeState);
   const outcome = getCaseReactiveOutcome(currentCase.id, activeState);
@@ -377,9 +458,13 @@ export function getPendingCaseEvent(currentCase: LegalCase, activeState: ActiveC
   const effectiveHours = activeState.hoursSpent + outcome.timePenaltyHours;
   const deadlineRatio = currentCase.deadlineHours > 0 ? effectiveHours / currentCase.deadlineHours : 0;
 
-  if (actions >= 2 && !resolved.has(events[0].id)) return events[0];
-  if (actions >= 4 && !resolved.has(events[1].id)) return events[1];
-  if ((actions >= 6 || deadlineRatio >= 0.55) && !resolved.has(events[2].id)) return events[2];
+  for (const event of events) {
+    if (resolved.has(event.id)) continue;
+    if (event.relatedClueId && !activeState.discoveredClueIds.includes(event.relatedClueId)) continue;
+    const actionTrigger = actions >= event.triggerMinActions;
+    const deadlineTrigger = event.triggerDeadlineRatio !== null && deadlineRatio >= event.triggerDeadlineRatio;
+    if (actionTrigger || deadlineTrigger) return event;
+  }
   return null;
 }
 
@@ -425,6 +510,11 @@ export function saveHearingResult(result: PlayableHearingResult) {
 }
 
 export function shouldRunPlayableHearing(currentCase: LegalCase) {
+  const config = getCaseReactiveWorldConfig(currentCase);
+  if (config) {
+    return Boolean(config.hearing && config.hearing.enabled !== false && Array.isArray(config.hearing.rounds) && config.hearing.rounds.length >= 2);
+  }
+
   const hasOralEvidence = currentCase.availableClues.some((clue) => clue.type === 'depoimento');
   const hasPeopleToHear = currentCase.locations.some((location) => location.characters.some((character) => character.dialogueOptions.length > 0));
   return hasOralEvidence || (hasPeopleToHear && currentCase.difficulty !== 'Iniciante');
