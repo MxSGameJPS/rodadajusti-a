@@ -10,6 +10,7 @@ import { DisciplinaryDefenseExperienceV2 } from './components/DisciplinaryDefens
 import { EthicalDilemmaExperience } from './components/EthicalDilemmaExperience';
 import { MisconductConsequenceExperience } from './components/MisconductConsequenceExperience';
 import { ProfessionalProfileExperience } from './components/ProfessionalProfileExperience';
+import { ProfessionalTreatmentGate } from './components/ProfessionalTreatmentGate';
 import { hydrateCaseCatalog } from './lib/caseRepository';
 import './index.css';
 
@@ -24,6 +25,7 @@ async function bootstrap() {
           <AuthGate>
             <CareerIntroGate>
               <App />
+              <ProfessionalTreatmentGate />
               <ProfessionalProfileExperience />
               <EthicalDilemmaExperience />
               <MisconductConsequenceExperience />
