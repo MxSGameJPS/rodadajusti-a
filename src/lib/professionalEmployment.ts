@@ -76,6 +76,12 @@ function resolveCareerTierAfterOnboarding(player: PlayerProfile): CareerTierId {
   return LAWYER_TIERS.has(player.careerTier) ? player.careerTier : 'ADVOGADO_CONTRATADO';
 }
 
+export function isProfessionalPreviewMode() {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.get('preview') === 'advogado';
+}
+
 export function readProfessionalEmploymentState(
   player: PlayerProfile | null | undefined,
 ): ProfessionalEmploymentState | null {
@@ -151,6 +157,8 @@ export function completeProfessionalEmploymentOnboarding(player: PlayerProfile) 
 }
 
 export function isProfessionalEmploymentActive(player: PlayerProfile | null | undefined) {
+  if (isProfessionalPreviewMode()) return true;
+
   const state = readProfessionalEmploymentState(player);
   return Boolean(
     player?.oabRegistration &&
