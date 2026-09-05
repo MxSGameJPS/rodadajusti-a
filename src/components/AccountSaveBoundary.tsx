@@ -45,8 +45,12 @@ function activateSessionStorage(session: Session | null) {
   }
 
   if (!nextUserId) {
-    remove(WORKING_SAVE_KEY);
-    remove(ACTIVE_ACCOUNT_KEY);
+    // Um save legado sem marcador de conta é preservado até o primeiro login,
+    // quando poderá ser migrado para o usuário autenticado sem perda de progresso.
+    if (previousUserId) {
+      remove(WORKING_SAVE_KEY);
+      remove(ACTIVE_ACCOUNT_KEY);
+    }
     return;
   }
 
