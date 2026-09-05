@@ -11,7 +11,7 @@ import { EthicalDilemmaExperience } from './components/EthicalDilemmaExperience'
 import { MisconductConsequenceExperience } from './components/MisconductConsequenceExperience';
 import { PostOabEmploymentExperience } from './components/PostOabEmploymentExperience/PostOabEmploymentExperience';
 import { ProfessionalPhone } from './components/ProfessionalPhone/ProfessionalPhone';
-import { ProfessionalProfileExperience } from './components/ProfessionalProfileExperience';
+import { ProfessionalProfileEmploymentGate } from './components/ProfessionalProfileEmploymentGate';
 import { ProfessionalTreatmentGate } from './components/ProfessionalTreatmentGate';
 import { hydrateCaseCatalog } from './lib/caseRepository';
 import './index.css';
@@ -30,7 +30,7 @@ async function bootstrap() {
               <ProfessionalTreatmentGate />
               <PostOabEmploymentExperience />
               <ProfessionalPhone />
-              <ProfessionalProfileExperience />
+              <ProfessionalProfileEmploymentGate />
               <EthicalDilemmaExperience />
               <MisconductConsequenceExperience />
               <DisciplinaryDefenseExperienceV2 />
