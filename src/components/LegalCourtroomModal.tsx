@@ -189,7 +189,7 @@ export const LegalCourtroomModal: React.FC<LegalCourtroomModalProps> = ({ isOpen
               type="button"
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className={`flex w-full items-center justify-center gap-2 rounded-xl px-6 py-2.5 font-bold uppercase tracking-wider transition-all sm:w-auto ${deadlineExceeded ? 'bg-[#F87171] text-[#0A0A0B] hover:bg-[#FCA5A5]' : submittingWithoutEvidence ? 'bg-[#F59E0B] text-[#0A0B] hover:bg-[#FBBF24]' : 'bg-[#C5A059] text-[#0A0A0B] hover:bg-[#D4B475]'} disabled:cursor-not-allowed disabled:opacity-40`}
+              className={`flex w-full items-center justify-center gap-2 rounded-xl px-6 py-2.5 font-bold uppercase tracking-wider transition-all sm:w-auto ${deadlineExceeded ? 'bg-[#F87171] text-[#0A0A0B] hover:bg-[#FCA5A5]' : submittingWithoutEvidence ? 'bg-[#F59E0B] text-[#0A0A0B] hover:bg-[#FBBF24]' : 'bg-[#C5A059] text-[#0A0A0B] hover:bg-[#D4B475]'} disabled:cursor-not-allowed disabled:opacity-40`}
             >
               <Send size={14} /> {deadlineExceeded ? 'Protocolar fora do prazo' : submittingWithoutEvidence ? 'Protocolar sob risco' : 'Protocolar no PJe'}
             </button>
