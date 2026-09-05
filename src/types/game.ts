@@ -282,6 +282,28 @@ export interface OfficeDisciplineState {
   incidents: OfficeDisciplineIncident[];
 }
 
+export interface OfficePerformanceEvaluation {
+  id: string;
+  source: 'CASE' | 'TASK';
+  title: string;
+  date: string;
+  techniqueDelta: number;
+  diligenceDelta: number;
+  ethicsDelta: number;
+  deadlineManagementDelta: number;
+  supervisorTrustDelta: number;
+}
+
+export interface OfficePerformanceState {
+  technique: number;
+  diligence: number;
+  ethics: number;
+  deadlineManagement: number;
+  supervisorTrust: number;
+  completedTaskIds: string[];
+  evaluations: OfficePerformanceEvaluation[];
+}
+
 export interface CaseHistoryRecord {
   caseId: string;
   caseTitle: string;
@@ -379,6 +401,7 @@ export interface PlayerProfile {
   history: CaseHistoryRecord[];
   officeFinances: OfficeFinances;
   officeDiscipline: OfficeDisciplineState;
+  officePerformance: OfficePerformanceState;
   concursoCompletedPhases: string[];
   professionalExamAttempts: ProfessionalExamAttemptRecord[];
   oabRegistration: OabRegistration | null;
