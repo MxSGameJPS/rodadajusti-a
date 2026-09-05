@@ -10,6 +10,7 @@ import {
   isSpecialCareerEligible,
 } from '../lib/progressionRules';
 import { getInternPromotionStatus, normalizeOfficePerformance } from '../lib/internCareerEngine';
+import { usePlayerDisplayName } from '../lib/playerTreatment';
 import { X, Award, CheckCircle2, Lock, Scale, Landmark, GraduationCap, Crown, ClipboardCheck } from 'lucide-react';
 import { sound } from '../utils/sound';
 
@@ -21,6 +22,7 @@ interface CareerModalProps {
 }
 
 export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, player }) => {
+  const displayName = usePlayerDisplayName(player);
   if (!isOpen) return null;
 
   const tiers = Object.values(CAREER_TIERS);
@@ -42,7 +44,7 @@ export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, playe
         <div className="bg-[#111113] px-6 py-4 border-b border-[#2A2A2E] flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-[#1A1A1D] border border-[#C5A059]/40 flex items-center justify-center text-[#C5A059]"><Award size={20}/></div>
-            <div><h2 className="text-lg sm:text-xl font-bold font-serif">Plano de Carreira Jurídica Nacional</h2><p className="text-xs text-[#888888]">Progressão profissional e acadêmica de <strong className="text-[#C5A059]">{player.name}</strong></p></div>
+            <div><h2 className="text-lg sm:text-xl font-bold font-serif">Plano de Carreira Jurídica Nacional</h2><p className="text-xs text-[#888888]">Progressão profissional e acadêmica de <strong className="text-[#C5A059]">{displayName}</strong></p></div>
           </div>
           <button onClick={() => { sound.playClick(); onClose(); }} className="p-2 rounded-lg bg-[#1A1A1D] hover:bg-[#222226] text-[#888888] border border-[#2A2A2E]"><X size={18}/></button>
         </div>
