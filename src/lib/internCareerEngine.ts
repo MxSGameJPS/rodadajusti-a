@@ -219,8 +219,9 @@ export function applyCasePerformance(params: {
   const current = normalizeOfficePerformance(params.current);
   const { assessment, supervisorReview } = params;
 
-  let techniqueDelta = assessment.strategyScore >= 85 ? 5 : assessment.strategyScore >= 65 ? 2 : -4;
-  let diligenceDelta = assessment.investigationScore >= 85 ? 5 : assessment.investigationScore >= 60 ? 2 : -5;
+  // Escalas do motor judicial: tese 0–25, investigação 0–15 e prazo 0–5.
+  let techniqueDelta = assessment.strategyScore >= 22 ? 5 : assessment.strategyScore >= 16 ? 2 : -4;
+  let diligenceDelta = assessment.investigationScore >= 13 ? 5 : assessment.investigationScore >= 9 ? 2 : -5;
   let ethicsDelta = assessment.falseEvidenceIds.length > 0 ? -3 : 1;
   let deadlineManagementDelta = assessment.issues.includes('DEADLINE_MISSED') ? -10 : 3;
   let supervisorTrustDelta = params.success ? 5 : -3;
