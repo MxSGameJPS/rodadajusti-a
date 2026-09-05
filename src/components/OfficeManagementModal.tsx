@@ -16,6 +16,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { sound } from '../utils/sound';
+import { usePlayerDisplayName } from '../lib/playerTreatment';
 
 interface OfficeManagementModalProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ export const OfficeManagementModal: React.FC<OfficeManagementModalProps> = ({
   onPayOfficeExpenses,
 }) => {
   const [activeTab, setActiveTab] = useState<'financeiro' | 'equipe'>('financeiro');
+  const displayName = usePlayerDisplayName(player);
 
   if (!isOpen) return null;
 
@@ -83,7 +85,7 @@ export const OfficeManagementModal: React.FC<OfficeManagementModalProps> = ({
                 Gestão & Administração do Escritório Próprio
               </h2>
               <p className="text-xs text-[#888888]">
-                Titular: <strong className="text-[#C5A059]">{player.name} Sociedade Individual de Advocacia</strong>
+                Titular: <strong className="text-[#C5A059]">{displayName}</strong> • Sociedade Individual de Advocacia
               </p>
             </div>
           </div>

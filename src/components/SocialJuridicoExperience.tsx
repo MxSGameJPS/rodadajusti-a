@@ -17,6 +17,7 @@ import {
   type SocialJuridicoFeature,
   type SocialJuridicoFeatureId,
 } from '../lib/socialJuridicoRepository';
+import { usePlayerDisplayName } from '../lib/playerTreatment';
 import { sound } from '../utils/sound';
 
 const HOME_URL = 'https://socialjuridico.com.br/?utm_source=rota-da-justica&utm_medium=game&utm_campaign=notebook_social_juridico';
@@ -66,6 +67,7 @@ export const SocialJuridicoExperience: React.FC<SocialJuridicoExperienceProps> =
   const [features, setFeatures] = useState<SocialJuridicoFeature[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const displayName = usePlayerDisplayName(player);
 
   const isEligible = ELIGIBLE_TIERS.has(player.careerTier);
   const activeState = player.activeCase;
@@ -222,7 +224,7 @@ export const SocialJuridicoExperience: React.FC<SocialJuridicoExperienceProps> =
             <div className="min-w-0">
               <span className="block text-[9px] font-black uppercase tracking-[0.2em] text-[#C5A059]">Notebook profissional</span>
               <h2 className="truncate font-serif text-lg font-black text-[#F2EFE8] sm:text-xl">Social Jurídico In-Game</h2>
-              <p className="truncate text-[10px] text-[#777]">{player.name} • {currentCase ? currentCase.title : 'Escritório'}</p>
+              <p className="truncate text-[10px] text-[#777]">{displayName} • {currentCase ? currentCase.title : 'Escritório'}</p>
             </div>
           </div>
           <button type="button" onClick={close} aria-label="Fechar notebook" className="rounded-xl border border-[#2A2A2E] p-2.5 text-[#888] hover:border-[#555] hover:text-[#EEE]">

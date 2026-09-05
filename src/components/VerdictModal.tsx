@@ -15,6 +15,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { sound } from '../utils/sound';
+import { usePlayerDisplayName } from '../lib/playerTreatment';
 import { CelebrationBurst } from './CelebrationBurst/CelebrationBurst';
 
 interface VerdictModalProps {
@@ -60,6 +61,7 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
   promotedToTier,
   onNextCaseOrHub,
 }) => {
+  const displayName = usePlayerDisplayName(player);
   if (!isOpen) return null;
 
   const isWin = result.success;
@@ -132,7 +134,7 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
                   ★ Nova etapa da sua carreira
                 </span>
                 <strong className="mt-1 block font-serif text-lg font-extrabold sm:text-xl">
-                  Parabéns, {player.name}! Você foi promovido(a) a {promotedTierObj.title}!
+                  Parabéns, {displayName}! Você foi promovido(a) a {promotedTierObj.title}!
                 </strong>
                 <p className="mt-2 max-w-xl text-xs font-medium leading-relaxed text-[#1C1810]/80 sm:text-sm">
                   {promotionMessage}
