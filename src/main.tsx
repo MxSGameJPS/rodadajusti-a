@@ -9,6 +9,8 @@ import { CinematicIntroGate } from './components/CinematicIntroGate/CinematicInt
 import { DisciplinaryDefenseExperienceV2 } from './components/DisciplinaryDefenseExperienceV2';
 import { EthicalDilemmaExperience } from './components/EthicalDilemmaExperience';
 import { MisconductConsequenceExperience } from './components/MisconductConsequenceExperience';
+import { PostOabEmploymentExperience } from './components/PostOabEmploymentExperience/PostOabEmploymentExperience';
+import { ProfessionalPhone } from './components/ProfessionalPhone/ProfessionalPhone';
 import { ProfessionalProfileExperience } from './components/ProfessionalProfileExperience';
 import { ProfessionalTreatmentGate } from './components/ProfessionalTreatmentGate';
 import { hydrateCaseCatalog } from './lib/caseRepository';
@@ -26,6 +28,8 @@ async function bootstrap() {
             <CareerIntroGate>
               <App />
               <ProfessionalTreatmentGate />
+              <PostOabEmploymentExperience />
+              <ProfessionalPhone />
               <ProfessionalProfileExperience />
               <EthicalDilemmaExperience />
               <MisconductConsequenceExperience />
