@@ -42,6 +42,7 @@ export interface PlayableHearingAnswer {
 
 export interface PlayableHearingResult {
   caseId: string;
+  attemptKey: string;
   scoreModifier: number;
   performancePercent: number;
   correctAnswers: number;
@@ -72,6 +73,8 @@ export interface UnexpectedCaseEventChoice {
 
 export interface UnexpectedCaseEvent {
   id: string;
+  caseId: string;
+  attemptKey: string;
   eyebrow: string;
   title: string;
   description: string;
@@ -133,6 +136,11 @@ function writeState(state: ReactiveWorldState) {
   } catch {
     // O jogo continua funcional mesmo quando o navegador bloqueia persistência local.
   }
+}
+
+export function getCaseAttemptKey(caseId: string, activeState?: ActiveCaseState | null) {
+  const firstLogId = activeState?.logs?.[0]?.id;
+  return `${caseId}:${firstLogId || 'legacy'}`;
 }
 
 export function getNpcRelationship(npcKey: string, name = 'NPC', role = 'Contato profissional'): NpcRelationshipState {
@@ -205,9 +213,10 @@ export function relationshipDeltaFromDialogue(option: DialogueOption) {
   }
 }
 
-export function getCaseReactiveOutcome(caseId: string): ReactiveCaseOutcome {
+export function getCaseReactiveOutcome(caseId: string, activeState?: ActiveCaseState | null): ReactiveCaseOutcome {
   const state = readState();
-  const current = state.cases[caseId];
+  const attemptKey = getCaseAttemptKey(caseId, activeState);
+  const current = state.cases[attemptKey] || (!activeState ? state.cases[caseId] : undefined);
   if (!current) return { ...EMPTY_CASE_OUTCOME, resolvedEventIds: [], events: [] };
   return {
     ...EMPTY_CASE_OUTCOME,
@@ -226,10 +235,12 @@ function actionCount(activeState: ActiveCaseState) {
   );
 }
 
-function caseEvents(currentCase: LegalCase): UnexpectedCaseEvent[] {
+function caseEvents(currentCase: LegalCase, attemptKey: string): UnexpectedCaseEvent[] {
   return [
     {
       id: `${currentCase.id}:client-new-info`,
+      caseId: currentCase.id,
+      attemptKey,
       eyebrow: 'Contato inesperado',
       title: `${currentCase.client.name} acrescentou uma informação que não estava no primeiro relato`,
       description: 'O cliente entrou em contato dizendo que lembrou de um fato que pode alterar a leitura do caso. O dado ainda não foi confirmado por documento ou por outra fonte.',
@@ -266,6 +277,8 @@ function caseEvents(currentCase: LegalCase): UnexpectedCaseEvent[] {
     },
     {
       id: `${currentCase.id}:witness-hesitation`,
+      caseId: currentCase.id,
+      attemptKey,
       eyebrow: 'Mudança de comportamento',
       title: 'Uma pessoa importante para a instrução demonstrou receio de colaborar',
       description: 'Depois das primeiras diligências, uma fonte que poderia contribuir com o esclarecimento dos fatos passou a evitar contato. A forma de abordagem pode preservar ou destruir a cooperação.',
@@ -302,6 +315,8 @@ function caseEvents(currentCase: LegalCase): UnexpectedCaseEvent[] {
     },
     {
       id: `${currentCase.id}:opposing-document`,
+      caseId: currentCase.id,
+      attemptKey,
       eyebrow: 'Intercorrência processual',
       title: 'Surgiu um documento novo apresentado pela parte contrária',
       description: 'A informação chegou perto da fase de protocolo. Ela pode ser irrelevante, autêntica ou capaz de enfraquecer parte da tese. Você precisa decidir quanto tempo investir na análise.',
@@ -340,9 +355,10 @@ function caseEvents(currentCase: LegalCase): UnexpectedCaseEvent[] {
 }
 
 export function getPendingCaseEvent(currentCase: LegalCase, activeState: ActiveCaseState) {
-  const outcome = getCaseReactiveOutcome(currentCase.id);
+  const attemptKey = getCaseAttemptKey(currentCase.id, activeState);
+  const outcome = getCaseReactiveOutcome(currentCase.id, activeState);
   const resolved = new Set(outcome.resolvedEventIds);
-  const events = caseEvents(currentCase);
+  const events = caseEvents(currentCase, attemptKey);
   const actions = actionCount(activeState);
   const effectiveHours = activeState.hoursSpent + outcome.timePenaltyHours;
   const deadlineRatio = currentCase.deadlineHours > 0 ? effectiveHours / currentCase.deadlineHours : 0;
@@ -354,9 +370,8 @@ export function getPendingCaseEvent(currentCase: LegalCase, activeState: ActiveC
 }
 
 export function resolveCaseEventChoice(event: UnexpectedCaseEvent, choice: UnexpectedCaseEventChoice) {
-  const caseId = event.id.split(':')[0];
   const state = readState();
-  const current = getCaseReactiveOutcome(caseId);
+  const current = state.cases[event.attemptKey] || { ...EMPTY_CASE_OUTCOME, resolvedEventIds: [], events: [] };
   if (current.resolvedEventIds.includes(event.id)) return current;
 
   const resolved: ResolvedCaseEvent = {
@@ -380,19 +395,21 @@ export function resolveCaseEventChoice(event: UnexpectedCaseEvent, choice: Unexp
     events: [...current.events, resolved],
   };
 
-  state.cases[caseId] = updated;
+  state.cases[event.attemptKey] = updated;
   writeState(state);
   return updated;
 }
 
 export function saveHearingResult(result: PlayableHearingResult) {
   const state = readState();
-  const current = getCaseReactiveOutcome(result.caseId);
-  state.cases[result.caseId] = { ...current, hearing: result };
+  const current = state.cases[result.attemptKey] || { ...EMPTY_CASE_OUTCOME, resolvedEventIds: [], events: [] };
+  state.cases[result.attemptKey] = { ...current, hearing: result };
   writeState(state);
-  return state.cases[result.caseId];
+  return state.cases[result.attemptKey];
 }
 
 export function shouldRunPlayableHearing(currentCase: LegalCase) {
-  return currentCase.locations.some((location) => location.characters.length > 0) || currentCase.availableClues.length > 0;
+  const hasOralEvidence = currentCase.availableClues.some((clue) => clue.type === 'depoimento');
+  const hasPeopleToHear = currentCase.locations.some((location) => location.characters.some((character) => character.dialogueOptions.length > 0));
+  return hasOralEvidence || (hasPeopleToHear && currentCase.difficulty !== 'Iniciante');
 }
