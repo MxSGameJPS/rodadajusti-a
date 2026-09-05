@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActiveCaseState, LegalCase } from '../types/game';
+import { ActiveCaseState, CareerTierId, LegalCase } from '../types/game';
 import { AlertTriangle, CheckCircle2, Clock, FileText, Scale, Send, X } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { resolveCollectedClues } from '../lib/evidenceProgress';
@@ -9,10 +9,18 @@ interface LegalCourtroomModalProps {
   onClose: () => void;
   currentCase: LegalCase;
   activeState: ActiveCaseState;
+  careerTier: CareerTierId;
   onSubmitPetition: (strategyId: string, selectedEvidenceIds: string[]) => void;
 }
 
-export const LegalCourtroomModal: React.FC<LegalCourtroomModalProps> = ({ isOpen, onClose, currentCase, activeState, onSubmitPetition }) => {
+export const LegalCourtroomModal: React.FC<LegalCourtroomModalProps> = ({
+  isOpen,
+  onClose,
+  currentCase,
+  activeState,
+  careerTier,
+  onSubmitPetition,
+}) => {
   const [selectedStrategyId, setSelectedStrategyId] = useState('');
   const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<string[]>([]);
 
@@ -44,6 +52,22 @@ export const LegalCourtroomModal: React.FC<LegalCourtroomModalProps> = ({ isOpen
   const canSubmit = deadlineExceeded || !!selectedStrategyId;
   const submittingWithoutEvidence = !deadlineExceeded && !!selectedStrategyId && selectedEvidenceIds.length === 0;
   const noInvestigation = discoveredClues.length === 0;
+  const isIntern = careerTier === 'ESTAGIARIO';
+  const isSeniorIntern = careerTier === 'ESTAGIARIO_SENIOR';
+
+  const submitLabel = deadlineExceeded
+    ? isIntern
+      ? 'Enviar fora do prazo'
+      : 'Protocolar fora do prazo'
+    : submittingWithoutEvidence
+      ? isIntern
+        ? 'Enviar sob risco para revisão'
+        : 'Protocolar sob risco'
+      : isIntern
+        ? 'Enviar para revisão e protocolo'
+        : isSeniorIntern
+          ? 'Enviar para protocolo'
+          : 'Protocolar no PJe';
 
   const toggleEvidence = (clueId: string) => {
     sound.playClick();
@@ -97,8 +121,21 @@ export const LegalCourtroomModal: React.FC<LegalCourtroomModalProps> = ({ isOpen
           {!deadlineExceeded && (
             <>
               <div className="rounded-xl border border-[#2A2A2E] bg-[#111113] p-4 text-xs leading-relaxed text-[#AAAAAA]">
-                O jogo não informa qual tese é a correta e não marca quais provas são decisivas. Você pode protocolar a qualquer momento, inclusive com investigação incompleta ou sem anexar provas. O magistrado avaliará exatamente o que você juntou aos autos — e as consequências profissionais de uma decisão precipitada serão suas.
+                O jogo não informa qual tese é a correta e não marca quais provas são decisivas. Você pode encaminhar a peça a qualquer momento, inclusive com investigação incompleta ou sem anexar provas. O magistrado avaliará exatamente o que chegou aos autos — e as consequências profissionais de uma decisão precipitada serão suas.
               </div>
+
+              {(isIntern || isSeniorIntern) && (
+                <div className={`rounded-xl border p-4 text-xs leading-relaxed ${isIntern ? 'border-[#60A5FA]/30 bg-[#60A5FA]/[0.06] text-[#AFCDF6]' : 'border-[#C5A059]/30 bg-[#C5A059]/[0.06] text-[#D4C294]'}`}>
+                  <strong className="block text-[10px] font-black uppercase tracking-[0.12em]">
+                    {isIntern ? 'Atuação supervisionada' : 'Autonomia de Estagiário Sênior'}
+                  </strong>
+                  <p className="mt-1">
+                    {isIntern
+                      ? 'Como estagiário(a), sua decisão representa a minuta encaminhada ao escritório para revisão e protocolo pelo advogado responsável. Uma instrução ruim ainda pesa na sua avaliação profissional.'
+                      : 'Como Estagiário Sênior, o escritório confia mais na sua preparação. A peça segue para protocolo com intervenção menor do supervisor, por isso erros de análise passam a ter peso maior na sua avaliação.'}
+                  </p>
+                </div>
+              )}
 
               {noInvestigation && (
                 <div className="rounded-xl border border-[#F87171]/35 bg-[#F87171]/[0.08] p-4 text-[#FCA5A5]">
@@ -106,7 +143,7 @@ export const LegalCourtroomModal: React.FC<LegalCourtroomModalProps> = ({ isOpen
                     <AlertTriangle size={18} className="mt-0.5 shrink-0" />
                     <div>
                       <strong className="block text-[10px] font-black uppercase tracking-[0.12em]">Nenhuma investigação realizada</strong>
-                      <p className="mt-1 text-xs leading-relaxed">Você ainda não coletou qualquer prova. O protocolo continua disponível, mas uma ação sem instrução mínima pode ser rejeitada e gerar avaliação grave do escritório.</p>
+                      <p className="mt-1 text-xs leading-relaxed">Você ainda não coletou qualquer prova. O encaminhamento continua disponível, mas uma ação sem instrução mínima pode ser rejeitada e gerar avaliação grave do escritório.</p>
                     </div>
                   </div>
                 </div>
@@ -148,7 +185,7 @@ export const LegalCourtroomModal: React.FC<LegalCourtroomModalProps> = ({ isOpen
                 </div>
 
                 {discoveredClues.length === 0 ? (
-                  <div className="rounded-xl border border-[#F87171]/30 bg-[#F87171]/10 p-6 text-center text-xs text-[#F87171]"><AlertTriangle size={18} className="mx-auto mb-1" />Você ainda não coletou nenhuma prova. Ainda assim, poderá protocolar se escolher uma medida jurídica.</div>
+                  <div className="rounded-xl border border-[#F87171]/30 bg-[#F87171]/10 p-6 text-center text-xs text-[#F87171]"><AlertTriangle size={18} className="mx-auto mb-1" />Você ainda não coletou nenhuma prova. Ainda assim, poderá encaminhar a peça se escolher uma medida jurídica.</div>
                 ) : (
                   <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                     {discoveredClues.map((clue) => {
@@ -174,7 +211,7 @@ export const LegalCourtroomModal: React.FC<LegalCourtroomModalProps> = ({ isOpen
 
               {submittingWithoutEvidence && (
                 <div className="rounded-xl border border-[#F59E0B]/35 bg-[#F59E0B]/[0.08] p-3.5 text-xs leading-relaxed text-[#F5C66D]">
-                  Você escolheu uma medida jurídica, mas não anexou nenhuma prova. O sistema permitirá o protocolo; isso não significa que a petição esteja suficientemente instruída.
+                  Você escolheu uma medida jurídica, mas não anexou nenhuma prova. O sistema permitirá o encaminhamento; isso não significa que a petição esteja suficientemente instruída.
                 </div>
               )}
             </>
@@ -191,7 +228,7 @@ export const LegalCourtroomModal: React.FC<LegalCourtroomModalProps> = ({ isOpen
               disabled={!canSubmit}
               className={`flex w-full items-center justify-center gap-2 rounded-xl px-6 py-2.5 font-bold uppercase tracking-wider transition-all sm:w-auto ${deadlineExceeded ? 'bg-[#F87171] text-[#0A0A0B] hover:bg-[#FCA5A5]' : submittingWithoutEvidence ? 'bg-[#F59E0B] text-[#0A0A0B] hover:bg-[#FBBF24]' : 'bg-[#C5A059] text-[#0A0A0B] hover:bg-[#D4B475]'} disabled:cursor-not-allowed disabled:opacity-40`}
             >
-              <Send size={14} /> {deadlineExceeded ? 'Protocolar fora do prazo' : submittingWithoutEvidence ? 'Protocolar sob risco' : 'Protocolar no PJe'}
+              <Send size={14} /> {submitLabel}
             </button>
           </div>
         </div>
