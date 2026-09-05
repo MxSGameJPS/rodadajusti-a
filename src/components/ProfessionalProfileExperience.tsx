@@ -29,6 +29,7 @@ import {
   type ProfessionalAttributeId,
   type ProfessionalRpgProfile,
 } from '../lib/professionalRpg';
+import { usePlayerDisplayName } from '../lib/playerTreatment';
 import { sound } from '../utils/sound';
 
 const ATTRIBUTE_ICONS: Record<ProfessionalAttributeId, React.ReactNode> = {
@@ -48,6 +49,7 @@ export const ProfessionalProfileExperience: React.FC = () => {
   const [player, setPlayer] = useState<PlayerProfile | null>(null);
   const [profile, setProfile] = useState<ProfessionalRpgProfile | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const displayName = usePlayerDisplayName(player, 'Profissional');
 
   useEffect(() => {
     let active = true;
@@ -152,7 +154,7 @@ export const ProfessionalProfileExperience: React.FC = () => {
                 </div>
                 <div className="min-w-0">
                   <span className="block text-[9px] font-black uppercase tracking-[0.2em] text-[#60A5FA]">Ficha profissional desbloqueada pela OAB</span>
-                  <h2 className="truncate font-serif text-lg font-black text-[#F2F0EB] sm:text-2xl">{player.name} • Perfil RPG</h2>
+                  <h2 className="truncate font-serif text-lg font-black text-[#F2F0EB] sm:text-2xl">{displayName} • Perfil RPG</h2>
                 </div>
               </div>
               <button
