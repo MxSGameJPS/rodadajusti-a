@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
+import { AccountSaveBoundary } from './components/AccountSaveBoundary';
 import { AuthGate } from './components/AuthGate';
 import { AuthRouteSync } from './components/AuthRouteSync';
 import { CareerIntroGate } from './components/CareerIntroGate/CareerIntroGate';
@@ -17,18 +18,20 @@ async function bootstrap() {
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <AuthRouteSync />
-      <CinematicIntroGate>
-        <AuthGate>
-          <CareerIntroGate>
-            <App />
-            <ProfessionalProfileExperience />
-            <EthicalDilemmaExperience />
-            <MisconductConsequenceExperience />
-            <DisciplinaryDefenseExperienceV2 />
-          </CareerIntroGate>
-        </AuthGate>
-      </CinematicIntroGate>
+      <AccountSaveBoundary>
+        <AuthRouteSync />
+        <CinematicIntroGate>
+          <AuthGate>
+            <CareerIntroGate>
+              <App />
+              <ProfessionalProfileExperience />
+              <EthicalDilemmaExperience />
+              <MisconductConsequenceExperience />
+              <DisciplinaryDefenseExperienceV2 />
+            </CareerIntroGate>
+          </AuthGate>
+        </CinematicIntroGate>
+      </AccountSaveBoundary>
     </StrictMode>,
   );
 }
