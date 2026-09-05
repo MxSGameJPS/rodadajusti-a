@@ -9,9 +9,10 @@ import {
   HelpCircle,
   MessageSquare,
   Search,
-  X
+  X,
 } from 'lucide-react';
 import { sound } from '../utils/sound';
+import { CharacterPortrait } from './CharacterPortrait';
 import { PersistentNpcDiligence } from './PersistentNpcDiligence';
 
 interface LocationSceneProps {
@@ -21,6 +22,17 @@ interface LocationSceneProps {
   onInspectSpot: (spot: SearchableSpot) => void;
   onBackToMap: () => void;
   onOpenDossier: () => void;
+}
+
+type VisualCharacter = Character & {
+  portraitSrc?: string;
+  portraitStoragePath?: string;
+  portraitGeneratedAt?: string;
+  appearanceProfile?: Record<string, string>;
+};
+
+function asVisualCharacter(character: Character): VisualCharacter {
+  return character as VisualCharacter;
 }
 
 export const LocationScene: React.FC<LocationSceneProps> = ({
@@ -44,6 +56,7 @@ export const LocationScene: React.FC<LocationSceneProps> = ({
   }, [currentLocation.id]);
 
   const selectedCharacter = currentLocation.characters.find((character) => character.id === selectedCharacterId) || currentLocation.characters[0];
+  const selectedVisualCharacter = selectedCharacter ? asVisualCharacter(selectedCharacter) : null;
   const reviewedClue = selectedSpotForReview?.foundClueId
     ? currentCase.availableClues.find((clue) => clue.id === selectedSpotForReview.foundClueId) || null
     : null;
@@ -135,38 +148,59 @@ export const LocationScene: React.FC<LocationSceneProps> = ({
                 {currentLocation.characters.length > 1 && (
                   <div className="space-y-2 md:col-span-4">
                     <span className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-[#888888]">Personagens deste caso</span>
-                    {currentLocation.characters.map((character) => (
-                      <button
-                        key={character.id}
-                        type="button"
-                        onClick={() => {
-                          sound.playClick();
-                          setSelectedCharacterId(character.id);
-                          setActiveSpeech(null);
-                        }}
-                        className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all ${selectedCharacter?.id === character.id ? 'border-[#C5A059] bg-[#1A1A1D]' : 'border-[#2A2A2E] bg-[#111113] hover:border-[#3A3A42]'}`}
-                      >
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#2A2A2E] bg-[#1A1A1D] font-bold text-[#C5A059]">{character.name.charAt(0)}</div>
-                        <div className="min-w-0">
-                          <h4 className="truncate text-sm font-bold text-[#E0E0E0]">{character.name}</h4>
-                          <p className="truncate text-[11px] text-[#888888]">{character.role}</p>
-                        </div>
-                      </button>
-                    ))}
+                    {currentLocation.characters.map((character) => {
+                      const visualCharacter = asVisualCharacter(character);
+                      return (
+                        <button
+                          key={character.id}
+                          type="button"
+                          onClick={() => {
+                            sound.playClick();
+                            setSelectedCharacterId(character.id);
+                            setActiveSpeech(null);
+                          }}
+                          className={`group flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all ${selectedCharacter?.id === character.id ? 'border-[#C5A059] bg-[#1A1A1D] shadow-[0_0_0_1px_rgba(197,160,89,0.12)]' : 'border-[#2A2A2E] bg-[#111113] hover:border-[#3A3A42] hover:bg-[#151517]'}`}
+                        >
+                          <CharacterPortrait
+                            name={character.name}
+                            src={visualCharacter.portraitSrc}
+                            avatarBg={character.avatarBg}
+                          />
+                          <div className="min-w-0">
+                            <h4 className="truncate text-sm font-bold text-[#E0E0E0]">{character.name}</h4>
+                            <p className="truncate text-[11px] text-[#888888]">{character.role}</p>
+                            {visualCharacter.portraitSrc && <span className="mt-1 inline-block text-[9px] font-bold uppercase tracking-wider text-[#6F6B65]">Retrato do caso</span>}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
 
                 <div className={`${currentLocation.characters.length > 1 ? 'md:col-span-8' : 'md:col-span-12'} space-y-4`}>
-                  {selectedCharacter ? (
+                  {selectedCharacter && selectedVisualCharacter ? (
                     <>
-                      <div className="flex items-start gap-4 rounded-xl border border-[#2A2A2E] bg-[#161618] p-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#C5A059] text-lg font-bold text-[#0A0A0B]">{selectedCharacter.name.charAt(0)}</div>
-                        <div className="w-full space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-base font-bold text-[#E0E0E0]">{selectedCharacter.name}</h3>
-                            <span className="rounded border border-[#2A2A2E] bg-[#1A1A1D] px-2 py-0.5 text-[10px] font-semibold text-[#C5A059]">{selectedCharacter.role}</span>
+                      <div className="overflow-hidden rounded-2xl border border-[#2A2A2E] bg-[#161618] shadow-xl">
+                        <div className="grid grid-cols-1 sm:grid-cols-[180px_minmax(0,1fr)]">
+                          <CharacterPortrait
+                            name={selectedCharacter.name}
+                            src={selectedVisualCharacter.portraitSrc}
+                            avatarBg={selectedCharacter.avatarBg}
+                            variant="conversation"
+                            className="border-b border-[#2A2A2E] sm:border-b-0 sm:border-r"
+                          />
+
+                          <div className="flex min-w-0 flex-col justify-center p-4 sm:p-5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[#C5A059]">Personagem deste caso</span>
+                              {selectedVisualCharacter.portraitSrc && (
+                                <span className="rounded-full border border-[#34D399]/20 bg-[#34D399]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#6EE7B7]">Retrato gerado</span>
+                              )}
+                            </div>
+                            <h3 className="mt-1 font-serif text-xl font-black text-[#F0ECE2]">{selectedCharacter.name}</h3>
+                            <p className="mt-1 text-xs text-[#A49E95]">{selectedCharacter.role}</p>
+                            <div className="mt-4 rounded-xl border border-[#222226] bg-[#0D0D0E] p-4 text-sm italic leading-7 text-[#D6D0C6]">“{activeSpeech || selectedCharacter.initialDialogue}”</div>
                           </div>
-                          <div className="rounded-lg border border-[#222226] bg-[#0D0D0E] p-3.5 text-xs italic leading-relaxed text-[#CCCCCC]">“{activeSpeech || selectedCharacter.initialDialogue}”</div>
                         </div>
                       </div>
 
