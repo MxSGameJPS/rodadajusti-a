@@ -1,6 +1,7 @@
 import type { ActiveCaseState, DialogueOption, LegalCase } from '../types/game';
 
 const ACTIVE_ACCOUNT_KEY = 'rota_da_justica_active_account_v1';
+const WORKING_SAVE_KEY = 'rota_da_justica_save_v1';
 const STORE_PREFIX = 'rota_reactive_world_v1:';
 
 const clamp = (value: number, min = 0, max = 100) => Math.max(min, Math.min(max, Math.round(value)));
@@ -42,7 +43,7 @@ export interface PlayableHearingAnswer {
 
 export interface PlayableHearingResult {
   caseId: string;
-  attemptKey: string;
+  attemptKey?: string;
   scoreModifier: number;
   performancePercent: number;
   correctAnswers: number;
@@ -138,8 +139,21 @@ function writeState(state: ReactiveWorldState) {
   }
 }
 
+function activeCaseFromWorkingSave(caseId: string): ActiveCaseState | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(WORKING_SAVE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { activeCase?: ActiveCaseState | null };
+    return parsed.activeCase?.caseId === caseId ? parsed.activeCase : null;
+  } catch {
+    return null;
+  }
+}
+
 export function getCaseAttemptKey(caseId: string, activeState?: ActiveCaseState | null) {
-  const firstLogId = activeState?.logs?.[0]?.id;
+  const resolvedActiveState = activeState || activeCaseFromWorkingSave(caseId);
+  const firstLogId = resolvedActiveState?.logs?.[0]?.id;
   return `${caseId}:${firstLogId || 'legacy'}`;
 }
 
@@ -216,7 +230,7 @@ export function relationshipDeltaFromDialogue(option: DialogueOption) {
 export function getCaseReactiveOutcome(caseId: string, activeState?: ActiveCaseState | null): ReactiveCaseOutcome {
   const state = readState();
   const attemptKey = getCaseAttemptKey(caseId, activeState);
-  const current = state.cases[attemptKey] || (!activeState ? state.cases[caseId] : undefined);
+  const current = state.cases[attemptKey] || (attemptKey.endsWith(':legacy') ? state.cases[caseId] : undefined);
   if (!current) return { ...EMPTY_CASE_OUTCOME, resolvedEventIds: [], events: [] };
   return {
     ...EMPTY_CASE_OUTCOME,
@@ -402,10 +416,12 @@ export function resolveCaseEventChoice(event: UnexpectedCaseEvent, choice: Unexp
 
 export function saveHearingResult(result: PlayableHearingResult) {
   const state = readState();
-  const current = state.cases[result.attemptKey] || { ...EMPTY_CASE_OUTCOME, resolvedEventIds: [], events: [] };
-  state.cases[result.attemptKey] = { ...current, hearing: result };
+  const attemptKey = result.attemptKey || getCaseAttemptKey(result.caseId);
+  const current = state.cases[attemptKey] || { ...EMPTY_CASE_OUTCOME, resolvedEventIds: [], events: [] };
+  const normalizedResult = { ...result, attemptKey };
+  state.cases[attemptKey] = { ...current, hearing: normalizedResult };
   writeState(state);
-  return state.cases[result.attemptKey];
+  return state.cases[attemptKey];
 }
 
 export function shouldRunPlayableHearing(currentCase: LegalCase) {
