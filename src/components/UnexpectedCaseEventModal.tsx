@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, X } from 'lucide-react';
 import type { UnexpectedCaseEvent, UnexpectedCaseEventChoice } from '../lib/reactiveWorldStore';
 import { sound } from '../utils/sound';
@@ -17,6 +17,10 @@ export const UnexpectedCaseEventModal: React.FC<UnexpectedCaseEventModalProps> =
   onCloseAfterResolution,
 }) => {
   const [resolvedChoice, setResolvedChoice] = useState<UnexpectedCaseEventChoice | null>(null);
+
+  useEffect(() => {
+    setResolvedChoice(null);
+  }, [event?.id, isOpen]);
 
   if (!isOpen || !event) return null;
 
