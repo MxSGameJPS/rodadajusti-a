@@ -4,6 +4,26 @@ import type { ProfessionalExam, ProfessionalExamResult } from '../types/game';
 export const DEFAULT_OAB_EXAM_SLUG = 'oab-46-2026-tipo-1';
 export type ProfessionalExamMode = 'full' | 'quick';
 
+type SupabaseRpcError = {
+  code?: string | null;
+  message?: string | null;
+  details?: string | null;
+  hint?: string | null;
+};
+
+function isExamSubmitSchemaCacheError(error: SupabaseRpcError) {
+  const text = [error.code, error.message, error.details, error.hint]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return (
+    error.code === 'PGRST202' ||
+    (text.includes('schema cache') && text.includes('submit_exam_attempt')) ||
+    text.includes('could not find the function public.submit_exam_attempt')
+  );
+}
+
 export async function loadProfessionalExam(slug = DEFAULT_OAB_EXAM_SLUG): Promise<ProfessionalExam> {
   if (!supabase) {
     throw new Error('Supabase não está configurado neste ambiente.');
@@ -42,7 +62,13 @@ export async function submitProfessionalExam(params: {
   });
 
   if (error) {
-    throw new Error(error.message || 'Não foi possível corrigir o exame.');
+    if (isExamSubmitSchemaCacheError(error)) {
+      throw new Error(
+        'O servidor do Exame da Ordem está sendo atualizado. Suas respostas continuam salvas neste dispositivo. Tente finalizar novamente em alguns instantes.',
+      );
+    }
+
+    throw new Error(error.message || 'Não foi possível corrigir o exame. Suas respostas foram preservadas.');
   }
 
   return data as ProfessionalExamResult;
