@@ -4,9 +4,15 @@ import { supabase } from '../lib/supabase';
 
 const PLAYER_SAVE_KEY = 'rota_da_justica_save_v1';
 
+function preservedPreviewQuery() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('preview') === 'advogado' ? '?preview=advogado' : '';
+}
+
 function navigate(path: string) {
-  if (window.location.pathname === path) return;
-  window.history.replaceState({}, '', path);
+  const target = `${path}${preservedPreviewQuery()}`;
+  if (`${window.location.pathname}${window.location.search}` === target) return;
+  window.history.replaceState({}, '', target);
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
