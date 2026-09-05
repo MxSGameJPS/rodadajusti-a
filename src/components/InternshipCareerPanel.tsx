@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Award,
   BookOpenCheck,
@@ -38,78 +38,32 @@ const METRICS = [
   { key: 'supervisorTrust', label: 'Confiança', icon: Star },
 ] as const;
 
-const TASK_GUIDANCE_PREFIX = 'rota_intern_tasks_guidance_v1:';
-
-function guidanceOwner(player: PlayerProfile) {
-  if (player.cloudCareerId) return `career-${player.cloudCareerId}`;
-  const normalized = (player.name || 'personagem')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return normalized || 'personagem';
-}
-
-function guidanceKey(player: PlayerProfile) {
-  return `${TASK_GUIDANCE_PREFIX}${guidanceOwner(player)}:${player.careerTier}`;
-}
-
-function buildMarianaTaskGuidance(isSenior: boolean): NpcGuidanceStep[] {
-  if (isSenior) {
-    return [
-      {
-        eyebrow: 'Novas responsabilidades',
-        text: 'Agora que você é Estagiário Sênior, o Dr. Roberto liberou atividades com mais autonomia. Elas continuam supervisionadas, mas já exigem análise de prova, preparação de audiência e raciocínio jurídico mais completo.',
-      },
-      {
-        eyebrow: 'Não é tarefa automática',
-        text: 'Quando você clicar em uma responsabilidade, o trabalho vai abrir de verdade. Você terá que analisar a situação e tomar decisões. Só depois de concluir corretamente a atividade ela será registrada na sua avaliação.',
-      },
-      {
-        eyebrow: 'Reta final do estágio',
-        text: 'Essas atividades também ajudam o escritório a medir sua preparação para o Exame da Ordem. Técnica, confiança e responsabilidade agora pesam tanto quanto a quantidade de casos concluídos.',
-      },
-    ];
-  }
-
+function buildMarianaTaskGuidance(task: OfficeStageTask, isSenior: boolean): NpcGuidanceStep[] {
   return [
     {
-      eyebrow: 'Uma nova rotina no escritório',
-      text: 'Antes de o Dr. Roberto aumentar sua autonomia nos casos, ele quer observar como você trabalha nas tarefas do dia a dia. Por isso organizei uma rotina supervisionada aqui no escritório.',
+      eyebrow: isSenior ? 'Responsabilidade de Estagiário Sênior' : 'Atividade supervisionada',
+      text: `O Dr. Roberto separou esta atividade para você: ${task.title}. ${task.description}`,
     },
     {
-      eyebrow: 'Você precisa executar a atividade',
-      text: 'Não basta apertar um botão. Cada tarefa abre uma situação prática: conferir um risco de prazo, selecionar uma pesquisa útil, organizar documentos ou preparar uma minuta. Você precisa tomar as decisões corretas para concluir.',
+      eyebrow: 'Como funciona',
+      text: `Você vai enfrentar ${task.challengeSteps.length} decisões práticas. Leia a situação com atenção e escolha como agir. A atividade só será concluída quando as decisões estiverem corretas e você entregar o trabalho ao Dr. Roberto.`,
     },
     {
-      eyebrow: 'Sua avaliação muda com o trabalho',
-      text: 'Quando você entrega uma atividade corretamente, o Dr. Roberto registra evolução em Técnica, Diligência, Prazos ou Confiança. Essas avaliações fazem parte dos requisitos para a promoção a Estagiário Sênior.',
+      eyebrow: 'Avaliação do escritório',
+      text: isSenior
+        ? 'Como Estagiário Sênior, o escritório espera mais autonomia e raciocínio jurídico. O resultado desta atividade entra na sua avaliação profissional e na preparação para a próxima etapa da carreira.'
+        : 'O resultado desta atividade entra na sua avaliação profissional. Técnica, diligência, prazos e a confiança do Dr. Roberto ajudam a definir quando você estará pronto para ser promovido.',
     },
   ];
 }
 
 export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask }) => {
   const [selectedTask, setSelectedTask] = useState<OfficeStageTask | null>(null);
+  const [pendingTask, setPendingTask] = useState<OfficeStageTask | null>(null);
   const [isTaskGuidanceOpen, setIsTaskGuidanceOpen] = useState(false);
 
   const isInternStage = player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR';
   const isSenior = player.careerTier === 'ESTAGIARIO_SENIOR';
-  const taskGuidance = useMemo(() => buildMarianaTaskGuidance(isSenior), [isSenior]);
-
-  useEffect(() => {
-    if (!isInternStage) return;
-    try {
-      const key = guidanceKey(player);
-      if (localStorage.getItem(key) !== '1') {
-        const timer = window.setTimeout(() => setIsTaskGuidanceOpen(true), 350);
-        return () => window.clearTimeout(timer);
-      }
-    } catch {
-      const timer = window.setTimeout(() => setIsTaskGuidanceOpen(true), 350);
-      return () => window.clearTimeout(timer);
-    }
-  }, [isInternStage, player.careerTier, player.cloudCareerId, player.name]);
 
   if (!isInternStage) return null;
 
@@ -129,27 +83,33 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
   const currentTier = CAREER_TIERS[player.careerTier];
   const progress = isSenior ? oabPreparation : internPromotion;
 
+  const openTask = (task: OfficeStageTask) => {
+    sound.playPaper();
+    setPendingTask(task);
+    setIsTaskGuidanceOpen(true);
+  };
+
   const handleGuidanceComplete = () => {
-    try {
-      localStorage.setItem(guidanceKey(player), '1');
-    } catch {
-      // A apresentação continua funcional mesmo sem persistência local.
-    }
+    const taskToOpen = pendingTask;
     setIsTaskGuidanceOpen(false);
+    setPendingTask(null);
+    if (taskToOpen) {
+      window.setTimeout(() => setSelectedTask(taskToOpen), 120);
+    }
   };
 
   return (
     <>
-      {isTaskGuidanceOpen && (
+      {isTaskGuidanceOpen && pendingTask && (
         <NpcGuidanceDialog
           isOpen
           npcName="Mariana Duarte"
           npcRole="Secretária do Escritório"
           portraitSrc="/personagens/mariana-duarte.png"
           portraitAlt="Mariana Duarte, secretária do escritório Ramos & Associados"
-          contextLabel={isSenior ? 'Rotina de Estagiário Sênior' : 'Rotina supervisionada do estágio'}
-          dialogues={taskGuidance}
-          finalActionLabel="Conhecer minhas tarefas"
+          contextLabel={pendingTask.title}
+          dialogues={buildMarianaTaskGuidance(pendingTask, isSenior)}
+          finalActionLabel="Iniciar atividade"
           onComplete={handleGuidanceComplete}
         />
       )}
@@ -299,10 +259,7 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
                       <button
                         type="button"
                         disabled={completed || unavailable}
-                        onClick={() => {
-                          sound.playPaper();
-                          setSelectedTask(task);
-                        }}
+                        onClick={() => openTask(task)}
                         className="shrink-0 rounded-lg border border-[#C5A059]/35 bg-[#C5A059]/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-[#D9C184] transition hover:bg-[#C5A059]/20 disabled:cursor-not-allowed disabled:border-[#2A2A2E] disabled:bg-[#17171A] disabled:text-[#66666D]"
                       >
                         {completed ? 'Concluída' : unavailable ? 'Finalize o caso atual' : 'Abrir atividade'}
