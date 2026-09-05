@@ -218,6 +218,70 @@ export interface ActiveCaseState {
   socialJuridicoActions: SocialJuridicoAction[];
 }
 
+export type JudicialIssueCode =
+  | 'DEADLINE_MISSED'
+  | 'NO_INVESTIGATION'
+  | 'INSUFFICIENT_INVESTIGATION'
+  | 'NO_EVIDENCE'
+  | 'MISSING_CRUCIAL_EVIDENCE'
+  | 'FALSE_EVIDENCE'
+  | 'IRRELEVANT_EVIDENCE'
+  | 'INCOMPATIBLE_EVIDENCE'
+  | 'WRONG_STRATEGY';
+
+export interface JudicialAssessment {
+  strategyTitle: string;
+  strategyScore: number;
+  evidenceScore: number;
+  investigationScore: number;
+  deadlineScore: number;
+  socialJuridicoBonus: number;
+  discoveredEvidenceCount: number;
+  selectedEvidenceCount: number;
+  crucialEvidenceRequired: number;
+  crucialEvidenceSelected: number;
+  investigationCoveragePercent: number;
+  missingRequiredEvidenceIds: string[];
+  missingRequiredEvidenceTitles: string[];
+  falseEvidenceIds: string[];
+  falseEvidenceTitles: string[];
+  irrelevantEvidenceIds: string[];
+  irrelevantEvidenceTitles: string[];
+  incompatibleEvidenceIds: string[];
+  incompatibleEvidenceTitles: string[];
+  issues: JudicialIssueCode[];
+}
+
+export type SupervisorReviewSeverity = 'ORIENTACAO' | 'ADVERTENCIA' | 'GRAVE';
+
+export interface SupervisorReview {
+  severity: SupervisorReviewSeverity;
+  title: string;
+  message: string;
+  warningIssued: boolean;
+  warningNumber: number;
+  contractTerminated: boolean;
+  issueCodes: JudicialIssueCode[];
+  caseId: string;
+  caseTitle: string;
+}
+
+export interface OfficeDisciplineIncident {
+  id: string;
+  caseId: string;
+  caseTitle: string;
+  completedDate: string;
+  severity: SupervisorReviewSeverity;
+  warningIssued: boolean;
+  issueCodes: JudicialIssueCode[];
+}
+
+export interface OfficeDisciplineState {
+  warningCount: number;
+  employmentStatus: 'ACTIVE' | 'TERMINATED';
+  incidents: OfficeDisciplineIncident[];
+}
+
 export interface CaseHistoryRecord {
   caseId: string;
   caseTitle: string;
@@ -232,6 +296,8 @@ export interface CaseHistoryRecord {
   totalAllowedHours: number;
   judgeFeedback: string;
   socialJuridicoBonus?: number;
+  judicialAssessment?: JudicialAssessment;
+  supervisorReview?: SupervisorReview;
 }
 
 export interface ProfessionalExamOption {
@@ -312,6 +378,7 @@ export interface PlayerProfile {
   activeCase: ActiveCaseState | null;
   history: CaseHistoryRecord[];
   officeFinances: OfficeFinances;
+  officeDiscipline: OfficeDisciplineState;
   concursoCompletedPhases: string[];
   professionalExamAttempts: ProfessionalExamAttemptRecord[];
   oabRegistration: OabRegistration | null;

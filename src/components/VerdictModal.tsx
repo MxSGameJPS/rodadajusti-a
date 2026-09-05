@@ -1,5 +1,5 @@
 import React from 'react';
-import { LegalCase, CaseHistoryRecord, PlayerProfile, CareerTierId } from '../types/game';
+import { LegalCase, CaseHistoryRecord, PlayerProfile, CareerTierId, JudicialIssueCode } from '../types/game';
 import { CAREER_TIERS } from '../data/careers';
 import {
   Scale,
@@ -10,6 +10,9 @@ import {
   ArrowRight,
   CheckCircle2,
   Laptop,
+  AlertTriangle,
+  FileSearch,
+  ShieldCheck,
 } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { CelebrationBurst } from './CelebrationBurst/CelebrationBurst';
@@ -37,6 +40,18 @@ const PROMOTION_MESSAGES: Partial<Record<CareerTierId, string>> = {
     'Uma nova perspectiva da Justiça se abre diante de você. A partir de agora, suas decisões passam a ter impacto direto na vida de outras pessoas.',
 };
 
+const ISSUE_LABELS: Record<JudicialIssueCode, string> = {
+  DEADLINE_MISSED: 'Prazo processual perdido',
+  NO_INVESTIGATION: 'Nenhuma investigação realizada',
+  INSUFFICIENT_INVESTIGATION: 'Investigação insuficiente',
+  NO_EVIDENCE: 'Petição protocolada sem prova',
+  MISSING_CRUCIAL_EVIDENCE: 'Prova essencial não juntada',
+  FALSE_EVIDENCE: 'Prova inautêntica incluída',
+  IRRELEVANT_EVIDENCE: 'Prova irrelevante incluída',
+  INCOMPATIBLE_EVIDENCE: 'Prova incompatível com a tese',
+  WRONG_STRATEGY: 'Estratégia jurídica inadequada',
+};
+
 export const VerdictModal: React.FC<VerdictModalProps> = ({
   isOpen,
   result,
@@ -48,6 +63,7 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
   if (!isOpen) return null;
 
   const isWin = result.success;
+  const assessment = result.judicialAssessment;
   const promotedTierObj = promotedToTier ? CAREER_TIERS[promotedToTier] : null;
   const promotionMessage = promotedToTier
     ? PROMOTION_MESSAGES[promotedToTier] || 'Sua dedicação abriu uma nova etapa na sua trajetória jurídica.'
@@ -57,7 +73,7 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A0A0B]/90 backdrop-blur-lg overflow-y-auto">
       {isWin && <CelebrationBurst intensity={promotedTierObj ? 'strong' : 'normal'} />}
 
-      <div className="relative w-full max-w-2xl bg-[#161618] border border-[#2A2A2E] rounded-2xl shadow-2xl overflow-hidden text-[#E0E0E0] my-6">
+      <div className="relative w-full max-w-3xl bg-[#161618] border border-[#2A2A2E] rounded-2xl shadow-2xl overflow-hidden text-[#E0E0E0] my-6">
         <div
           className={`p-6 text-center border-b relative overflow-hidden bg-[#111113] ${
             isWin ? 'border-b-[#34D399]/40' : 'border-b-[#F87171]/40'
@@ -88,7 +104,7 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
           {isWin && (
             <div className="mx-auto mt-4 flex max-w-md items-center justify-center gap-2 rounded-xl border border-[#34D399]/25 bg-[#34D399]/[0.07] px-4 py-2.5 text-xs font-semibold text-[#8BE7C3]">
               <CheckCircle2 size={16} className="shrink-0" />
-              <span>Parabéns! Você conduziu o caso com sucesso e conquistou mais um resultado importante para sua carreira.</span>
+              <span>Parabéns! O resultado só foi reconhecido depois da análise da tese, da investigação e das provas efetivamente juntadas.</span>
             </div>
           )}
 
@@ -135,9 +151,86 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
               <span className="font-mono text-[11px]">{result.completedDate}</span>
             </div>
             <p className="text-[#CCCCCC] leading-relaxed italic font-serif">
-              "{result.judgeFeedback}"
+              “{result.judgeFeedback}”
             </p>
           </div>
+
+          {assessment && (
+            <div className="rounded-xl border border-[#2A2A2E] bg-[#121316] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <FileSearch size={17} className="text-[#C5A059]" />
+                  <div>
+                    <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-[#C5A059]">Análise judicial do processo</span>
+                    <strong className="mt-0.5 block text-xs text-[#E7E3DA]">O juiz avaliou a tese, o que você investigou e somente as provas anexadas.</strong>
+                  </div>
+                </div>
+                <ShieldCheck size={18} className={isWin ? 'text-[#34D399]' : 'text-[#F87171]'} />
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="rounded-lg border border-[#292A30] bg-[#0B0C0E] p-3 text-center">
+                  <span className="block text-[9px] uppercase tracking-wider text-[#747984]">Tese</span>
+                  <strong className="mt-1 block font-mono text-sm text-[#E5C87F]">{assessment.strategyScore}</strong>
+                </div>
+                <div className="rounded-lg border border-[#292A30] bg-[#0B0C0E] p-3 text-center">
+                  <span className="block text-[9px] uppercase tracking-wider text-[#747984]">Provas</span>
+                  <strong className="mt-1 block font-mono text-sm text-[#E5C87F]">{assessment.evidenceScore}</strong>
+                </div>
+                <div className="rounded-lg border border-[#292A30] bg-[#0B0C0E] p-3 text-center">
+                  <span className="block text-[9px] uppercase tracking-wider text-[#747984]">Investigação</span>
+                  <strong className="mt-1 block font-mono text-sm text-[#E5C87F]">{assessment.investigationScore}</strong>
+                </div>
+                <div className="rounded-lg border border-[#292A30] bg-[#0B0C0E] p-3 text-center">
+                  <span className="block text-[9px] uppercase tracking-wider text-[#747984]">Prazo</span>
+                  <strong className="mt-1 block font-mono text-sm text-[#E5C87F]">{assessment.deadlineScore}</strong>
+                </div>
+              </div>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <div className="rounded-lg border border-[#292A30] bg-[#0B0C0E] px-3 py-2.5">
+                  <span className="text-[9px] uppercase tracking-wider text-[#747984]">Provas descobertas</span>
+                  <strong className="ml-2 font-mono text-[#D9DCE2]">{assessment.discoveredEvidenceCount}</strong>
+                </div>
+                <div className="rounded-lg border border-[#292A30] bg-[#0B0C0E] px-3 py-2.5">
+                  <span className="text-[9px] uppercase tracking-wider text-[#747984]">Provas juntadas</span>
+                  <strong className="ml-2 font-mono text-[#D9DCE2]">{assessment.selectedEvidenceCount}</strong>
+                </div>
+                <div className="rounded-lg border border-[#292A30] bg-[#0B0C0E] px-3 py-2.5">
+                  <span className="text-[9px] uppercase tracking-wider text-[#747984]">Cobertura crucial</span>
+                  <strong className="ml-2 font-mono text-[#D9DCE2]">{assessment.investigationCoveragePercent}%</strong>
+                </div>
+              </div>
+
+              {assessment.issues.length > 0 && (
+                <div className="mt-4 rounded-lg border border-[#F87171]/25 bg-[#F87171]/[0.05] p-3">
+                  <div className="flex items-center gap-2 text-[#FCA5A5]">
+                    <AlertTriangle size={15} />
+                    <span className="text-[9px] font-black uppercase tracking-[0.14em]">Falhas encontradas pelo magistrado</span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {assessment.issues.map((issue) => (
+                      <span key={issue} className="rounded-md border border-[#F87171]/25 bg-[#160D0F] px-2 py-1 text-[10px] text-[#E7A4A4]">
+                        {ISSUE_LABELS[issue]}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {assessment.missingRequiredEvidenceTitles.length > 0 && (
+                <p className="mt-3 text-[11px] leading-relaxed text-[#B6BAC3]">
+                  <strong className="text-[#E1C477]">Provas essenciais não juntadas:</strong> {assessment.missingRequiredEvidenceTitles.join(', ')}.
+                </p>
+              )}
+
+              {assessment.falseEvidenceTitles.length > 0 && (
+                <p className="mt-2 text-[11px] leading-relaxed text-[#F0A5A5]">
+                  <strong>Material considerado inautêntico:</strong> {assessment.falseEvidenceTitles.join(', ')}.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="p-3 bg-[#161618] rounded-xl border border-[#2A2A2E]">
@@ -198,7 +291,7 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
             }}
             className="w-full sm:w-auto px-8 py-3 rounded-xl bg-[#C5A059] hover:bg-[#D4B475] text-[#0A0A0B] font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-[#C5A059]/20 transition-all cursor-pointer transform active:scale-98"
           >
-            <span>Retornar ao Escritório e Avançar</span>
+            <span>{result.supervisorReview ? 'Retornar ao Escritório' : 'Retornar ao Escritório e Avançar'}</span>
             <ArrowRight size={16} />
           </button>
         </div>

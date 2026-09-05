@@ -14,6 +14,7 @@ import {
   ProfessionalExam,
   ProfessionalExamResult,
   SocialJuridicoToolUse,
+  SupervisorReview,
 } from './types/game';
 import { GAME_CASES } from './data/cases';
 import { CAREER_TIERS, ACADEMIC_COURSES } from './data/careers';
@@ -26,12 +27,15 @@ import { CaseBriefingModal } from './components/CaseBriefingModal';
 import { CaseDossierModal } from './components/CaseDossierModal';
 import { LegalCourtroomModal } from './components/LegalCourtroomModal';
 import { VerdictModal } from './components/VerdictModal';
+import { SupervisorReviewModal } from './components/SupervisorReviewModal';
 import { CareerModal } from './components/CareerModal';
 import { AcademicModal } from './components/AcademicModal';
 import { ConcursoModal } from './components/ConcursoModal';
 import { OfficeManagementModal } from './components/OfficeManagementModal';
 import { OabExamModal } from './components/OabExamModal';
 import { SocialJuridicoExperience } from './components/SocialJuridicoExperience';
+import { evaluatePetition } from './lib/judicialDecisionEngine';
+import { buildSupervisorReview } from './lib/officeDisciplineEngine';
 import { sound } from './utils/sound';
 
 const STORAGE_KEY = 'rota_da_justica_save_v1';
@@ -58,6 +62,11 @@ const INITIAL_PLAYER_STATE: PlayerProfile = {
     adminExpensesMonthly: 500,
     employees: [],
     monthlyRevenueHistory: [],
+  },
+  officeDiscipline: {
+    warningCount: 0,
+    employmentStatus: 'ACTIVE',
+    incidents: [],
   },
   concursoCompletedPhases: [],
   professionalExamAttempts: [],
@@ -102,6 +111,13 @@ function normalizeSavedPlayer(saved: Partial<PlayerProfile>): PlayerProfile {
         ? saved.officeFinances!.monthlyRevenueHistory
         : [],
     },
+    officeDiscipline: {
+      ...INITIAL_PLAYER_STATE.officeDiscipline,
+      ...(saved.officeDiscipline || {}),
+      incidents: Array.isArray(saved.officeDiscipline?.incidents)
+        ? saved.officeDiscipline!.incidents
+        : [],
+    },
   };
 }
 
@@ -132,6 +148,7 @@ export default function App() {
   const [verdictResult, setVerdictResult] = useState<CaseHistoryRecord | null>(null);
   const [verdictCase, setVerdictCase] = useState<LegalCase | null>(null);
   const [promotedTierAnnouncement, setPromotedTierAnnouncement] = useState<CareerTierId | null>(null);
+  const [pendingSupervisorReview, setPendingSupervisorReview] = useState<SupervisorReview | null>(null);
 
   useEffect(() => {
     try {
@@ -154,6 +171,11 @@ export default function App() {
       officeFinances: {
         ...INITIAL_PLAYER_STATE.officeFinances,
         officeName: `${name} Advocacia & Consultoria`,
+      },
+      officeDiscipline: {
+        warningCount: 0,
+        employmentStatus: 'ACTIVE',
+        incidents: [],
       },
     };
     setPlayer(freshProfile);
@@ -358,24 +380,6 @@ export default function App() {
 
     setIsCourtroomOpen(false);
 
-    const chosenStrategy = activeCaseData.strategies.find((s) => s.id === strategyId);
-    let totalScore = 0;
-
-    if (chosenStrategy?.isOptimal) totalScore += 50;
-    else totalScore += (chosenStrategy?.scoreWeight || 20) * 0.5;
-
-    const crucialCluesInCase = activeCaseData.availableClues.filter((c) => c.relevance === 'crucial');
-    const crucialSelected = selectedEvidenceIds.filter((id) =>
-      crucialCluesInCase.some((c) => c.id === id)
-    );
-    const evidenceRatio = crucialCluesInCase.length > 0
-      ? crucialSelected.length / crucialCluesInCase.length
-      : 1;
-    totalScore += Math.round(evidenceRatio * 40);
-
-    if (player.activeCase.hoursSpent <= activeCaseData.deadlineHours) totalScore += 10;
-    else totalScore += 2;
-
     const socialJuridicoBonus = Math.min(
       10,
       (player.activeCase.socialJuridicoActions || []).reduce(
@@ -383,36 +387,46 @@ export default function App() {
         0,
       ),
     );
-    totalScore += socialJuridicoBonus;
 
-    const isSuccess = totalScore >= activeCaseData.minimumPassingScore;
-    const verdict: 'PROCEDENTE' | 'PARCIALMENTE PROCEDENTE' | 'IMPROCEDENTE' = isSuccess
-      ? 'PROCEDENTE'
-      : totalScore >= 50
-      ? 'PARCIALMENTE PROCEDENTE'
-      : 'IMPROCEDENTE';
+    const decision = evaluatePetition({
+      currentCase: activeCaseData,
+      activeState: player.activeCase,
+      strategyId,
+      selectedEvidenceIds,
+      socialJuridicoBonus,
+    });
+
+    const completedDate = `${String(player.gameCurrentDay).padStart(2, '0')}/${String(player.gameCurrentMonth).padStart(2, '0')}/${player.gameCurrentYear}`;
+    const { review: supervisorReview, discipline: nextDiscipline } = buildSupervisorReview({
+      decision,
+      caseId: activeCaseData.id,
+      caseTitle: activeCaseData.title,
+      completedDate,
+      currentDiscipline: player.officeDiscipline,
+    });
 
     let earnedXp = 0;
     let earnedMoney = 0;
     let earnedReputation = 0;
-    let feedback = '';
 
-    if (isSuccess) {
+    if (decision.success) {
       sound.playVictory();
       earnedXp = activeCaseData.xpReward;
       earnedMoney = activeCaseData.honorariosReward;
       earnedReputation = activeCaseData.reputationReward;
-      feedback = 'Vistos, etc. Diante do robusto acervo probatório pré-constituído e da acertada fundamentação legal requerida pela parte autora, JULGO TOTALMENTE PROCEDENTE a pretensão formulada, deferindo de plano a tutela de urgência antecipada e condenando a parte ré em custas e honorários advocatícios.';
     } else {
       sound.playFailure();
       earnedXp = Math.round(activeCaseData.xpReward * 0.25);
       earnedMoney = 0;
-      earnedReputation = -8;
-      feedback = 'Vistos, etc. A parte autora não logrou êxito em demonstrar a verossimilhança de suas alegações, carecendo os autos de elementos de convicção indispensáveis à declaração do direito pretendido. JULGO IMPROCEDENTE o pedido.';
+      earnedReputation = supervisorReview?.severity === 'GRAVE'
+        ? -15
+        : supervisorReview?.severity === 'ADVERTENCIA'
+          ? -10
+          : -6;
     }
 
-    const newSolvedCount = isSuccess ? player.casesSolved + 1 : player.casesSolved;
-    const newFailedCount = !isSuccess ? player.casesFailed + 1 : player.casesFailed;
+    const newSolvedCount = decision.success ? player.casesSolved + 1 : player.casesSolved;
+    const newFailedCount = !decision.success ? player.casesFailed + 1 : player.casesFailed;
 
     let newTier = player.careerTier;
     let promotionAnnouncement: CareerTierId | null = null;
@@ -431,17 +445,19 @@ export default function App() {
     const resultRecord: CaseHistoryRecord = {
       caseId: activeCaseData.id,
       caseTitle: activeCaseData.title,
-      completedDate: `${String(player.gameCurrentDay).padStart(2, '0')}/${String(player.gameCurrentMonth).padStart(2, '0')}/${player.gameCurrentYear}`,
-      success: isSuccess,
-      score: Math.min(100, totalScore),
-      verdict,
+      completedDate,
+      success: decision.success,
+      score: decision.score,
+      verdict: decision.verdict,
       earnedXp,
       earnedMoney,
       earnedReputation,
       hoursUsed: player.activeCase.hoursSpent,
       totalAllowedHours: activeCaseData.deadlineHours,
-      judgeFeedback: feedback,
+      judgeFeedback: decision.feedback,
       socialJuridicoBonus,
+      judicialAssessment: decision.assessment,
+      supervisorReview: supervisorReview || undefined,
     };
 
     setVerdictCase(activeCaseData);
@@ -458,6 +474,7 @@ export default function App() {
       careerTier: newTier,
       activeCase: null,
       history: [resultRecord, ...prev.history],
+      officeDiscipline: nextDiscipline,
       gameCurrentDay: prev.gameCurrentDay + 3,
     }));
   };
@@ -694,12 +711,20 @@ export default function App() {
           player={player}
           promotedToTier={promotedTierAnnouncement}
           onNextCaseOrHub={() => {
+            const review = verdictResult.supervisorReview || null;
             setVerdictResult(null);
             setVerdictCase(null);
             setCurrentView('HUB');
+            if (review) setPendingSupervisorReview(review);
           }}
         />
       )}
+
+      <SupervisorReviewModal
+        isOpen={!!pendingSupervisorReview}
+        review={pendingSupervisorReview}
+        onClose={() => setPendingSupervisorReview(null)}
+      />
 
       <CareerModal
         isOpen={isCareerModalOpen}
