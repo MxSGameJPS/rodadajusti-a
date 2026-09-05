@@ -1,6 +1,8 @@
 {
   "rewrites": [
     { "source": "/login", "destination": "/index.html" },
-    { "source": "/jogo", "destination": "/index.html" }
+    { "source": "/jogo", "destination": "/index.html" },
+    { "source": "/demo/advogado", "destination": "/index.html" },
+    { "source": "/demo/contratacao", "destination": "/index.html" }
   ]
 }
