@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActiveCaseState, Clue, LegalCase } from '../types/game';
 import { FileCheck, FileText, MessageSquare, Receipt, Scale, Search, Stamp, X } from 'lucide-react';
 import { sound } from '../utils/sound';
+import { resolveCollectedClues } from '../lib/evidenceProgress';
 
 interface CaseDossierModalProps {
   isOpen: boolean;
@@ -30,7 +31,7 @@ export const CaseDossierModal: React.FC<CaseDossierModalProps> = ({ isOpen, onCl
 
   if (!isOpen) return null;
 
-  const discoveredClues = currentCase.availableClues.filter((clue) => activeState.discoveredClueIds.includes(clue.id));
+  const discoveredClues = resolveCollectedClues(currentCase, activeState);
   const filteredClues = filterType === 'todos' ? discoveredClues : discoveredClues.filter((clue) => clue.type === filterType);
 
   return (

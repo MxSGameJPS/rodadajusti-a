@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActiveCaseState, LegalCase } from '../types/game';
 import { AlertTriangle, CheckCircle2, Clock, FileText, Scale, Send, X } from 'lucide-react';
 import { sound } from '../utils/sound';
+import { resolveCollectedClues } from '../lib/evidenceProgress';
 
 interface LegalCourtroomModalProps {
   isOpen: boolean;
@@ -37,12 +38,12 @@ export const LegalCourtroomModal: React.FC<LegalCourtroomModalProps> = ({ isOpen
 
   if (!isOpen) return null;
 
-  const discoveredClues = currentCase.availableClues.filter((clue) => activeState.discoveredClueIds.includes(clue.id));
+  const discoveredClues = resolveCollectedClues(currentCase, activeState);
   const deadlineExceeded = activeState.hoursSpent > currentCase.deadlineHours;
   const hoursOverdue = Math.max(0, activeState.hoursSpent - currentCase.deadlineHours);
   const canSubmit = deadlineExceeded || !!selectedStrategyId;
   const submittingWithoutEvidence = !deadlineExceeded && !!selectedStrategyId && selectedEvidenceIds.length === 0;
-  const noInvestigation = activeState.discoveredClueIds.length === 0;
+  const noInvestigation = discoveredClues.length === 0;
 
   const toggleEvidence = (clueId: string) => {
     sound.playClick();

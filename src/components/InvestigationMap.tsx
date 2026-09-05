@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { TravelMapTransition } from './TravelMapTransition';
+import { resolveCollectedClueIds } from '../lib/evidenceProgress';
 
 interface InvestigationMapProps {
   currentCase: LegalCase;
@@ -38,6 +39,7 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
   const [travelTarget, setTravelTarget] = useState<LocationScene | null>(null);
   const hoursLeft = Math.max(0, currentCase.deadlineHours - activeState.hoursSpent);
   const isTimeRunningOut = hoursLeft <= 12;
+  const collectedClueIds = new Set(resolveCollectedClueIds(currentCase, activeState));
 
   const getIcon = (iconName: string, className: string) => {
     switch (iconName) {
@@ -110,7 +112,7 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
               className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#1A1A1D] hover:bg-[#222226] text-[#E0E0E0] border border-[#2A2A2E] hover:border-[#C5A059]/40 text-xs font-semibold transition-all cursor-pointer shadow-sm"
             >
               <FileCheck size={16} className="text-[#C5A059]" />
-              <span>Autos ({activeState.discoveredClueIds.length} Provas)</span>
+              <span>Autos ({collectedClueIds.size} Provas)</span>
             </button>
 
             <button
@@ -144,7 +146,7 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
               const isUnlocked = activeState.unlockedLocationIds.includes(location.id);
               const isCurrent = activeState.currentLocationId === location.id;
               const cluesInThisLocation = currentCase.availableClues.filter((clue) => clue.locationFoundId === location.id);
-              const discoveredCluesCount = cluesInThisLocation.filter((clue) => activeState.discoveredClueIds.includes(clue.id)).length;
+              const discoveredCluesCount = cluesInThisLocation.filter((clue) => collectedClueIds.has(clue.id)).length;
 
               return (
                 <div

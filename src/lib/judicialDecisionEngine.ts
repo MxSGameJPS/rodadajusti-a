@@ -5,6 +5,7 @@ import type {
   LegalCase,
   SupervisorReviewSeverity,
 } from '../types/game';
+import { resolveCollectedClueIds } from './evidenceProgress';
 
 export type JudicialDecision = {
   score: number;
@@ -110,7 +111,8 @@ export function evaluatePetition({
 }: EvaluatePetitionInput): JudicialDecision {
   const deadlineMissed = strategyId === '__PRAZO_FATAL_PERDIDO__' || activeState.hoursSpent > currentCase.deadlineHours;
   const chosenStrategy = currentCase.strategies.find((strategy) => strategy.id === strategyId) || null;
-  const discoveredSet = new Set(activeState.discoveredClueIds);
+  const resolvedDiscoveredIds = resolveCollectedClueIds(currentCase, activeState);
+  const discoveredSet = new Set(resolvedDiscoveredIds);
   const selectedIds = unique(selectedEvidenceIds).filter((id) => discoveredSet.has(id));
   const selectedClues = currentCase.availableClues.filter((clue) => selectedIds.includes(clue.id));
 
@@ -138,7 +140,7 @@ export function evaluatePetition({
 
   const issues: JudicialIssueCode[] = [];
   if (deadlineMissed) issues.push('DEADLINE_MISSED');
-  if (activeState.discoveredClueIds.length === 0) issues.push('NO_INVESTIGATION');
+  if (resolvedDiscoveredIds.length === 0) issues.push('NO_INVESTIGATION');
   else if (
     authenticCrucialClues.length > 0 &&
     discoveredAuthenticCrucial.length / authenticCrucialClues.length < 0.5
@@ -202,7 +204,7 @@ export function evaluatePetition({
     investigationScore,
     deadlineScore,
     socialJuridicoBonus,
-    discoveredEvidenceCount: activeState.discoveredClueIds.length,
+    discoveredEvidenceCount: resolvedDiscoveredIds.length,
     selectedEvidenceCount: selectedClues.length,
     crucialEvidenceRequired: requiredClues.length,
     crucialEvidenceSelected: selectedRequired.length,
