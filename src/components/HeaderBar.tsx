@@ -13,6 +13,7 @@ import {
   Laptop,
 } from 'lucide-react';
 import { sound } from '../utils/sound';
+import { usePlayerDisplayName } from '../lib/playerTreatment';
 import { SessionLogoutButton } from './SessionLogoutButton';
 
 const OPEN_SOCIAL_JURIDICO_EVENT = 'rota:open-social-juridico';
@@ -46,6 +47,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 }) => {
   const currentTier: CareerTier = CAREER_TIERS[player.careerTier] || CAREER_TIERS.ESTAGIARIO;
   const canUseSocialJuridico = SOCIAL_JURIDICO_TIERS.has(player.careerTier);
+  const displayName = usePlayerDisplayName(player, 'Estagiário');
 
   const tierKeys = Object.keys(CAREER_TIERS) as (keyof typeof CAREER_TIERS)[];
   const currentTierIndex = tierKeys.indexOf(player.careerTier);
@@ -139,7 +141,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               }}
               className="group flex min-w-0 items-center gap-1 text-left text-sm font-semibold text-[#E0E0E0] transition-colors hover:text-[#C5A059]"
             >
-              <span className="truncate">{player.name || 'Dr. Estagiário'}</span>
+              <span className="truncate">{displayName}</span>
               <span className="hidden text-xs font-normal text-[#888888] sm:inline">
                 • {player.academicDegree === 'GRADUANDO' ? 'Bacharelando' : player.academicDegree}
               </span>
