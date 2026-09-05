@@ -13,6 +13,7 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { GAME_CASES } from '../../data/cases';
+import { isProfessionalPreviewMode } from '../../lib/professionalEmployment';
 import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import type { PlayerProfile } from '../../types/game';
 import { sound } from '../../utils/sound';
@@ -40,6 +41,7 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
 }) => {
   const displayName = usePlayerDisplayName(player, 'Advogado');
   const activeCase = GAME_CASES.find((caseItem) => caseItem.id === player.activeCase?.caseId) || null;
+  const previewMode = isProfessionalPreviewMode();
 
   const openDevice = (eventName: string) => {
     sound.playClick();
@@ -56,6 +58,7 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
           <div className={styles.heroBadges}>
             <span>Ramos & Associados</span>
             <span className={styles.enterpriseBadge}>Social Jurídico Enterprise</span>
+            {previewMode && <span>Modo demonstração • seu progresso não foi alterado</span>}
           </div>
           <h2>Bom expediente, {displayName}.</h2>
           <p>
@@ -65,8 +68,8 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
         </div>
         <div className={styles.oabCard}>
           <span>Inscrição profissional do personagem</span>
-          <strong>{player.oabRegistration?.code || '—'}</strong>
-          <small>simulada no Rota da Justiça</small>
+          <strong>{player.oabRegistration?.code || (previewMode ? 'OAB/RS • DEMO' : '—')}</strong>
+          <small>{previewMode ? 'visualização de desenvolvimento' : 'simulada no Rota da Justiça'}</small>
         </div>
       </section>
 
