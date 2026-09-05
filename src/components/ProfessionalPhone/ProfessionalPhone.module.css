@@ -1,0 +1,678 @@
+.launcher {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 78;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border: 1px solid rgba(52, 211, 153, 0.38);
+  border-radius: 14px;
+  background: rgba(17, 17, 19, 0.96);
+  color: #7de5bd;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.42);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  backdrop-filter: blur(16px);
+}
+
+.launcher i {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid #111113;
+  border-radius: 999px;
+  background: #f87171;
+  animation: pulse 1.2s infinite;
+}
+
+.incomingCall {
+  position: fixed;
+  right: 24px;
+  bottom: 82px;
+  z-index: 172;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: min(420px, calc(100vw - 32px));
+  padding: 14px;
+  border: 1px solid rgba(52, 211, 153, 0.42);
+  border-radius: 17px;
+  background: rgba(14, 14, 16, 0.98);
+  box-shadow: 0 24px 75px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(18px);
+}
+
+.incomingPulse {
+  display: flex;
+  width: 45px;
+  height: 45px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  border-radius: 50%;
+  background: rgba(52, 211, 153, 0.1);
+  color: #34d399;
+  animation: pulse 1.2s infinite;
+}
+
+.incomingCopy {
+  min-width: 0;
+}
+
+.incomingCopy span,
+.incomingCopy small,
+.phoneHeader span,
+.contactText span,
+.chatHeader span,
+.activeCall > span,
+.callIntro span {
+  display: block;
+}
+
+.incomingCopy span {
+  color: #34d399;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.incomingCopy strong {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: #f0eee9;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.incomingCopy small {
+  margin-top: 2px;
+  color: #77777e;
+  font-size: 9px;
+}
+
+.incomingActions {
+  display: flex;
+  gap: 7px;
+}
+
+.incomingActions button {
+  display: flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+}
+
+.rejectButton {
+  background: #dc4b4b;
+}
+
+.acceptButton {
+  background: #22a973;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 18px;
+  background: rgba(3, 3, 4, 0.84);
+  backdrop-filter: blur(10px);
+}
+
+.phoneFrame {
+  position: relative;
+  display: flex;
+  width: min(860px, 100%);
+  height: min(760px, calc(100vh - 36px));
+  min-height: 560px;
+  flex-direction: column;
+  overflow: hidden;
+  border: 8px solid #242428;
+  border-radius: 36px;
+  background: #0d0d0f;
+  box-shadow: 0 38px 110px rgba(0, 0, 0, 0.65), inset 0 0 0 1px #414147;
+}
+
+.phoneSpeaker {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 2;
+  width: 72px;
+  height: 5px;
+  border-radius: 999px;
+  background: #3d3d42;
+  transform: translateX(-50%);
+}
+
+.phoneHeader {
+  display: flex;
+  min-height: 74px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 22px 20px 12px;
+  border-bottom: 1px solid #29292e;
+  background: #141416;
+}
+
+.phoneHeader span {
+  color: #c5a059;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.phoneHeader strong {
+  display: block;
+  margin-top: 2px;
+  color: #efede8;
+  font-size: 12px;
+}
+
+.phoneHeader > button,
+.chatHeader > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #333338;
+  background: #19191c;
+  color: #99999f;
+  cursor: pointer;
+}
+
+.phoneHeader > button {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid #29292e;
+  background: #111113;
+}
+
+.tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #74747b;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tabs .activeTab {
+  border-color: rgba(52, 211, 153, 0.28);
+  background: rgba(52, 211, 153, 0.08);
+  color: #7de5bd;
+}
+
+.appBody {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: minmax(230px, 0.78fr) minmax(0, 1.6fr);
+}
+
+.contactList {
+  overflow-y: auto;
+  border-right: 1px solid #29292e;
+  background: #111113;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 12px;
+  padding: 9px 11px;
+  border: 1px solid #2c2c31;
+  border-radius: 10px;
+  background: #17171a;
+  color: #6f6f76;
+  font-size: 9px;
+}
+
+.contactList > button,
+.callDirectory > button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-bottom: 1px solid #232327;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.contactList > button {
+  padding: 12px 14px;
+}
+
+.contactList > button:hover,
+.contactList .selectedContact {
+  background: #19191c;
+}
+
+.contactList > button:disabled,
+.callDirectory > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.avatar,
+.callAvatar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid #34343a;
+  background: #202024;
+  color: #96969c;
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+}
+
+.avatar img,
+.callAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.contactText {
+  min-width: 0;
+  flex: 1;
+}
+
+.contactText strong {
+  display: block;
+  overflow: hidden;
+  color: #dddddf;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contactText span {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #73737a;
+  font-size: 9px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatPanel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 25% 20%, rgba(52, 211, 153, 0.035), transparent 32%),
+    #0e0e10;
+}
+
+.chatHeader {
+  display: flex;
+  min-height: 62px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #29292e;
+  background: #151517;
+}
+
+.chatHeader strong {
+  color: #e2e1dd;
+  font-size: 11px;
+}
+
+.chatHeader span {
+  margin-top: 2px;
+  color: #717178;
+  font-size: 8px;
+}
+
+.chatHeader > button {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #67d8ad;
+}
+
+.chatHeader > button:disabled {
+  opacity: 0.35;
+}
+
+.messages {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.incomingMessageBubble,
+.outgoingMessage {
+  width: fit-content;
+  max-width: 78%;
+  padding: 9px 10px 6px;
+  border: 1px solid #29292e;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+}
+
+.incomingMessageBubble {
+  align-self: flex-start;
+  background: #1a1a1d;
+}
+
+.outgoingMessage {
+  align-self: flex-end;
+  border-color: rgba(52, 211, 153, 0.2);
+  background: #15362c;
+}
+
+.incomingMessageBubble p,
+.outgoingMessage p {
+  margin: 0;
+  color: #dfded9;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.incomingMessageBubble span,
+.outgoingMessage span {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  margin-top: 4px;
+  color: #77777d;
+  font-size: 7px;
+}
+
+.outgoingMessage span {
+  color: #7db6a3;
+}
+
+.emptyChat {
+  margin: auto;
+  padding: 18px;
+  color: #6e6e75;
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid #29292e;
+  background: #141416;
+}
+
+.composer input {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #303036;
+  border-radius: 12px;
+  outline: none;
+  background: #1a1a1d;
+  color: #e2e1dd;
+  font-size: 10px;
+}
+
+.composer input:focus {
+  border-color: rgba(52, 211, 153, 0.46);
+}
+
+.composer button {
+  display: flex;
+  width: 39px;
+  height: 39px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: #27b47d;
+  color: #071b14;
+  cursor: pointer;
+}
+
+.composer button:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
+.callsApp {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.callDirectory {
+  width: min(600px, 100%);
+  margin: auto;
+  padding: 22px;
+}
+
+.callIntro {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 15px;
+  border: 1px solid rgba(52, 211, 153, 0.22);
+  border-radius: 14px;
+  background: rgba(52, 211, 153, 0.05);
+  color: #63d5aa;
+}
+
+.callIntro span {
+  color: #72a991;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.callIntro strong {
+  display: block;
+  margin-top: 2px;
+  color: #e5e3de;
+  font-size: 12px;
+}
+
+.callDirectory > button {
+  padding: 13px 6px;
+}
+
+.callDirectory > button > svg {
+  color: #54c99d;
+}
+
+.activeCall {
+  display: flex;
+  width: min(520px, 100%);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: auto;
+  padding: 30px 20px;
+  text-align: center;
+}
+
+.callAvatar {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+}
+
+.activeCall > span {
+  margin-top: 18px;
+  color: #65d3a8;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.activeCall h3 {
+  margin: 7px 0 0;
+  color: #f0eee9;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 21px;
+}
+
+.activeCall > p {
+  margin: 4px 0 0;
+  color: #77777d;
+  font-size: 9px;
+}
+
+.activeCall > strong {
+  margin-top: 12px;
+  color: #d4d2cc;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+}
+
+.callTranscript {
+  max-width: 440px;
+  margin-top: 22px;
+  padding: 14px;
+  border: 1px solid #2e2e34;
+  border-radius: 13px;
+  background: #17171a;
+  color: #aaa8a2;
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.hangupButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 26px;
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #d95151;
+  color: #fff;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.7; }
+}
+
+@media (max-width: 720px) {
+  .launcher {
+    right: 14px;
+    bottom: 14px;
+  }
+
+  .incomingCall {
+    right: 16px;
+    bottom: 72px;
+  }
+
+  .backdrop {
+    align-items: flex-start;
+    padding: 8px;
+  }
+
+  .phoneFrame {
+    height: calc(100vh - 16px);
+    min-height: 0;
+    margin: auto 0;
+    border-width: 5px;
+    border-radius: 28px;
+  }
+
+  .appBody {
+    grid-template-columns: 1fr;
+  }
+
+  .contactList {
+    display: flex;
+    min-height: 82px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-bottom: 1px solid #29292e;
+  }
+
+  .searchBar {
+    display: none;
+  }
+
+  .contactList > button {
+    min-width: 170px;
+    border-right: 1px solid #232327;
+    border-bottom: 0;
+  }
+
+  .messages {
+    padding: 12px;
+  }
+
+  .incomingMessageBubble,
+  .outgoingMessage {
+    max-width: 88%;
+  }
+}
