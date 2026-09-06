@@ -1,6 +1,8 @@
 import type { LegalCase } from '../types/game';
 import { GAME_CASES } from '../data/cases';
 import '../data/casesExpansion';
+import { applyIndependentCasePresentations } from './independentPractice';
+import { readCurrentPlayerSnapshot } from './professionalRpg';
 import { isSupabaseConfigured, supabase } from './supabase';
 import { normalizeCaseCatalog } from './caseRules';
 import { isLegalCase, validateLegalCase } from './caseValidation';
@@ -169,7 +171,9 @@ export async function loadCaseCatalog(): Promise<LegalCase[]> {
 
 export async function hydrateCaseCatalog(): Promise<LegalCase[]> {
   const catalog = await loadCaseCatalog();
+  const player = readCurrentPlayerSnapshot();
+  const runtimeCatalog = player ? applyIndependentCasePresentations(player, catalog) : catalog;
 
-  GAME_CASES.splice(0, GAME_CASES.length, ...catalog);
+  GAME_CASES.splice(0, GAME_CASES.length, ...runtimeCatalog);
   return GAME_CASES;
 }

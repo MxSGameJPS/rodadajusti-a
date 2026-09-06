@@ -1,5 +1,13 @@
 import { GAME_CASES } from '../data/cases';
 import type { PlayerProfile } from '../types/game';
+import {
+  getIndependentMarketplaceCase,
+  isIndependentCase,
+} from './independentPractice';
+import {
+  isIndependentProfessional,
+  isRamosEmploymentActive,
+} from './professionalEmployment';
 import { getProfessionalOwnerKey } from './professionalRpg';
 import {
   getAssignmentContext,
@@ -66,6 +74,8 @@ function dateLabel(player: PlayerProfile) {
 
 export function buildProfessionalAgenda(player: PlayerProfile): ProfessionalAgendaItem[] {
   const items: ProfessionalAgendaItem[] = [];
+  const ramosActive = isRamosEmploymentActive(player);
+  const independent = isIndependentProfessional(player);
   const activeCase = GAME_CASES.find((caseItem) => caseItem.id === player.activeCase?.caseId) || null;
 
   if (activeCase && player.activeCase) {
@@ -81,21 +91,42 @@ export function buildProfessionalAgenda(player: PlayerProfile): ProfessionalAgen
     });
   }
 
-  const assigned = getProfessionalAssignedCase(player, GAME_CASES);
+  const assigned = ramosActive
+    ? getProfessionalAssignedCase(player, GAME_CASES)
+    : independent
+      ? getIndependentMarketplaceCase(player, GAME_CASES)
+      : null;
+
   if (!player.activeCase && assigned) {
-    const context = getAssignmentContext(assigned, player);
-    items.push({
-      id: `assigned-${assigned.id}`,
-      title: context.title,
-      description: `${assigned.code} • ${assigned.title}`,
-      meta: context.isAppeal ? context.description : 'Aguardando aceite no CRM',
-      tone: context.isAppeal ? 'warning' : 'info',
-      action: 'CRM',
-      urgent: context.isAppeal,
-    });
+    if (ramosActive) {
+      const context = getAssignmentContext(assigned, player);
+      items.push({
+        id: `assigned-${assigned.id}`,
+        title: context.title,
+        description: `${assigned.code} • ${assigned.title}`,
+        meta: context.isAppeal ? context.description : 'Aguardando aceite no CRM',
+        tone: context.isAppeal ? 'warning' : 'info',
+        action: 'CRM',
+        urgent: context.isAppeal,
+      });
+    } else {
+      items.push({
+        id: `independent-assigned-${assigned.id}`,
+        title: 'Oportunidade no Social Jurídico Pro',
+        description: `${assigned.code} • ${assigned.title}`,
+        meta: 'Disponível na sua conta própria • sem vínculo com o Ramos & Associados',
+        tone: 'info',
+        action: 'CRM',
+        urgent: false,
+      });
+    }
   }
 
-  for (const record of player.history.slice(0, 6)) {
+  const processHistory = player.history
+    .slice(0, 6)
+    .filter((record) => ramosActive || (independent && isIndependentCase(player, record.caseId)));
+
+  for (const record of processHistory) {
     const info = getProcessStatusInfo(record, player, GAME_CASES);
     if (info.status === 'PRAZO_RECURSAL_ABERTO') {
       items.push({
@@ -169,8 +200,10 @@ export function buildProfessionalAgenda(player: PlayerProfile): ProfessionalAgen
   if (items.length === 0) {
     items.push({
       id: `quiet-${dateLabel(player)}`,
-      title: 'Expediente sem pendências urgentes',
-      description: 'Use o tempo para revisar o CRM, organizar a agenda e acompanhar movimentações dos processos.',
+      title: independent ? 'Dia aberto para captação e organização' : 'Expediente sem pendências urgentes',
+      description: independent
+        ? 'Sem distribuição de escritório. Procure oportunidades, acompanhe sua conta pessoal e desenvolva sua própria carteira de clientes.'
+        : 'Use o tempo para revisar o CRM, organizar a agenda e acompanhar movimentações dos processos.',
       meta: dateLabel(player),
       tone: 'success',
       action: 'CRM',
@@ -183,6 +216,11 @@ export function buildProfessionalAgenda(player: PlayerProfile): ProfessionalAgen
 
 export function emitProfessionalLifeNotifications(player: PlayerProfile) {
   let pulse = readPulseState(player);
+
+  // Mariana e Dr. Roberto só podem gerar comunicações de trabalho enquanto
+  // existir vínculo ativo com o Ramos & Associados.
+  if (!isRamosEmploymentActive(player)) return pulse;
+
   const activeCase = GAME_CASES.find((caseItem) => caseItem.id === player.activeCase?.caseId) || null;
 
   if (activeCase && player.activeCase) {

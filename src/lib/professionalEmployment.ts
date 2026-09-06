@@ -156,6 +156,11 @@ export function completeProfessionalEmploymentOnboarding(player: PlayerProfile) 
   return next;
 }
 
+/**
+ * Indica que a fase profissional já foi desbloqueada. Depois de uma demissão,
+ * notebook/celular e a vida profissional continuam existindo; o que deixa de
+ * existir é o vínculo com o Ramos & Associados.
+ */
 export function isProfessionalEmploymentActive(player: PlayerProfile | null | undefined) {
   if (isProfessionalPreviewMode()) return true;
 
@@ -165,5 +170,21 @@ export function isProfessionalEmploymentActive(player: PlayerProfile | null | un
       state?.contractStatus === 'SIGNED' &&
       state.onboardingCompleted &&
       state.devicesUnlocked,
+  );
+}
+
+export function isRamosEmploymentActive(player: PlayerProfile | null | undefined) {
+  if (isProfessionalPreviewMode()) return true;
+  return Boolean(
+    isProfessionalEmploymentActive(player) &&
+      player?.officeDiscipline?.employmentStatus !== 'TERMINATED',
+  );
+}
+
+export function isIndependentProfessional(player: PlayerProfile | null | undefined) {
+  if (!player?.oabRegistration) return false;
+  return Boolean(
+    isProfessionalEmploymentActive(player) &&
+      player.officeDiscipline?.employmentStatus === 'TERMINATED',
   );
 }

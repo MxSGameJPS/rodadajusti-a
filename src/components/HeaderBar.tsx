@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Laptop,
 } from 'lucide-react';
+import { isIndependentProfessional } from '../lib/professionalEmployment';
 import { sound } from '../utils/sound';
 import { usePlayerDisplayName } from '../lib/playerTreatment';
 import { SessionLogoutButton } from './SessionLogoutButton';
@@ -48,6 +49,17 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   const currentTier: CareerTier = CAREER_TIERS[player.careerTier] || CAREER_TIERS.ESTAGIARIO;
   const canUseSocialJuridico = SOCIAL_JURIDICO_TIERS.has(player.careerTier);
   const displayName = usePlayerDisplayName(player, 'Estagiário');
+  const independent = isIndependentProfessional(player);
+  const workspaceLabel = independent
+    ? player.officeFinances.isOfficeOpen
+      ? player.officeFinances.officeName.toUpperCase()
+      : 'ADVOCACIA INDEPENDENTE'
+    : 'RAMOS & ASSOCIADOS';
+  const tierDisplayTitle = independent
+    ? player.officeFinances.isOfficeOpen
+      ? 'Advogado • Escritório Próprio'
+      : 'Advogado Autônomo'
+    : currentTier.title;
 
   const tierKeys = Object.keys(CAREER_TIERS) as (keyof typeof CAREER_TIERS)[];
   const currentTierIndex = tierKeys.indexOf(player.careerTier);
@@ -69,7 +81,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           </span>
           <span className="truncate tracking-wider text-[#A0A0A0] md:hidden">PJe • BRASIL</span>
           <span className="hidden text-[#444] xl:inline">•</span>
-          <span className="hidden font-medium text-[#C5A059] xl:inline">RAMOS & ASSOCIADOS</span>
+          <span className="hidden font-medium text-[#C5A059] xl:inline">{workspaceLabel}</span>
         </div>
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
@@ -130,7 +142,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C5A059]">Rota da Justiça</span>
               <span className="rounded border border-[#C5A059]/30 bg-[#C5A059]/10 px-1.5 py-0.5 font-mono text-[9px] text-[#C5A059]">
-                {currentTier.title}
+                {tierDisplayTitle}
               </span>
             </div>
 
@@ -164,12 +176,12 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             </div>
           </div>
 
-          <div className="text-center px-1 sm:px-2">
+          <div className="px-1 text-center sm:px-2">
             <span className="block text-[9px] font-semibold uppercase tracking-wider text-[#888888] sm:text-[10px]">Reputação</span>
             <span className="font-mono text-sm font-bold text-[#60A5FA]">{player.reputation} / 100</span>
           </div>
 
-          <div className="text-center px-1 sm:px-2">
+          <div className="px-1 text-center sm:px-2">
             <span className="block text-[9px] font-semibold uppercase tracking-wider text-[#888888] sm:text-[10px]">Patrimônio</span>
             <span className="font-mono text-sm font-bold text-[#34D399]">
               R$ {player.money.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}

@@ -1,7 +1,11 @@
 import React from 'react';
 import type { LegalCase, PlayerProfile } from '../types/game';
-import { isProfessionalEmploymentActive } from '../lib/professionalEmployment';
+import {
+  isIndependentProfessional,
+  isRamosEmploymentActive,
+} from '../lib/professionalEmployment';
 import { CareerMomentumCard } from './CareerMomentum/CareerMomentumCard';
+import { IndependentProfessionalHub } from './IndependentProfessionalHub/IndependentProfessionalHub';
 import { OfficeHub as LegacyOfficeHub } from './LegacyOfficeHub';
 import { ProfessionalOfficeHub } from './ProfessionalOfficeHub/ProfessionalOfficeHub';
 
@@ -17,18 +21,32 @@ interface OfficeHubProps {
 }
 
 export const OfficeHub: React.FC<OfficeHubProps> = (props) => {
-  const hub = isProfessionalEmploymentActive(props.player) ? (
-    <ProfessionalOfficeHub
-      player={props.player}
-      onResumeActiveCase={props.onResumeActiveCase}
-      onOpenCareerModal={props.onOpenCareerModal}
-      onOpenAcademicModal={props.onOpenAcademicModal}
-      onOpenConcursoModal={props.onOpenConcursoModal}
-      onOpenOfficeModal={props.onOpenOfficeModal}
-    />
-  ) : (
-    <LegacyOfficeHub {...props} />
-  );
+  let hub: React.ReactNode;
+
+  if (isIndependentProfessional(props.player)) {
+    hub = (
+      <IndependentProfessionalHub
+        player={props.player}
+        onResumeActiveCase={props.onResumeActiveCase}
+        onOpenCareerModal={props.onOpenCareerModal}
+        onOpenAcademicModal={props.onOpenAcademicModal}
+        onOpenConcursoModal={props.onOpenConcursoModal}
+      />
+    );
+  } else if (isRamosEmploymentActive(props.player)) {
+    hub = (
+      <ProfessionalOfficeHub
+        player={props.player}
+        onResumeActiveCase={props.onResumeActiveCase}
+        onOpenCareerModal={props.onOpenCareerModal}
+        onOpenAcademicModal={props.onOpenAcademicModal}
+        onOpenConcursoModal={props.onOpenConcursoModal}
+        onOpenOfficeModal={props.onOpenOfficeModal}
+      />
+    );
+  } else {
+    hub = <LegacyOfficeHub {...props} />;
+  }
 
   return (
     <>
