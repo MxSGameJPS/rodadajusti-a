@@ -5,6 +5,7 @@ import { AccountSaveBoundary } from './components/AccountSaveBoundary';
 import { AuthGate } from './components/AuthGate';
 import { AuthRouteSync } from './components/AuthRouteSync';
 import { CareerIntroGate } from './components/CareerIntroGate/CareerIntroGate';
+import { CareerOriginGate } from './components/CareerOriginGate/CareerOriginGate';
 import { CinematicIntroGate } from './components/CinematicIntroGate/CinematicIntroGate';
 import { DisciplinaryDefenseExperienceV2 } from './components/DisciplinaryDefenseExperienceV2';
 import { EthicalDilemmaExperience } from './components/EthicalDilemmaExperience';
@@ -44,6 +45,7 @@ async function bootstrap() {
         <CinematicIntroGate>
           <AuthGate>
             <CareerIntroGate>
+              <CareerOriginGate />
               <App />
               <ProfessionalTreatmentGate />
               <PostOabEmploymentExperience />
