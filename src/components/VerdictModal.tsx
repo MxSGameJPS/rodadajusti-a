@@ -17,6 +17,7 @@ import {
 import { sound } from '../utils/sound';
 import { usePlayerDisplayName } from '../lib/playerTreatment';
 import { CelebrationBurst } from './CelebrationBurst/CelebrationBurst';
+import { VerdictFactorsPanel } from './VerdictFactorsPanel';
 
 interface VerdictModalProps {
   isOpen: boolean;
@@ -156,6 +157,8 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
               “{result.judgeFeedback}”
             </p>
           </div>
+
+          <VerdictFactorsPanel result={result} currentCase={currentCase} />
 
           {assessment && (
             <div className="rounded-xl border border-[#2A2A2E] bg-[#121316] p-4">

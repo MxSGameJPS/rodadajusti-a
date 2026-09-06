@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Gavel, Scale, UserRound, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Gavel, Info, Scale, UserRound, X } from 'lucide-react';
 import type { ActiveCaseState, Clue, LegalCase } from '../types/game';
 import {
   getCaseSpecificHearingConfig,
@@ -268,6 +268,39 @@ function buildRounds(currentCase: LegalCase, activeState: ActiveCaseState, selec
   ];
 }
 
+function getChoiceFeedback(choice: HearingChoice) {
+  if (choice.impact > 0) {
+    return {
+      title: 'Condução tecnicamente adequada',
+      description: 'Sua decisão fortaleceu a apresentação oral deste ponto.',
+      Icon: CheckCircle2,
+      boxClass: 'border-[#34D399]/30 bg-[#34D399]/[0.06]',
+      iconClass: 'text-[#6EE7B7]',
+      titleClass: 'text-[#8BE7C3]',
+    };
+  }
+
+  if (choice.impact < 0) {
+    return {
+      title: 'Condução arriscada',
+      description: 'Sua decisão enfraqueceu a apresentação oral deste ponto e poderá ser considerada na sentença.',
+      Icon: AlertTriangle,
+      boxClass: 'border-[#F87171]/35 bg-[#F87171]/[0.07]',
+      iconClass: 'text-[#F87171]',
+      titleClass: 'text-[#FCA5A5]',
+    };
+  }
+
+  return {
+    title: 'Impacto neutro',
+    description: 'A resposta não gerou vantagem relevante, mas também não criou uma penalidade direta.',
+    Icon: Info,
+    boxClass: 'border-[#60A5FA]/25 bg-[#60A5FA]/[0.05]',
+    iconClass: 'text-[#60A5FA]',
+    titleClass: 'text-[#9CC7FA]',
+  };
+}
+
 export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
   isOpen,
   currentCase,
@@ -290,7 +323,7 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
 
   const round = rounds[roundIndex];
   const runningImpact = answers.reduce((sum, answer) => sum + answer.impact, 0) + (selectedChoice?.impact || 0);
-  const correctAnswers = answers.filter((answer) => answer.impact > 0).length + (selectedChoice?.correct ? 1 : 0);
+  const choiceFeedback = selectedChoice ? getChoiceFeedback(selectedChoice) : null;
 
   const choose = (choice: HearingChoice) => {
     if (selectedChoice || isFinished) return;
@@ -345,6 +378,12 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-[#060607]/95 p-3 backdrop-blur-md sm:p-6">
       <div className="my-4 w-full max-w-4xl overflow-hidden rounded-2xl border border-[#C5A059]/35 bg-[#111113] shadow-2xl">
+        <div className="border-b border-[#3A321F] bg-[linear-gradient(135deg,#211D12_0%,#171513_48%,#101012_100%)] px-5 py-2.5 sm:px-6">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[#C5A059]/35 bg-[#C5A059]/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-[#E5C87F]">
+            <Gavel size={12} /> Sustentação oral / audiência jogável
+          </span>
+        </div>
+
         <div className="flex items-start justify-between gap-4 border-b border-[#2A2A2E] bg-gradient-to-r from-[#181613] to-[#101012] p-5 sm:p-6">
           <div className="flex items-start gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#C5A059]/35 bg-[#C5A059]/10 text-[#C5A059]"><Gavel size={22} /></div>
@@ -363,7 +402,7 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
         {!isFinished ? (
           <div className="space-y-5 p-5 sm:p-6">
             <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#C5A059]"><Scale size={14} /> Momento {roundIndex + 1} de {rounds.length}</div>
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#C5A059]"><Scale size={14} /> Audiência • etapa {roundIndex + 1} de {rounds.length}</div>
               <div className="h-1.5 w-40 overflow-hidden rounded-full bg-[#242428]"><div className="h-full bg-[#C5A059] transition-all" style={{ width: `${((roundIndex + 1) / rounds.length) * 100}%` }} /></div>
             </div>
 
@@ -373,22 +412,36 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
               <p className="mt-2 text-sm leading-7 text-[#B9B4AC]">{round.prompt}</p>
             </div>
 
+            {!selectedChoice && (
+              <div className="flex items-start gap-2 rounded-lg border border-[#60A5FA]/15 bg-[#60A5FA]/[0.04] px-3 py-2.5 text-[10px] leading-relaxed text-[#8FAFD5]">
+                <Info size={14} className="mt-0.5 shrink-0" />
+                <span>Escolha sua atuação sem indicação prévia da resposta ideal. O efeito técnico será explicado somente depois da sua decisão.</span>
+              </div>
+            )}
+
             <div className="space-y-3">
               {round.choices.map((choice) => {
                 const isSelected = selectedChoice?.id === choice.id;
+                const selectedStateClass = isSelected
+                  ? choice.impact > 0
+                    ? 'border-[#34D399]/55 bg-[#34D399]/10'
+                    : choice.impact < 0
+                      ? 'border-[#F87171]/55 bg-[#F87171]/10'
+                      : 'border-[#60A5FA]/45 bg-[#60A5FA]/10'
+                  : 'border-[#2A2A2E] bg-[#161618] hover:border-[#C5A059]/45 hover:bg-[#1A1A1D]';
+
                 return (
                   <button
                     key={choice.id}
                     type="button"
                     disabled={!!selectedChoice}
                     onClick={() => choose(choice)}
-                    className={`w-full rounded-xl border p-4 text-left transition ${isSelected ? 'border-[#C5A059] bg-[#C5A059]/10' : 'border-[#2A2A2E] bg-[#161618] hover:border-[#C5A059]/45 hover:bg-[#1A1A1D]'} disabled:cursor-default`}
+                    className={`w-full rounded-xl border p-4 text-left transition ${selectedStateClass} disabled:cursor-default`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-[#C5A059] bg-[#C5A059] text-[#0A0A0B]' : 'border-[#47474D]'}`}>{isSelected && <CheckCircle2 size={13} />}</div>
+                      <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-current bg-[#E7E3DA] text-[#0A0A0B]' : 'border-[#47474D]'}`}>{isSelected && <CheckCircle2 size={13} />}</div>
                       <div>
                         <strong className="text-sm text-[#E5E1D8]">{choice.label}</strong>
-                        {isSelected && <p className="mt-2 text-xs leading-6 text-[#AAA49B]">{choice.explanation}</p>}
                       </div>
                     </div>
                   </button>
@@ -396,9 +449,25 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
               })}
             </div>
 
+            {selectedChoice && choiceFeedback && (() => {
+              const FeedbackIcon = choiceFeedback.Icon;
+              return (
+                <div className={`rounded-xl border p-4 ${choiceFeedback.boxClass}`}>
+                  <div className="flex items-start gap-3">
+                    <FeedbackIcon size={18} className={`mt-0.5 shrink-0 ${choiceFeedback.iconClass}`} />
+                    <div>
+                      <span className={`block text-[10px] font-black uppercase tracking-[0.14em] ${choiceFeedback.titleClass}`}>{choiceFeedback.title}</span>
+                      <p className="mt-1 text-xs leading-6 text-[#C2BDB4]">{choiceFeedback.description}</p>
+                      <p className="mt-2 text-xs leading-6 text-[#9D9890]">{selectedChoice.explanation}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {selectedChoice && (
               <button type="button" onClick={continueRound} className="w-full rounded-xl bg-[#C5A059] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-[#0A0A0B] hover:bg-[#D4B475]">
-                {roundIndex >= rounds.length - 1 ? 'Encerrar audiência' : 'Prosseguir na audiência'}
+                {roundIndex >= rounds.length - 1 ? 'Entendi • encerrar audiência' : 'Entendi • próxima etapa'}
               </button>
             )}
           </div>
@@ -407,11 +476,15 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
             <div className={`rounded-xl border p-5 ${runningImpact >= 4 ? 'border-[#34D399]/30 bg-[#34D399]/[0.06]' : runningImpact <= -3 ? 'border-[#F87171]/30 bg-[#F87171]/[0.06]' : 'border-[#C5A059]/25 bg-[#C5A059]/[0.05]'}`}>
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#C5A059]"><Gavel size={15} /> Audiência encerrada</div>
               <h3 className="mt-2 font-serif text-xl font-black text-[#F0ECE3]">O processo segue para decisão</h3>
-              <p className="mt-2 text-sm leading-7 text-[#AAA49B]">A qualidade da sua atuação oral será considerada junto com tese, provas, investigação e prazo.</p>
+              <p className="mt-2 text-sm leading-7 text-[#AAA49B]">A atuação oral foi uma parte do processo. O juiz ainda avaliará tese, provas, investigação, prazo e intercorrências antes de decidir.</p>
             </div>
 
             {runningImpact <= -3 && (
-              <div className="flex items-start gap-2 rounded-xl border border-[#F87171]/25 bg-[#F87171]/[0.05] p-4 text-xs leading-relaxed text-[#F1A6A6]"><AlertTriangle size={16} className="mt-0.5 shrink-0" /> Algumas decisões tomadas em audiência criaram risco adicional para a tese. Isso não significa derrota automática, mas terá peso na sentença.</div>
+              <div className="flex items-start gap-2 rounded-xl border border-[#F87171]/25 bg-[#F87171]/[0.05] p-4 text-xs leading-relaxed text-[#F1A6A6]"><AlertTriangle size={16} className="mt-0.5 shrink-0" /> Sua atuação oral teve decisões desfavoráveis. Isso enfraquece a causa, mas não determina sozinho o resultado do processo.</div>
+            )}
+
+            {runningImpact >= 4 && (
+              <div className="flex items-start gap-2 rounded-xl border border-[#34D399]/25 bg-[#34D399]/[0.05] p-4 text-xs leading-relaxed text-[#8BE7C3]"><CheckCircle2 size={16} className="mt-0.5 shrink-0" /> Sua condução oral foi consistente e poderá contribuir positivamente para a apreciação final.</div>
             )}
 
             <button type="button" onClick={finish} className="w-full rounded-xl bg-[#C5A059] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-[#0A0A0B] hover:bg-[#D4B475]">Receber decisão judicial</button>
