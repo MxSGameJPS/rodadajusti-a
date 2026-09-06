@@ -1,7 +1,12 @@
 import type { PlayerProfile } from '../types/game';
 import { getProfessionalOwnerKey } from './professionalRpg';
 
-export type ExternalPhoneContactId = 'MARIANA' | 'PARTNER';
+export type ExternalPhoneContactId =
+  | 'MARIANA'
+  | 'PARTNER'
+  | 'ROBERTO'
+  | 'LAWYER_FELIPE'
+  | 'FRIEND_CARLOS';
 
 export interface ExternalPhoneMessage {
   id: string;
