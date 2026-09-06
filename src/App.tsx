@@ -45,6 +45,7 @@ import {
   getInternPromotionStatus,
   normalizeOfficePerformance,
 } from './lib/internCareerEngine';
+import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
 import { sound } from './utils/sound';
 
 const STORAGE_KEY = 'rota_da_justica_save_v1';
@@ -170,6 +171,21 @@ export default function App() {
     }
   }, [player]);
 
+  useEffect(() => {
+    const refreshPlayerFromSave = () => {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) return;
+        setPlayer(normalizeSavedPlayer(JSON.parse(saved)));
+      } catch {
+        // Mantém o estado atual se o save externo estiver inválido.
+      }
+    };
+
+    window.addEventListener(PLAYER_SAVE_EXTERNAL_UPDATED_EVENT, refreshPlayerFromSave);
+    return () => window.removeEventListener(PLAYER_SAVE_EXTERNAL_UPDATED_EVENT, refreshPlayerFromSave);
+  }, []);
+
   const activeCaseData = GAME_CASES.find((c) => c.id === player.activeCase?.caseId) || null;
 
   const handleStartNewGame = (name: string) => {
@@ -292,7 +308,7 @@ export default function App() {
             {
               id: `log-${Date.now()}`,
               timestampGameHours: newHoursSpent,
-              message: `Depoimento de ${character.name}: "${option.question}"`,
+              message: `Depoimento de ${character.name}: \"${option.question}\"`,
               type: 'depoimento',
             },
           ],
@@ -332,7 +348,7 @@ export default function App() {
             {
               id: `log-${Date.now()}`,
               timestampGameHours: newHoursSpent,
-              message: `Perícia no ponto "${spot.name}" (+${spot.timeCostMinutes}min)`,
+              message: `Perícia no ponto \"${spot.name}\" (+${spot.timeCostMinutes}min)`,
               type: 'analise',
             },
           ],
