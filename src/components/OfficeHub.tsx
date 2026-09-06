@@ -1,6 +1,7 @@
 import React from 'react';
 import type { LegalCase, PlayerProfile } from '../types/game';
 import { isProfessionalEmploymentActive } from '../lib/professionalEmployment';
+import { CareerMomentumCard } from './CareerMomentum/CareerMomentumCard';
 import { OfficeHub as LegacyOfficeHub } from './LegacyOfficeHub';
 import { ProfessionalOfficeHub } from './ProfessionalOfficeHub/ProfessionalOfficeHub';
 
@@ -16,18 +17,23 @@ interface OfficeHubProps {
 }
 
 export const OfficeHub: React.FC<OfficeHubProps> = (props) => {
-  if (isProfessionalEmploymentActive(props.player)) {
-    return (
-      <ProfessionalOfficeHub
-        player={props.player}
-        onResumeActiveCase={props.onResumeActiveCase}
-        onOpenCareerModal={props.onOpenCareerModal}
-        onOpenAcademicModal={props.onOpenAcademicModal}
-        onOpenConcursoModal={props.onOpenConcursoModal}
-        onOpenOfficeModal={props.onOpenOfficeModal}
-      />
-    );
-  }
+  const hub = isProfessionalEmploymentActive(props.player) ? (
+    <ProfessionalOfficeHub
+      player={props.player}
+      onResumeActiveCase={props.onResumeActiveCase}
+      onOpenCareerModal={props.onOpenCareerModal}
+      onOpenAcademicModal={props.onOpenAcademicModal}
+      onOpenConcursoModal={props.onOpenConcursoModal}
+      onOpenOfficeModal={props.onOpenOfficeModal}
+    />
+  ) : (
+    <LegacyOfficeHub {...props} />
+  );
 
-  return <LegacyOfficeHub {...props} />;
+  return (
+    <>
+      <CareerMomentumCard player={props.player} />
+      {hub}
+    </>
+  );
 };
