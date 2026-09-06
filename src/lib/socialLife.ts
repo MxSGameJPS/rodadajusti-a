@@ -168,16 +168,14 @@ export function buildSocialOpportunity(player: PlayerProfile, state: SocialLifeS
   const committed = isCommittedRelationship(state.profile.relationshipStatus);
   if (!shouldOfferOnCurrentDate(player, committed)) return null;
 
-  const weekday = getGameWeekday(player);
   if (committed) {
     const partnerName = state.profile.partnerName || 'Meu amor';
-    const channel: SocialChannel = weekday === 0 || (weekday === 6 && player.gameCurrentDay % 2 === 0) ? 'CALL' : 'WHATSAPP';
     return {
       id: `social-${dateKey}-partner`,
       kind: 'DATE_NIGHT',
       status: 'PENDING',
       sourceContactId: 'PARTNER',
-      channel,
+      channel: 'CALL',
       title: 'Convite para sair a dois',
       message: `${partnerName}: Amor, você está trabalhando demais. Que tal a gente sair hoje à noite para jantar, conversar e tomar alguma coisa?`,
       createdDateKey: dateKey,
