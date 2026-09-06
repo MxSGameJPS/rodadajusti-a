@@ -20,6 +20,7 @@ import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import type { PlayerProfile } from '../../types/game';
 import { sound } from '../../utils/sound';
 import styles from './ProfessionalPhone.module.css';
+import transcriptStyles from './ProfessionalPhoneTranscript.module.css';
 
 const OPEN_PHONE_EVENT = 'rota:open-professional-phone';
 
@@ -655,7 +656,7 @@ export const ProfessionalPhone: React.FC = () => {
             {tab === 'CALLS' && (
               <div className={styles.callsApp}>
                 {callStatus !== 'IDLE' && callContact ? (
-                  <div className={styles.activeCall}>
+                  <div className={`${styles.activeCall} ${transcriptStyles.activeCallScrollable}`}>
                     <div className={styles.callAvatar}>
                       {callContact.avatar ? <img src={callContact.avatar} alt="" /> : <UserRound size={30} />}
                     </div>
@@ -665,24 +666,24 @@ export const ProfessionalPhone: React.FC = () => {
                     <strong>{callStatus === 'CONNECTED' ? callTime : '...'}</strong>
 
                     {callStatus === 'CONNECTED' && (
-                      <div className={styles.liveTranscriptWrap}>
-                        <div className={styles.transcriptHeader}>
+                      <div className={transcriptStyles.liveTranscriptWrap}>
+                        <div className={transcriptStyles.transcriptHeader}>
                           <div><FileText size={14} /><span>Transcrição ao vivo</span></div>
                           <small>Áudio indisponível nesta versão</small>
                         </div>
-                        <div className={styles.callTranscript} aria-live="polite">
-                          {callTranscript.length === 0 && <div className={styles.transcribing}>Transcrevendo fala...</div>}
+                        <div className={transcriptStyles.callTranscript} aria-live="polite">
+                          {callTranscript.length === 0 && <div className={transcriptStyles.transcribing}>Transcrevendo fala...</div>}
                           {callTranscript.map((line) => (
-                            <div key={line.id} className={line.speaker === 'PLAYER' ? styles.playerTranscriptLine : styles.contactTranscriptLine}>
+                            <div key={line.id} className={line.speaker === 'PLAYER' ? transcriptStyles.playerTranscriptLine : transcriptStyles.contactTranscriptLine}>
                               <span>{line.speaker === 'PLAYER' ? displayName : callContact.name}</span>
                               <p>{line.text}</p>
                             </div>
                           ))}
-                          {awaitingCallReply && <div className={styles.transcribing}>Transcrevendo resposta...</div>}
+                          {awaitingCallReply && <div className={transcriptStyles.transcribing}>Transcrevendo resposta...</div>}
                         </div>
 
                         {!callResponseUsed && callTranscript.length > 0 && (
-                          <div className={styles.callChoices}>
+                          <div className={transcriptStyles.callChoices}>
                             <span>Responder na ligação</span>
                             {responseOptions.map((option) => (
                               <button key={option.id} type="button" onClick={() => chooseCallResponse(option)}>
@@ -712,20 +713,20 @@ export const ProfessionalPhone: React.FC = () => {
                       </button>
                     ))}
 
-                    <div className={styles.historySection}>
-                      <div className={styles.historyTitle}>
+                    <div className={transcriptStyles.historySection}>
+                      <div className={transcriptStyles.historyTitle}>
                         <FileText size={15} />
                         <div><span>Histórico</span><strong>Transcrições de chamadas</strong></div>
                       </div>
 
                       {phoneState.callHistory.length === 0 ? (
-                        <p className={styles.emptyHistory}>As chamadas concluídas aparecerão aqui com a transcrição.</p>
+                        <p className={transcriptStyles.emptyHistory}>As chamadas concluídas aparecerão aqui com a transcrição.</p>
                       ) : (
                         phoneState.callHistory.map((record) => {
                           const contact = contacts.find((item) => item.id === record.contactId);
                           const isSelected = selectedHistoryId === record.id;
                           return (
-                            <article key={record.id} className={styles.historyRecord}>
+                            <article key={record.id} className={transcriptStyles.historyRecord}>
                               <button type="button" onClick={() => setSelectedHistoryId(isSelected ? null : record.id)}>
                                 <div>
                                   <strong>{contact?.name || 'Contato profissional'}</strong>
@@ -734,7 +735,7 @@ export const ProfessionalPhone: React.FC = () => {
                                 <FileText size={15} />
                               </button>
                               {isSelected && selectedHistory && selectedHistoryContact && (
-                                <div className={styles.historyTranscript}>
+                                <div className={transcriptStyles.historyTranscript}>
                                   {selectedHistory.transcript.map((line) => (
                                     <div key={line.id}>
                                       <strong>{line.speaker === 'PLAYER' ? displayName : selectedHistoryContact.name}</strong>
