@@ -1,0 +1,121 @@
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #34343a;
+  background: #111113;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #b9b9c0;
+}
+
+.stage {
+  border-color: rgba(96,165,250,.3);
+  background: rgba(96,165,250,.08);
+  color: #93c5fd;
+}
+
+.relevant {
+  border-color: rgba(245,158,11,.3);
+  background: rgba(245,158,11,.08);
+  color: #f6c66f;
+}
+
+.major {
+  border-color: rgba(248,113,113,.35);
+  background: rgba(248,113,113,.09);
+  color: #fca5a5;
+}
+
+.national {
+  border-color: rgba(196,160,89,.45);
+  background: rgba(196,160,89,.12);
+  color: #efd494;
+  box-shadow: 0 0 18px rgba(196,160,89,.08);
+}
+
+.panel {
+  border: 1px solid #2a2a2e;
+  background: #101012;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.panelHeader svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.panelHeader span {
+  display: block;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.panelHeader strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  color: #ece8df;
+}
+
+.description {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #aaa6a0;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 9px;
+  font-size: 10px;
+  color: #85858c;
+}
+
+.warning {
+  border-color: rgba(245,158,11,.28);
+  background: rgba(245,158,11,.05);
+}
+.warning .panelHeader { color: #f5c36c; }
+
+.info {
+  border-color: rgba(96,165,250,.26);
+  background: rgba(96,165,250,.05);
+}
+.info .panelHeader { color: #93c5fd; }
+
+.success {
+  border-color: rgba(52,211,153,.25);
+  background: rgba(52,211,153,.05);
+}
+.success .panelHeader { color: #6ee7b7; }
+
+.danger {
+  border-color: rgba(248,113,113,.28);
+  background: rgba(248,113,113,.05);
+}
+.danger .panelHeader { color: #fca5a5; }
+
+.neutral .panelHeader { color: #c5a059; }
