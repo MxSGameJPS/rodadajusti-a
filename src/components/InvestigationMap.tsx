@@ -20,7 +20,15 @@ import {
 } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { TravelMapTransition } from './TravelMapTransition';
+import { RealCityMapPanel } from './WorldMap/RealCityMapPanel';
 import { resolveCollectedClueIds, resolveUnlockedLocationIds } from '../lib/evidenceProgress';
+import { readCurrentPlayerSnapshot } from '../lib/professionalRpg';
+import {
+  WORLD_MAP_UPDATED_EVENT,
+  getLocalizedLocationLabel,
+  readWorldMapProfile,
+  type WorldMapProfile,
+} from '../lib/worldMap';
 import {
   getCaseReactiveOutcome,
   getPendingCaseEvent,
@@ -47,6 +55,10 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
 }) => {
   const [travelTarget, setTravelTarget] = useState<LocationScene | null>(null);
   const [pendingEvent, setPendingEvent] = useState<UnexpectedCaseEvent | null>(null);
+  const [worldProfile, setWorldProfile] = useState<WorldMapProfile | null>(() => {
+    const player = readCurrentPlayerSnapshot();
+    return player ? readWorldMapProfile(player) : null;
+  });
 
   const reactiveOutcome = getCaseReactiveOutcome(currentCase.id);
   const effectiveHoursSpent = activeState.hoursSpent + reactiveOutcome.timePenaltyHours;
@@ -64,6 +76,16 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
 
     return () => window.clearTimeout(timer);
   }, [currentCase.id, investigationActionCount, activeState.hoursSpent]);
+
+  useEffect(() => {
+    const refreshWorld = () => {
+      const player = readCurrentPlayerSnapshot();
+      setWorldProfile(player ? readWorldMapProfile(player) : null);
+    };
+    refreshWorld();
+    window.addEventListener(WORLD_MAP_UPDATED_EVENT, refreshWorld);
+    return () => window.removeEventListener(WORLD_MAP_UPDATED_EVENT, refreshWorld);
+  }, []);
 
   const getIcon = (iconName: string, className: string) => {
     switch (iconName) {
@@ -165,13 +187,20 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
           </div>
         </div>
 
+        <RealCityMapPanel
+          currentCase={currentCase}
+          currentLocationId={activeState.currentLocationId}
+          unlockedLocationIds={Array.from(unlockedLocationIds)}
+          onTravelToLocation={beginTravel}
+        />
+
         <div className="relative w-full rounded-2xl overflow-hidden border border-[#2A2A2E] bg-[#0A0A0B] shadow-2xl p-4 sm:p-6 min-h-[380px]">
           <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#C5A059_1px,transparent_1px)] [background-size:24px_24px]" />
 
           <div className="relative z-10 mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs text-[#888888]">
               <Navigation size={15} className="text-[#C5A059]" />
-              <span className="font-bold tracking-widest uppercase text-[#C5A059]">Mapa de Diligências e Locais da Investigação</span>
+              <span className="font-bold tracking-widest uppercase text-[#C5A059]">Locais e diligências do processo</span>
             </div>
             <span className="text-[11px] text-[#888888] font-mono">
               {unlockedLocationIds.size} de {currentCase.locations.length} locais mapeados
@@ -184,6 +213,7 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
               const isCurrent = activeState.currentLocationId === location.id;
               const cluesInThisLocation = currentCase.availableClues.filter((clue) => clue.locationFoundId === location.id);
               const discoveredCluesCount = cluesInThisLocation.filter((clue) => collectedClueIds.has(clue.id)).length;
+              const locationLabel = worldProfile ? getLocalizedLocationLabel(location, worldProfile) : location.address;
 
               return (
                 <div
@@ -215,7 +245,7 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
                         </div>
                         <div>
                           <h3 className="font-bold text-sm text-[#E0E0E0]">{location.name}</h3>
-                          <p className="text-[11px] text-[#888888]">{location.address}</p>
+                          <p className="text-[11px] text-[#888888]">{locationLabel}</p>
                         </div>
                       </div>
 
@@ -237,7 +267,7 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
                         <div className="flex items-center gap-2 text-[#888888]">
                           <span>Pistas: <strong className="text-[#C5A059]">{discoveredCluesCount}/{cluesInThisLocation.length}</strong></span>
                           <span className="text-[#444]">•</span>
-                          <span>{location.travelTimeHours > 0 ? `+${location.travelTimeHours}h viagem` : '0h (Local)'}</span>
+                          <span>{location.travelTimeHours > 0 ? `+${location.travelTimeHours}h no caso` : '0h (Local)'}</span>
                         </div>
 
                         {!isCurrent ? (
@@ -271,6 +301,7 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
 
       {travelTarget && (
         <TravelMapTransition
+          caseId={currentCase.id}
           origin={currentLocation}
           destination={travelTarget}
           caseHoursSpent={effectiveHoursSpent}
