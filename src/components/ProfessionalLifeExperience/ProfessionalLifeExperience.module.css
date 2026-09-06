@@ -1,0 +1,665 @@
+.launcher {
+  position: fixed;
+  right: 20px;
+  bottom: 78px;
+  z-index: 72;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 13px;
+  border-radius: 14px;
+  border: 1px solid rgba(244, 114, 182, 0.32);
+  background: rgba(17, 17, 19, 0.95);
+  color: #f9a8d4;
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(14px);
+  cursor: pointer;
+}
+
+.launcher i {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #fb7185;
+  box-shadow: 0 0 0 5px rgba(251, 113, 133, 0.12);
+}
+
+.toast {
+  position: fixed;
+  right: 20px;
+  top: 84px;
+  z-index: 105;
+  width: min(390px, calc(100vw - 32px));
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  background: rgba(13, 18, 16, 0.97);
+  color: #e8f8ef;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.toastIcon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(52, 211, 153, 0.09);
+  color: #86efac;
+}
+
+.toast span,
+.toast p {
+  display: block;
+  margin: 0;
+  color: #88a497;
+  font-size: 9px;
+}
+
+.toast strong {
+  display: block;
+  margin: 2px 0;
+  font-size: 12px;
+}
+
+.toast button {
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(52, 211, 153, 0.28);
+  background: rgba(52, 211, 153, 0.08);
+  color: #9cf0ca;
+  font-size: 9px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 112;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 18px;
+  background: rgba(4, 4, 6, 0.91);
+  backdrop-filter: blur(16px);
+}
+
+.profileModal,
+.socialModal,
+.inviteDecision {
+  width: min(760px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: #111214;
+  color: #ececf0;
+  box-shadow: 0 36px 100px rgba(0, 0, 0, 0.62);
+}
+
+.profileModal,
+.inviteDecision {
+  padding: 22px;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.profileModal .modalHeader {
+  padding: 0 0 16px;
+}
+
+.modalHeader > div {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.modalHeader span,
+.inviteDecision header > span,
+.nightContent > span {
+  display: block;
+  color: #a16d8a;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.modalHeader h2,
+.inviteDecision h2,
+.nightContent h2 {
+  margin: 2px 0 0;
+  color: #f2eef1;
+  font: 800 23px/1.15 Georgia, serif;
+}
+
+.modalHeader > button {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #19191c;
+  color: #a0a0a8;
+  cursor: pointer;
+}
+
+.intro {
+  margin: 16px 0;
+  color: #9d9da5;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.relationshipGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.relationshipGrid button {
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #2c2c31;
+  background: #171719;
+  color: #c9c9cf;
+  text-align: left;
+  cursor: pointer;
+}
+
+.relationshipSelected {
+  border-color: rgba(244, 114, 182, 0.45) !important;
+  background: rgba(244, 114, 182, 0.08) !important;
+  color: #f9a8d4 !important;
+}
+
+.partnerField {
+  display: block;
+  margin-top: 16px;
+}
+
+.partnerField span {
+  display: block;
+  margin-bottom: 7px;
+  color: #9999a2;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.partnerField input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 13px;
+  border-radius: 12px;
+  border: 1px solid #303036;
+  background: #0d0d0f;
+  color: #eeeeef;
+  outline: none;
+}
+
+.partnerField input:focus {
+  border-color: rgba(244, 114, 182, 0.5);
+}
+
+.profileActions,
+.invitationActions,
+.inviteFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.primaryButton,
+.finishNight {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: #e2b65d;
+  color: #12100b;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.primaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.socialStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px 20px;
+}
+
+.socialStats > div {
+  min-width: 0;
+  padding: 13px;
+  border-radius: 14px;
+  border: 1px solid #29292f;
+  background: #151518;
+}
+
+.socialStats span,
+.socialStats small {
+  display: block;
+  color: #777780;
+  font-size: 9px;
+}
+
+.socialStats strong {
+  display: block;
+  margin: 3px 0;
+  color: #efeff2;
+  font-size: 13px;
+}
+
+.invitationCard {
+  margin: 0 20px 16px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(244, 114, 182, 0.22);
+  background: linear-gradient(145deg, rgba(244, 114, 182, 0.07), rgba(255, 255, 255, 0.018));
+}
+
+.invitationTop {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+}
+
+.invitationTop > div:first-child {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(244, 114, 182, 0.09);
+  color: #f9a8d4;
+}
+
+.invitationTop span {
+  display: block;
+  color: #b07899;
+  font-size: 9px;
+  text-transform: uppercase;
+  font-weight: 900;
+}
+
+.invitationTop h3,
+.emptySocial h3 {
+  margin: 2px 0 0;
+  color: #eeeeef;
+  font-size: 14px;
+}
+
+.invitationCard > p,
+.emptySocial p {
+  margin: 12px 0 0;
+  color: #a8a8b0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.invitationActions > button:not(.primaryButton),
+.editProfile,
+.inviteFooter button,
+.audioButton {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 11px;
+  border: 1px solid #323238;
+  background: #19191d;
+  color: #b8b8bf;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.emptySocial {
+  margin: 0 20px 16px;
+  padding: 28px 20px;
+  text-align: center;
+  border-radius: 16px;
+  border: 1px dashed #303038;
+  color: #8c8c95;
+}
+
+.historySection {
+  margin: 0 20px 18px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #c8a6ba;
+  font-size: 11px;
+}
+
+.emptyHistory {
+  color: #72727a;
+  font-size: 10px;
+}
+
+.historyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.historyRow strong,
+.historyRow span {
+  display: block;
+}
+
+.historyRow strong {
+  color: #d9d9de;
+  font-size: 11px;
+}
+
+.historyRow span,
+.historyRow small {
+  color: #73737c;
+  font-size: 9px;
+}
+
+.editProfile {
+  margin: 0 20px 20px;
+}
+
+.inviteDecision header {
+  text-align: center;
+}
+
+.bigIcon,
+.barSign {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 12px;
+  border-radius: 18px;
+  background: rgba(197, 160, 89, 0.1);
+  border: 1px solid rgba(197, 160, 89, 0.26);
+  color: #e3c06f;
+}
+
+.inviteDecision header p {
+  max-width: 560px;
+  margin: 10px auto 0;
+  color: #8d8d96;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.packageGrid {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.packageGrid button {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #303037;
+  background: #17171a;
+  color: #d8d8dd;
+  text-align: left;
+  cursor: pointer;
+}
+
+.packageGrid button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.packageGrid strong,
+.packageGrid p,
+.packageGrid span {
+  display: block;
+}
+
+.packageGrid p {
+  margin: 4px 0;
+  color: #888892;
+  font-size: 10px;
+}
+
+.packageGrid span {
+  color: #8be7c3;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.inviteFooter {
+  justify-content: space-between;
+  color: #888891;
+  font-size: 10px;
+}
+
+.nightScene {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(88, 28, 65, 0.34), transparent 42%),
+    linear-gradient(180deg, #08070c, #0d0810 55%, #050507);
+}
+
+.lightOne,
+.lightTwo,
+.lightThree,
+.lightFour {
+  position: absolute;
+  width: 38vw;
+  max-width: 520px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(72px);
+  opacity: 0.2;
+  animation: drift 5.6s ease-in-out infinite alternate, pulse 1.6s ease-in-out infinite;
+}
+
+.lightOne { left: -10%; top: -8%; background: #d946ef; }
+.lightTwo { right: -12%; top: 8%; background: #2563eb; animation-delay: -1.3s; }
+.lightThree { left: 8%; bottom: -18%; background: #f97316; animation-delay: -2.1s; }
+.lightFour { right: 5%; bottom: -14%; background: #22c55e; animation-delay: -0.7s; }
+
+.barNoise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.14;
+  background-image: repeating-linear-gradient(90deg, transparent 0, transparent 48px, rgba(255,255,255,.035) 49px, transparent 50px);
+  animation: flicker 0.95s steps(2, end) infinite;
+}
+
+.nightContent {
+  position: relative;
+  z-index: 2;
+  width: min(650px, 100%);
+  padding: 28px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(10, 10, 14, 0.78);
+  text-align: center;
+  color: #f4f1f4;
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(18px);
+}
+
+.nightContent > p {
+  max-width: 520px;
+  margin: 12px auto 0;
+  color: #bbb4be;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.nightReceipt {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 20px;
+}
+
+.nightReceipt > div {
+  padding: 12px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nightReceipt span,
+.nightReceipt strong {
+  display: block;
+}
+
+.nightReceipt span {
+  color: #8d8790;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.nightReceipt strong {
+  margin-top: 4px;
+  color: #f1e8ef;
+  font-size: 11px;
+}
+
+.audioButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 18px;
+}
+
+.audioHint {
+  display: block;
+  max-width: 500px;
+  margin: 8px auto 0;
+  color: #9f8d98;
+  font-size: 9px;
+}
+
+.audioHint code {
+  color: #efb6d7;
+}
+
+.finishNight {
+  display: block;
+  width: 100%;
+  margin-top: 18px;
+}
+
+@keyframes drift {
+  from { transform: translate3d(-4%, -3%, 0) scale(0.9); }
+  to { transform: translate3d(8%, 6%, 0) scale(1.12); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: 0.31; }
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 0.09; }
+  50% { opacity: 0.19; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightOne,
+  .lightTwo,
+  .lightThree,
+  .lightFour,
+  .barNoise {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .launcher {
+    right: 12px;
+    bottom: 72px;
+  }
+
+  .launcher span {
+    display: none;
+  }
+
+  .toast {
+    right: 12px;
+    top: 74px;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .toast button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .backdrop {
+    padding: 10px;
+  }
+
+  .relationshipGrid,
+  .socialStats,
+  .nightReceipt {
+    grid-template-columns: 1fr;
+  }
+
+  .invitationActions,
+  .profileActions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .invitationActions button,
+  .profileActions button {
+    width: 100%;
+  }
+}
