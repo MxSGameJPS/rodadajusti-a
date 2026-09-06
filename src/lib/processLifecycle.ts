@@ -12,6 +12,7 @@ import {
 
 export type ProcessStatus =
   | 'EM_ANDAMENTO'
+  | 'AGUARDANDO_TRANSITO'
   | 'PRAZO_RECURSAL_ABERTO'
   | 'RECURSO_PARTE_CONTRARIA'
   | 'RECURSO_EM_TRAMITACAO'
@@ -77,19 +78,15 @@ function isStageCareerEligible(caseItem: LegalCase, player: PlayerProfile) {
   return getCareerRank(player.careerTier) >= Math.max(explicitRank, stageRank);
 }
 
-function hasCaseBeenHandled(caseId: string, player: PlayerProfile) {
-  return player.history.some((record) => record.caseId === caseId) || player.activeCase?.caseId === caseId;
-}
-
-function appealDeadlineFor(record: CaseHistoryRecord, appealCase: LegalCase) {
+function deadlineFromCase(record: CaseHistoryRecord, caseItem: LegalCase) {
   const completedAt = parseGameDate(record.completedDate);
-  return completedAt ? addDays(completedAt, getAppealDeadlineDays(appealCase)) : null;
+  return completedAt ? addDays(completedAt, getAppealDeadlineDays(caseItem)) : null;
 }
 
 function isOwnAppealDeadlineOpen(record: CaseHistoryRecord, appealCase: LegalCase, player: PlayerProfile) {
   const trigger = getAppealTrigger(appealCase) || 'PLAYER_LOSS';
   if (trigger !== 'PLAYER_LOSS') return true;
-  const deadline = appealDeadlineFor(record, appealCase);
+  const deadline = deadlineFromCase(record, appealCase);
   if (!deadline) return true;
   return playerGameDate(player).getTime() <= deadline.getTime();
 }
@@ -166,6 +163,7 @@ export function getProcessStatusInfo(
   player: PlayerProfile,
   catalog: LegalCase[],
 ): ProcessStatusInfo {
+  const currentPhase = catalog.find((caseItem) => caseItem.id === record.caseId) || null;
   const activeContinuation = catalog.find(
     (caseItem) => player.activeCase?.caseId === caseItem.id && getAppealOfCaseId(caseItem) === record.caseId,
   );
@@ -200,10 +198,25 @@ export function getProcessStatusInfo(
 
   const continuation = findDirectContinuation(record, player, catalog);
   if (!continuation) {
+    if (currentPhase) {
+      const finalityDeadline = deadlineFromCase(record, currentPhase);
+      if (finalityDeadline && playerGameDate(player).getTime() <= finalityDeadline.getTime()) {
+        return {
+          status: 'AGUARDANDO_TRANSITO',
+          label: 'Aguardando trânsito em julgado',
+          description: 'A decisão já foi proferida, mas o processo ainda não está definitivamente encerrado. Não há recurso jogável configurado nesta fase; o trânsito em julgado ocorrerá após o decurso do prazo simulado.',
+          tone: 'neutral',
+          appealCase: null,
+          appealDeadlineLabel: formatDate(finalityDeadline),
+          appealTypeLabel: null,
+        };
+      }
+    }
+
     return {
       status: 'TRANSITO_EM_JULGADO',
       label: 'Trânsito em julgado',
-      description: 'Não há recurso subsequente configurado para esta decisão. O processo está encerrado e não pode ser repetido.',
+      description: 'A decisão tornou-se definitiva. O processo está encerrado e esta fase não pode ser repetida. Reabertura por prova nova não faz parte desta versão do jogo.',
       tone: 'success',
       appealCase: null,
       appealDeadlineLabel: null,
@@ -212,7 +225,7 @@ export function getProcessStatusInfo(
   }
 
   const trigger = getAppealTrigger(continuation) || 'PLAYER_LOSS';
-  const deadline = appealDeadlineFor(record, continuation);
+  const deadline = deadlineFromCase(record, continuation);
   const deadlineOpen = isOwnAppealDeadlineOpen(record, continuation, player);
   const careerEligible = isStageCareerEligible(continuation, player);
 
@@ -220,7 +233,7 @@ export function getProcessStatusInfo(
     return {
       status: 'TRANSITO_EM_JULGADO',
       label: 'Trânsito em julgado',
-      description: 'O prazo recursal transcorreu sem a interposição do recurso. A decisão tornou-se definitiva.',
+      description: 'O prazo recursal transcorreu sem a interposição do recurso. A decisão tornou-se definitiva e o processo foi encerrado.',
       tone: 'danger',
       appealCase: null,
       appealDeadlineLabel: deadline ? formatDate(deadline) : null,
@@ -234,7 +247,7 @@ export function getProcessStatusInfo(
       label: trigger === 'PLAYER_WIN_OPPONENT_APPEALS' ? 'Recurso da parte contrária' : 'Recurso sob responsabilidade do escritório',
       description: trigger === 'PLAYER_WIN_OPPONENT_APPEALS'
         ? `A parte contrária levou o processo a ${getShortStageLabel(continuation)}. Ele poderá retornar ao jogador quando o nível profissional exigido for alcançado.`
-        : `Existe medida recursal cabível, mas esta etapa exige nível profissional superior. O processo permanece sob responsabilidade do escritório.`,
+        : 'Existe medida recursal cabível, mas esta etapa exige nível profissional superior. O processo permanece sob responsabilidade do escritório.',
       tone: 'warning',
       appealCase: continuation,
       appealDeadlineLabel: deadline ? formatDate(deadline) : null,
