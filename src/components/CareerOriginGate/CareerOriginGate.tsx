@@ -7,7 +7,12 @@ import {
   readCareerOriginFromPlayerSave,
   saveCareerOrigin,
 } from '../../lib/careerOrigin';
-import { geocodeBrazilianCity } from '../../lib/worldMap';
+import {
+  geocodeBrazilianCity,
+  readSavedPlayerForWorldMap,
+  readWorldMapProfile,
+  saveWorldMapProfile,
+} from '../../lib/worldMap';
 import styles from './CareerOriginGate.module.css';
 
 const BRAZIL_STATES = [
@@ -39,6 +44,39 @@ export const CareerOriginGate: React.FC = () => {
     setIsOpen(true);
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    let syncing = false;
+
+    const syncOriginToCareer = async () => {
+      if (!active || syncing) return;
+      const origin = readCareerOrigin();
+      const player = readSavedPlayerForWorldMap();
+      if (!origin || !player?.name?.trim()) return;
+
+      patchCareerOriginIntoExistingPlayerSave(origin);
+      if (readWorldMapProfile(player)) return;
+
+      syncing = true;
+      try {
+        const geocoded = await geocodeBrazilianCity(origin.city, origin.state);
+        if (!active) return;
+        saveWorldMapProfile(player, { ...geocoded, source: 'PLAYER_PROFILE' });
+      } catch {
+        // O painel do mapa ainda oferece configuração manual se a geocodificação ficar indisponível.
+      } finally {
+        syncing = false;
+      }
+    };
+
+    void syncOriginToCareer();
+    const interval = window.setInterval(() => void syncOriginToCareer(), 1200);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
   if (!isOpen) return null;
 
   const confirmOrigin = async (event: React.FormEvent) => {
@@ -50,10 +88,16 @@ export const CareerOriginGate: React.FC = () => {
     setIsValidating(true);
     setError('');
     try {
-      await geocodeBrazilianCity(cleanCity, cleanState);
+      const geocoded = await geocodeBrazilianCity(cleanCity, cleanState);
       const origin = normalizeCareerOrigin(cleanCity, cleanState);
       saveCareerOrigin(origin);
       patchCareerOriginIntoExistingPlayerSave(origin);
+
+      const player = readSavedPlayerForWorldMap();
+      if (player?.name?.trim()) {
+        saveWorldMapProfile(player, { ...geocoded, source: 'PLAYER_PROFILE' });
+      }
+
       setIsOpen(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível localizar esta cidade agora.');
