@@ -1,6 +1,10 @@
 import React from 'react';
 import type { LegalCase, PlayerProfile, SocialJuridicoToolUse } from '../types/game';
-import { isProfessionalEmploymentActive } from '../lib/professionalEmployment';
+import {
+  isIndependentProfessional,
+  isRamosEmploymentActive,
+} from '../lib/professionalEmployment';
+import { IndependentSocialJuridicoExperience } from './IndependentSocialJuridicoExperience/IndependentSocialJuridicoExperience';
 import { SocialJuridicoExperience as LegacySocialJuridicoExperience } from './LegacySocialJuridicoExperience';
 import { ProfessionalSocialJuridicoExperience } from './ProfessionalSocialJuridicoExperience/ProfessionalSocialJuridicoExperience';
 
@@ -11,7 +15,11 @@ interface SocialJuridicoExperienceProps {
 }
 
 export const SocialJuridicoExperience: React.FC<SocialJuridicoExperienceProps> = (props) => {
-  if (isProfessionalEmploymentActive(props.player)) {
+  if (isIndependentProfessional(props.player)) {
+    return <IndependentSocialJuridicoExperience {...props} />;
+  }
+
+  if (isRamosEmploymentActive(props.player)) {
     return <ProfessionalSocialJuridicoExperience {...props} />;
   }
 
