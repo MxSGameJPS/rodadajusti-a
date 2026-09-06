@@ -11,6 +11,7 @@ import { EthicalDilemmaExperience } from './components/EthicalDilemmaExperience'
 import { MisconductConsequenceExperience } from './components/MisconductConsequenceExperience';
 import { PostOabEmploymentExperience } from './components/PostOabEmploymentExperience/PostOabEmploymentExperience';
 import { ProfessionalDemoRoute } from './components/ProfessionalDemoRoute/ProfessionalDemoRoute';
+import { PersonalIncomingCallExperience } from './components/ProfessionalLifeExperience/PersonalIncomingCallExperience';
 import { ProfessionalLifeExperience } from './components/ProfessionalLifeExperience/ProfessionalLifeExperience';
 import { ProfessionalPhone } from './components/ProfessionalPhone/ProfessionalPhone';
 import { ProfessionalProfileEmploymentGate } from './components/ProfessionalProfileEmploymentGate';
@@ -48,6 +49,7 @@ async function bootstrap() {
               <PostOabEmploymentExperience />
               <ProfessionalPhone />
               <ProfessionalLifeExperience />
+              <PersonalIncomingCallExperience />
               <ProfessionalProfileEmploymentGate />
               <EthicalDilemmaExperience />
               <MisconductConsequenceExperience />
