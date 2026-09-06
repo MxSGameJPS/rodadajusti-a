@@ -62,7 +62,8 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   const [route, setRoute] = useState<WorldRoute | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
 
-  const unlockedSet = useMemo(() => new Set(unlockedLocationIds), [unlockedLocationIds]);
+  const unlockedKey = unlockedLocationIds.join('|');
+  const unlockedSet = useMemo(() => new Set(unlockedLocationIds), [unlockedKey]);
   const currentLocation = useMemo(
     () => currentCase.locations.find((location) => location.id === currentLocationId) || currentCase.locations[0] || null,
     [currentCase.locations, currentLocationId],
@@ -114,7 +115,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!profile || !mapContainerRef.current) return undefined;
+    if (!profile || isEditingCity || !mapContainerRef.current) return undefined;
     let disposed = false;
 
     const mount = async () => {
@@ -191,7 +192,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       if (mapRef.current) mapRef.current.remove();
       mapRef.current = null;
     };
-  }, [profile?.city, profile?.state, profile?.center.lng, profile?.center.lat, currentCase.id, currentLocationId, unlockedLocationIds.join('|')]);
+  }, [profile?.city, profile?.state, profile?.center.lng, profile?.center.lat, currentCase.id, currentLocationId, unlockedKey, isEditingCity]);
 
   useEffect(() => {
     if (!profile || !selectedLocation || !currentLocation || selectedLocation.id === currentLocation.id) {
@@ -216,7 +217,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || isEditingCity) return;
 
     const draw = async () => {
       if (!mapRef.current) return;
@@ -254,7 +255,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
 
     if (map.isStyleLoaded()) void draw();
     else map.once('load', () => void draw());
-  }, [route]);
+  }, [route, isEditingCity]);
 
   const configureCity = async (event: React.FormEvent) => {
     event.preventDefault();
