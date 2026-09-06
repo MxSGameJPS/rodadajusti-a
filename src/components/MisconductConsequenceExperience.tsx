@@ -4,6 +4,7 @@ import {
   getEthicalDilemmaDefinition,
   type EthicalDilemmaRecord,
 } from '../lib/ethicalDilemmas';
+import { emitPlayerSaveExternalUpdated } from '../lib/playerSaveEvents';
 import {
   applyProfessionalConsequence,
   getProfessionalOwnerKey,
@@ -196,9 +197,10 @@ export const MisconductConsequenceExperience: React.FC = () => {
   const acknowledge = () => {
     localStorage.removeItem(PENDING_NOTICE_KEY);
     setNotice(null);
-    // Recarrega o snapshot principal para que o saldo atualizado seja refletido imediatamente
-    // em todas as áreas do jogo sem risco de o estado antigo sobrescrever a penalidade.
-    window.location.reload();
+    // Atualiza o PlayerProfile do App sem recarregar a página. Assim saldo,
+    // disciplina e demais consequências aparecem imediatamente, mas a view
+    // atual (inclusive LOCATION_SCENE) permanece exatamente onde estava.
+    emitPlayerSaveExternalUpdated();
   };
 
   return (
