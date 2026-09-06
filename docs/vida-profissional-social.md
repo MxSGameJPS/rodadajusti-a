@@ -35,7 +35,7 @@ O estado civil não altera resultado judicial. Ele muda apenas eventos pessoais,
 
 ### Personagem comprometido
 
-O parceiro ou parceira pode procurar o jogador por mensagem ou ligação. As ligações são transcritas enquanto não houver voz. O convite pode levar a jantar/bar e gerar gasto de dinheiro e avanço de um dia no calendário do personagem.
+Nesta primeira versão, o parceiro ou parceira procura o jogador por ligação pessoal. As ligações são transcritas enquanto não houver voz e oferecem escolhas de resposta. A arquitetura de eventos e contatos já aceita também WhatsApp em evolução futura. O convite pode levar a jantar/bar e gerar gasto de dinheiro e avanço de um dia no calendário do personagem.
 
 ### Personagem solteiro
 
