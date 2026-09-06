@@ -1,4 +1,11 @@
 import type { CareerTierId, LegalCase } from '../types/game';
+import {
+  REPERCUSSION_CONFIG,
+  asProceduralCase,
+  getAppealDeadlineDays,
+  getCaseRepercussionLevel,
+  getProceduralStage,
+} from './caseMetadata';
 
 const CAREER_ORDER: CareerTierId[] = [
   'ESTAGIARIO',
@@ -47,11 +54,48 @@ export function getBalancedCaseXp(caseItem: LegalCase): number {
   return base + starOffset * step;
 }
 
+export function getCaseRewardBreakdown(caseItem: LegalCase) {
+  const repercussionLevel = getCaseRepercussionLevel(caseItem);
+  const config = REPERCUSSION_CONFIG[repercussionLevel];
+  const configuredBaseXp = Number(caseItem.xpReward);
+  const baseXp = Number.isFinite(configuredBaseXp) && configuredBaseXp > 0
+    ? Math.round(configuredBaseXp)
+    : getBalancedCaseXp(caseItem);
+  const totalXp = Math.max(baseXp, Math.round(baseXp * config.xpMultiplier));
+  const configuredReputation = Number(caseItem.reputationReward);
+  const baseReputation = Number.isFinite(configuredReputation) ? Math.round(configuredReputation) : 0;
+  const totalReputation = baseReputation + config.reputationBonus;
+
+  return {
+    repercussionLevel,
+    repercussionLabel: config.label,
+    xpMultiplier: config.xpMultiplier,
+    baseXp,
+    repercussionXpBonus: Math.max(0, totalXp - baseXp),
+    totalXp,
+    baseReputation,
+    repercussionReputationBonus: config.reputationBonus,
+    totalReputation,
+  };
+}
+
 export function normalizeCaseBalance(caseItem: LegalCase): LegalCase {
+  const metadata = asProceduralCase(caseItem);
+  const rewards = getCaseRewardBreakdown(caseItem);
+
   return {
     ...caseItem,
-    xpReward: getBalancedCaseXp(caseItem),
-  };
+    xpReward: rewards.totalXp,
+    reputationReward: rewards.totalReputation,
+    repercussionLevel: rewards.repercussionLevel,
+    proceduralStage: getProceduralStage(caseItem),
+    processKey: metadata.processKey || null,
+    appealOfCaseId: metadata.appealOfCaseId || null,
+    appealType: metadata.appealType || null,
+    appealTrigger: metadata.appealTrigger || null,
+    appealDeadlineDays: getAppealDeadlineDays(caseItem),
+    courtName: metadata.courtName || null,
+  } as LegalCase;
 }
 
 export function normalizeCaseCatalog(cases: LegalCase[]): LegalCase[] {
