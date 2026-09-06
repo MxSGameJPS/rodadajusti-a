@@ -196,6 +196,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   useEffect(() => {
     if (!profile || !selectedLocation || !currentLocation || selectedLocation.id === currentLocation.id) {
       setRoute(null);
+      setRouteLoading(false);
       return undefined;
     }
 
@@ -217,7 +218,8 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
     const map = mapRef.current;
     if (!map) return;
 
-    const draw = () => {
+    const draw = async () => {
+      if (!mapRef.current) return;
       if (map.getLayer(ROUTE_LAYER_ID)) map.removeLayer(ROUTE_LAYER_ID);
       if (map.getSource(ROUTE_SOURCE_ID)) map.removeSource(ROUTE_SOURCE_ID);
       if (!route) return;
@@ -242,21 +244,16 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       });
 
       const first = route.coordinates[0];
-      const last = route.coordinates[route.coordinates.length - 1];
-      const maplibreBounds = route.coordinates.reduce((bounds: any, coordinate) => bounds.extend(coordinate), null as any);
-      if (first && last) {
-        loadMapLibre().then((maplibre) => {
-          if (!mapRef.current) return;
-          const bounds = new maplibre.LngLatBounds(first, first);
-          route.coordinates.forEach((coordinate) => bounds.extend(coordinate));
-          mapRef.current.fitBounds(bounds, { padding: 80, maxZoom: 15, duration: 700 });
-        });
-      }
-      void maplibreBounds;
+      if (!first) return;
+      const maplibre = await loadMapLibre();
+      if (!mapRef.current) return;
+      const bounds = new maplibre.LngLatBounds(first, first);
+      route.coordinates.forEach((coordinate) => bounds.extend(coordinate));
+      mapRef.current.fitBounds(bounds, { padding: 80, maxZoom: 15, duration: 700 });
     };
 
-    if (map.isStyleLoaded()) draw();
-    else map.once('load', draw);
+    if (map.isStyleLoaded()) void draw();
+    else map.once('load', () => void draw());
   }, [route]);
 
   const configureCity = async (event: React.FormEvent) => {
