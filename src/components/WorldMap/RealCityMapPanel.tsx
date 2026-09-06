@@ -32,7 +32,7 @@ const ROUTE_SOURCE_ID = 'rota-preview-route';
 const ROUTE_LAYER_ID = 'rota-preview-route-layer';
 
 function markerGlyph(location?: LocationScene, isOffice = false) {
-  if (isOffice) return 'R';
+  if (isOffice) return '⚖';
   if (!location) return '•';
   if (location.category === 'tribunal') return '⚖';
   if (location.category === 'delegacia') return 'D';
@@ -68,6 +68,11 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
     () => currentCase.locations.find((location) => location.id === currentLocationId) || currentCase.locations[0] || null,
     [currentCase.locations, currentLocationId],
   );
+  const officeLocation = useMemo(
+    () => currentCase.locations.find((location) => location.category === 'escritorio' || /ESCRITORIO_RAMOS/i.test(location.id)) || null,
+    [currentCase.locations],
+  );
+  const officeDisplayName = officeLocation?.name || 'Base profissional';
 
   useEffect(() => {
     let active = true;
@@ -139,7 +144,6 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
         map.on('load', () => {
           if (disposed) return;
           const points: [number, number][] = [];
-          const officeLocation = currentCase.locations.find((location) => location.category === 'escritorio' || /ESCRITORIO_RAMOS/i.test(location.id));
           const officePoint = getRamosOfficePoint(profile);
           points.push([officePoint.lng, officePoint.lat]);
 
@@ -147,9 +151,9 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
           officeElement.type = 'button';
           officeElement.className = officeLocation?.id === currentLocationId ? styles.currentMarker : styles.officeMarker;
           const officeText = document.createElement('span');
-          officeText.textContent = markerGlyph(officeLocation, true);
+          officeText.textContent = markerGlyph(officeLocation || undefined, true);
           officeElement.appendChild(officeText);
-          officeElement.title = 'Ramos & Associados';
+          officeElement.title = officeDisplayName;
           if (officeLocation) officeElement.addEventListener('click', () => setSelectedLocation(officeLocation));
           markersRef.current.push(new maplibre.Marker({ element: officeElement, anchor: 'bottom' })
             .setLngLat([officePoint.lng, officePoint.lat])
@@ -192,7 +196,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       if (mapRef.current) mapRef.current.remove();
       mapRef.current = null;
     };
-  }, [profile?.city, profile?.state, profile?.center.lng, profile?.center.lat, currentCase.id, currentLocationId, unlockedKey, isEditingCity]);
+  }, [profile?.city, profile?.state, profile?.center.lng, profile?.center.lat, currentCase.id, currentLocationId, unlockedKey, isEditingCity, officeDisplayName, officeLocation?.id]);
 
   useEffect(() => {
     if (!profile || !selectedLocation || !currentLocation || selectedLocation.id === currentLocation.id) {
@@ -300,7 +304,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
           <div className={styles.setupCard}>
             <MapPin size={30} color="#C5A059" />
             <h4>Ativar mapa real da carreira</h4>
-            <p>Informe apenas a cidade e o estado. O jogo posicionará o Ramos & Associados na região central e criará pontos fictícios de diligência sobre ruas reais, sem associar NPCs a residências de pessoas reais.</p>
+            <p>Informe apenas a cidade e o estado. O jogo posicionará sua base profissional na região central e criará pontos fictícios de diligência sobre ruas reais, sem associar NPCs a residências de pessoas reais.</p>
             <form className={styles.form} onSubmit={configureCity}>
               <input value={cityInput} onChange={(event) => setCityInput(event.target.value)} placeholder="Cidade, ex.: Santiago" maxLength={70} />
               <input value={stateInput} onChange={(event) => setStateInput(event.target.value)} placeholder="UF" maxLength={30} />
@@ -316,7 +320,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
           <div className={styles.mapWrap}>
             <div ref={mapContainerRef} className={styles.map} />
             <div className={styles.cityBadge}>
-              <strong><Building2 size={12} style={{ display: 'inline', marginRight: 5 }} /> Ramos & Associados</strong>
+              <strong><Building2 size={12} style={{ display: 'inline', marginRight: 5 }} /> {officeDisplayName}</strong>
               <span>Região central virtual • {profile.city}/{profile.state}</span>
             </div>
             {mapError && <div className={styles.mapError}>{mapError}</div>}
