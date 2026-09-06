@@ -17,6 +17,7 @@ import { isProfessionalPreviewMode } from '../../lib/professionalEmployment';
 import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import type { PlayerProfile } from '../../types/game';
 import { sound } from '../../utils/sound';
+import { ProfessionalDailyBrief } from './ProfessionalDailyBrief';
 import styles from './ProfessionalOfficeHub.module.css';
 
 const OPEN_SOCIAL_JURIDICO_EVENT = 'rota:open-social-juridico';
@@ -73,6 +74,8 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
         </div>
       </section>
 
+      <ProfessionalDailyBrief player={player} onResumeActiveCase={onResumeActiveCase} />
+
       <section className={styles.deviceGrid} aria-label="Dispositivos profissionais">
         <button type="button" className={styles.notebookCard} onClick={() => openDevice(OPEN_SOCIAL_JURIDICO_EVENT)}>
           <div className={styles.deviceIcon}><Laptop size={30} /></div>
@@ -87,9 +90,9 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
         <button type="button" className={styles.phoneCard} onClick={() => openDevice(OPEN_PHONE_EVENT)}>
           <div className={styles.deviceIcon}><Smartphone size={30} /></div>
           <div className={styles.deviceCopy}>
-            <span>Comunicação profissional</span>
-            <h3>Celular do Escritório</h3>
-            <p>Faça e receba ligações, converse com a equipe e responda mensagens de WhatsApp relacionadas à sua rotina e aos clientes.</p>
+            <span>Comunicação profissional e pessoal</span>
+            <h3>Celular</h3>
+            <p>Faça e receba ligações, converse com a equipe, clientes e pessoas da sua vida pessoal por WhatsApp.</p>
             <div className={styles.deviceAction}>Abrir celular <ArrowRight size={15} /></div>
           </div>
         </button>
