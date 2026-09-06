@@ -23,8 +23,10 @@ export const PersonalIncomingCallExperience: React.FC = () => {
   const [player, setPlayer] = useState<PlayerProfile | null>(null);
   const [stage, setStage] = useState<CallStage | null>(null);
   const [partnerName, setPartnerName] = useState('');
+  const [openingLine, setOpeningLine] = useState('');
   const [playerLine, setPlayerLine] = useState('');
   const [partnerReply, setPartnerReply] = useState('');
+  const [acceptedInvitation, setAcceptedInvitation] = useState(false);
 
   useEffect(() => {
     const incoming = (event: Event) => {
@@ -38,8 +40,10 @@ export const PersonalIncomingCallExperience: React.FC = () => {
 
       setPlayer(current);
       setPartnerName(social.profile.partnerName || 'Meu amor');
+      setOpeningLine('');
       setPlayerLine('');
       setPartnerReply('');
+      setAcceptedInvitation(false);
       setStage('RINGING');
     };
 
@@ -48,12 +52,12 @@ export const PersonalIncomingCallExperience: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (stage !== 'CONNECTED') return undefined;
+    if (stage !== 'CONNECTED' || openingLine) return undefined;
     const timer = window.setTimeout(() => {
-      setPartnerReply('Oi, amor. Eu sei que o trabalho está puxado, mas queria te ver fora desse ritmo. Vamos sair hoje à noite para jantar, conversar e tomar alguma coisa?');
+      setOpeningLine('Oi, amor. Eu sei que o trabalho está puxado, mas queria te ver fora desse ritmo. Vamos sair hoje à noite para jantar, conversar e tomar alguma coisa?');
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [stage]);
+  }, [stage, openingLine]);
 
   if (!stage || !player) return null;
 
@@ -62,7 +66,7 @@ export const PersonalIncomingCallExperience: React.FC = () => {
     setStage('CONNECTED');
   };
 
-  const rejectCall = () => {
+  const closeCall = () => {
     sound.playClick();
     setStage(null);
     setPlayer(null);
@@ -70,6 +74,7 @@ export const PersonalIncomingCallExperience: React.FC = () => {
 
   const answerInvitation = (accept: boolean) => {
     sound.playClick();
+    setAcceptedInvitation(accept);
     setPlayerLine(
       accept
         ? 'Vamos sim. Quero sair um pouco do escritório e ficar com você.'
@@ -105,7 +110,7 @@ export const PersonalIncomingCallExperience: React.FC = () => {
             <small>Sem voz nesta versão • chamada será transcrita</small>
           </div>
           <div className={styles.ringingActions}>
-            <button type="button" className={styles.reject} onClick={rejectCall} aria-label="Recusar ligação"><PhoneOff size={17} /></button>
+            <button type="button" className={styles.reject} onClick={closeCall} aria-label="Recusar ligação"><PhoneOff size={17} /></button>
             <button type="button" className={styles.accept} onClick={acceptCall} aria-label="Atender ligação"><PhoneCall size={17} /></button>
           </div>
         </aside>
@@ -121,11 +126,11 @@ export const PersonalIncomingCallExperience: React.FC = () => {
 
             <div className={styles.transcriptBox}>
               <div className={styles.transcriptHeader}><FileText size={14} /> Transcrição</div>
-              {!partnerReply && <div className={styles.transcribing}>Transcrevendo fala...</div>}
-              {partnerReply && (
+              {!openingLine && <div className={styles.transcribing}>Transcrevendo fala...</div>}
+              {openingLine && (
                 <div className={styles.partnerLine}>
                   <strong>{partnerName}</strong>
-                  <p>{partnerReply}</p>
+                  <p>{openingLine}</p>
                 </div>
               )}
               {playerLine && (
@@ -134,9 +139,15 @@ export const PersonalIncomingCallExperience: React.FC = () => {
                   <p>{playerLine}</p>
                 </div>
               )}
+              {partnerReply && (
+                <div className={styles.partnerLine}>
+                  <strong>{partnerName}</strong>
+                  <p>{partnerReply}</p>
+                </div>
+              )}
             </div>
 
-            {stage === 'CONNECTED' && partnerReply && (
+            {stage === 'CONNECTED' && openingLine && (
               <div className={styles.choices}>
                 <span>Responder</span>
                 <button type="button" onClick={() => answerInvitation(true)}>Vamos sim. Quero sair um pouco do escritório.</button>
@@ -145,8 +156,8 @@ export const PersonalIncomingCallExperience: React.FC = () => {
             )}
 
             {stage === 'ANSWERED' && (
-              <button type="button" className={styles.finish} onClick={playerLine.startsWith('Vamos') ? finishAccepted : rejectCall}>
-                {playerLine.startsWith('Vamos') ? 'Encerrar ligação e escolher o programa' : 'Encerrar ligação'}
+              <button type="button" className={styles.finish} onClick={acceptedInvitation ? finishAccepted : closeCall}>
+                {acceptedInvitation ? 'Encerrar ligação e escolher o programa' : 'Encerrar ligação'}
               </button>
             )}
           </section>
