@@ -5,6 +5,7 @@ import type {
   LegalCase,
   SupervisorReviewSeverity,
 } from '../types/game';
+import { getProceduralStage } from './caseMetadata';
 import { resolveCollectedClueIds } from './evidenceProgress';
 import { getCaseReactiveOutcome } from './reactiveWorldStore';
 
@@ -38,13 +39,18 @@ function buildJudgeFeedback(
   verdict: JudicialDecision['verdict'],
 ) {
   const issueSet = new Set(assessment.issues);
+  const isAppeal = getProceduralStage(currentCase) !== 'PRIMEIRA_INSTANCIA';
 
   if (issueSet.has('DEADLINE_MISSED')) {
-    return 'Vistos. A manifestação foi apresentada após o esgotamento do prazo processual. A intempestividade impede o exame útil da pretensão nesta oportunidade, razão pela qual reconheço a perda da oportunidade processual, com as consequências cabíveis.';
+    return isAppeal
+      ? 'Vistos. O recurso foi apresentado após o esgotamento do prazo recursal. Diante da intempestividade, NÃO CONHEÇO do recurso, mantendo-se os efeitos da decisão recorrida.'
+      : 'Vistos. A manifestação foi apresentada após o esgotamento do prazo processual. A intempestividade impede o exame útil da pretensão nesta oportunidade, razão pela qual reconheço a perda da oportunidade processual, com as consequências cabíveis.';
   }
 
   if (issueSet.has('NO_INVESTIGATION') || issueSet.has('NO_EVIDENCE')) {
-    return 'Vistos. A pretensão foi apresentada sem instrução probatória mínima. Alegações desacompanhadas de elementos concretos não permitem ao Juízo reconhecer a probabilidade do direito invocado. A parte deixou de trazer aos autos documentos e elementos essenciais disponíveis durante a fase de preparação.';
+    return isAppeal
+      ? 'Vistos. As razões recursais não foram acompanhadas dos elementos mínimos necessários para infirmar os fundamentos da decisão recorrida. A deficiência da instrução impede o acolhimento da pretensão recursal.'
+      : 'Vistos. A pretensão foi apresentada sem instrução probatória mínima. Alegações desacompanhadas de elementos concretos não permitem ao Juízo reconhecer a probabilidade do direito invocado. A parte deixou de trazer aos autos documentos e elementos essenciais disponíveis durante a fase de preparação.';
   }
 
   if (assessment.falseEvidenceTitles.length > 0) {
@@ -52,22 +58,32 @@ function buildJudgeFeedback(
   }
 
   if (assessment.missingRequiredEvidenceTitles.length > 0) {
-    return `Vistos. Embora haja elementos favoráveis à tese apresentada, a instrução permaneceu incompleta. Não foram juntados elementos essenciais para a medida escolhida: ${assessment.missingRequiredEvidenceTitles.join(', ')}. A ausência dessas provas reduz a força demonstrativa do pedido.`;
+    return isAppeal
+      ? `Vistos. O recurso apresenta fundamentos relevantes, mas a demonstração necessária permaneceu incompleta. Não foram apresentados elementos essenciais para afastar os fundamentos da decisão recorrida: ${assessment.missingRequiredEvidenceTitles.join(', ')}.`
+      : `Vistos. Embora haja elementos favoráveis à tese apresentada, a instrução permaneceu incompleta. Não foram juntados elementos essenciais para a medida escolhida: ${assessment.missingRequiredEvidenceTitles.join(', ')}. A ausência dessas provas reduz a força demonstrativa do pedido.`;
   }
 
   if (issueSet.has('WRONG_STRATEGY')) {
-    return 'Vistos. O acervo reunido possui utilidade, porém a medida jurídica escolhida não é a que melhor corresponde aos fatos e às provas produzidas. A inadequação entre tese e suporte probatório impede o acolhimento integral da pretensão.';
+    return isAppeal
+      ? 'Vistos. O material apresentado possui utilidade, porém a via recursal e a tese escolhidas não enfrentam adequadamente os fundamentos da decisão recorrida. A inadequação técnica impede o acolhimento integral do recurso.'
+      : 'Vistos. O acervo reunido possui utilidade, porém a medida jurídica escolhida não é a que melhor corresponde aos fatos e às provas produzidas. A inadequação entre tese e suporte probatório impede o acolhimento integral da pretensão.';
   }
 
   if (verdict === 'PROCEDENTE') {
-    return `Vistos. A tese jurídica adotada encontra suporte em prova autêntica, pertinente e suficiente. A investigação reuniu os elementos essenciais ao pedido e o conjunto probatório demonstra adequadamente os fatos relevantes do caso ${currentCase.code}. JULGO PROCEDENTE a pretensão.`;
+    return isAppeal
+      ? `Vistos. Conheço do recurso. As razões apresentadas encontram suporte técnico e probatório suficiente para afastar os fundamentos da decisão recorrida no processo ${currentCase.code}. DOU PROVIMENTO ao recurso, nos termos da fundamentação.`
+      : `Vistos. A tese jurídica adotada encontra suporte em prova autêntica, pertinente e suficiente. A investigação reuniu os elementos essenciais ao pedido e o conjunto probatório demonstra adequadamente os fatos relevantes do caso ${currentCase.code}. JULGO PROCEDENTE a pretensão.`;
   }
 
   if (verdict === 'PARCIALMENTE PROCEDENTE') {
-    return 'Vistos. O conjunto probatório oferece suporte parcial às alegações, mas apresenta lacunas relevantes de investigação ou de seleção probatória. Reconheço apenas a parcela suficientemente demonstrada pela prova constante dos autos.';
+    return isAppeal
+      ? 'Vistos. Conheço do recurso e DOU-LHE PARCIAL PROVIMENTO. Parte das razões recursais encontra suporte nos autos, mas permanecem limitações relevantes que impedem a reforma integral da decisão recorrida.'
+      : 'Vistos. O conjunto probatório oferece suporte parcial às alegações, mas apresenta lacunas relevantes de investigação ou de seleção probatória. Reconheço apenas a parcela suficientemente demonstrada pela prova constante dos autos.';
   }
 
-  return 'Vistos. A parte autora não logrou demonstrar, com prova suficiente e adequada, os fatos indispensáveis à pretensão formulada. As lacunas da instrução e da estratégia processual impedem o reconhecimento do direito nos termos requeridos. JULGO IMPROCEDENTE o pedido.';
+  return isAppeal
+    ? 'Vistos. Conheço do recurso, porém as razões apresentadas não demonstram erro suficiente para modificar a decisão recorrida. NEGO PROVIMENTO ao recurso, mantendo a decisão pelos seus fundamentos essenciais.'
+    : 'Vistos. A parte autora não logrou demonstrar, com prova suficiente e adequada, os fatos indispensáveis à pretensão formulada. As lacunas da instrução e da estratégia processual impedem o reconhecimento do direito nos termos requeridos. JULGO IMPROCEDENTE o pedido.';
 }
 
 function appendReactiveFeedback(base: string, eventModifier: number, hearingModifier: number) {

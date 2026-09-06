@@ -1,5 +1,5 @@
 import React from 'react';
-import { LegalCase, PlayerProfile, CareerTierId } from '../types/game';
+import { LegalCase, PlayerProfile } from '../types/game';
 import {
   X,
   Briefcase,
@@ -15,7 +15,17 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { CAREER_TIERS } from '../data/careers';
+import { GAME_CASES } from '../data/cases';
+import { getCareerRank, getCaseRewardBreakdown } from '../lib/caseRules';
+import {
+  STAGE_CONFIG,
+  getAppealOfCaseId,
+  getCaseRepercussionLevel,
+  getProceduralStage,
+} from '../lib/caseMetadata';
+import { getProcessStatusInfo } from '../lib/processLifecycle';
 import { sound } from '../utils/sound';
+import { CaseMetadataBadges, ProcessStatusPanel } from './CaseLifecycle/CaseLifecycle';
 
 interface CaseBriefingModalProps {
   isOpen: boolean;
@@ -24,19 +34,6 @@ interface CaseBriefingModalProps {
   player: PlayerProfile;
   onAcceptCase: (c: LegalCase) => void;
 }
-
-const CAREER_ORDER: CareerTierId[] = [
-  'ESTAGIARIO',
-  'ESTAGIARIO_SENIOR',
-  'ADVOGADO_CONTRATADO',
-  'ADVOGADO_SENIOR',
-  'SOCIO_ESCRITORIO',
-  'DONO_ESCRITORIO',
-  'MAGISTRADO_SUBSTITUTO',
-  'JUIZ_TITULAR',
-  'DESEMBARGADOR',
-  'MINISTRO_STF'
-];
 
 export const CaseBriefingModal: React.FC<CaseBriefingModalProps> = ({
   isOpen,
@@ -47,24 +44,44 @@ export const CaseBriefingModal: React.FC<CaseBriefingModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const currentCareerIndex = CAREER_ORDER.indexOf(player.careerTier);
-  const requiredCareerIndex = CAREER_ORDER.indexOf(caseData.minCareerTier);
+  const stage = getProceduralStage(caseData);
+  const currentCareerIndex = getCareerRank(player.careerTier);
+  const requiredCareerIndex = Math.max(
+    getCareerRank(caseData.minCareerTier),
+    getCareerRank(STAGE_CONFIG[stage].minimumCareerTier),
+  );
   const hasCareerAccess = currentCareerIndex >= requiredCareerIndex;
-  const alreadyCompleted = player.history.some((item) => item.caseId === caseData.id && item.success);
+  const previousRecord = player.history.find((item) => item.caseId === caseData.id) || null;
+  const alreadyHandled = !!previousRecord;
   const isCurrentActiveCase = player.activeCase?.caseId === caseData.id;
   const hasAnotherActiveCase = !!player.activeCase && !isCurrentActiveCase;
-  const canAccept = hasCareerAccess && !alreadyCompleted && !isCurrentActiveCase && !hasAnotherActiveCase;
-  const requiredCareerTitle = CAREER_TIERS[caseData.minCareerTier]?.title || caseData.minCareerTier;
+  const appealOfCaseId = getAppealOfCaseId(caseData);
+  const isAppealCase = !!appealOfCaseId;
+  const predecessorExists = appealOfCaseId
+    ? player.history.some((item) => item.caseId === appealOfCaseId)
+    : true;
+  const canAccept = hasCareerAccess && !alreadyHandled && !isCurrentActiveCase && !hasAnotherActiveCase && !isAppealCase;
+  const minimumTier = Object.values(CAREER_TIERS).find((tier) => getCareerRank(tier.id) === requiredCareerIndex);
+  const requiredCareerTitle = minimumTier?.title || CAREER_TIERS[caseData.minCareerTier]?.title || caseData.minCareerTier;
+  const rewardBreakdown = getCaseRewardBreakdown(caseData);
+  const hasRepercussion = getCaseRepercussionLevel(caseData) !== 'COMUM';
+  const processStatus = previousRecord ? getProcessStatusInfo(previousRecord, player, GAME_CASES) : null;
 
-  const blockedReason = alreadyCompleted
-    ? 'Este processo já foi concluído com êxito. Ele permanece disponível para consulta no histórico, mas não concede novamente XP, reputação ou progressão de carreira.'
+  const blockedReason = alreadyHandled
+    ? processStatus?.status === 'TRANSITO_EM_JULGADO'
+      ? 'Esta fase processual já foi julgada e o processo está em trânsito em julgado. Ela permanece no histórico, mas não pode ser repetida.'
+      : 'Esta fase processual já foi julgada. O próximo passo, quando cabível, é o recurso indicado no status do processo — nunca repetir a mesma instância.'
     : isCurrentActiveCase
-    ? 'Este é o processo que já está em andamento. Retorne ao mapa de diligências para continuar a investigação.'
-    : hasAnotherActiveCase
-    ? 'Há outro processo em andamento. Conclua o caso atual antes de assumir uma nova responsabilidade profissional.'
-    : !hasCareerAccess
-    ? `Este processo exige o nível profissional ${requiredCareerTitle}. Continue resolvendo os casos adequados ao seu estágio de carreira para desbloqueá-lo.`
-    : null;
+      ? 'Este é o processo que já está em andamento. Retorne ao mapa de diligências para continuar a investigação.'
+      : hasAnotherActiveCase
+        ? 'Há outro processo em andamento. Conclua o caso atual antes de assumir uma nova responsabilidade profissional.'
+        : isAppealCase
+          ? predecessorExists
+            ? 'Esta é uma fase recursal vinculada a um processo anterior. Recursos são distribuídos pelo CRM do escritório e não podem ser iniciados como um caso independente.'
+            : 'Esta fase recursal depende de uma decisão anterior do mesmo processo e não pode ser iniciada isoladamente.'
+          : !hasCareerAccess
+            ? `Este processo exige o nível profissional ${requiredCareerTitle}. Continue evoluindo na carreira para desbloqueá-lo.`
+            : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A0A0B]/85 backdrop-blur-md overflow-y-auto">
@@ -106,20 +123,26 @@ export const CaseBriefingModal: React.FC<CaseBriefingModalProps> = ({
         </div>
 
         <div className="p-6 overflow-y-auto flex-1 space-y-5 bg-[#0A0A0B]">
+          <CaseMetadataBadges caseItem={caseData} />
+
           {blockedReason && (
             <div className={`p-4 rounded-xl border flex items-start gap-3 ${
-              alreadyCompleted
-                ? 'bg-[#34D399]/8 border-[#34D399]/30 text-[#B7F7D8]'
+              alreadyHandled
+                ? 'bg-[#C5A059]/8 border-[#C5A059]/30 text-[#E6D2A2]'
                 : 'bg-[#F87171]/8 border-[#F87171]/30 text-[#FCA5A5]'
             }`}>
-              {alreadyCompleted ? <CheckCircle2 size={18} className="shrink-0 mt-0.5" /> : <LockKeyhole size={18} className="shrink-0 mt-0.5" />}
+              {alreadyHandled ? <CheckCircle2 size={18} className="shrink-0 mt-0.5" /> : <LockKeyhole size={18} className="shrink-0 mt-0.5" />}
               <div>
                 <div className="font-bold text-xs uppercase tracking-wider mb-1">
-                  {alreadyCompleted ? 'Caso já concluído' : 'Responsabilidade profissional bloqueada'}
+                  {alreadyHandled ? 'Fase processual já julgada' : 'Responsabilidade profissional bloqueada'}
                 </div>
                 <p className="text-xs leading-relaxed opacity-90">{blockedReason}</p>
               </div>
             </div>
+          )}
+
+          {previousRecord && (
+            <ProcessStatusPanel record={previousRecord} player={player} catalog={GAME_CASES} />
           )}
 
           <div className="p-4 bg-[#161618] rounded-xl border border-[#2A2A2E] flex items-start gap-4">
@@ -165,6 +188,15 @@ export const CaseBriefingModal: React.FC<CaseBriefingModalProps> = ({
               </div>
             </div>
           </div>
+
+          {hasRepercussion && (
+            <div className="p-4 rounded-xl border border-[#C5A059]/30 bg-[#C5A059]/[0.06]">
+              <span className="text-[10px] uppercase tracking-wider text-[#D9BD7A] font-bold">Recompensa ampliada por repercussão</span>
+              <p className="mt-1 text-xs leading-relaxed text-[#CFC4AA]">
+                XP-base: <strong>{rewardBreakdown.baseXp}</strong> • bônus: <strong>+{rewardBreakdown.repercussionXpBonus} XP</strong> • reputação adicional: <strong>+{rewardBreakdown.repercussionReputationBonus}%</strong>.
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center text-xs">
             <div className="p-3 bg-[#161618] rounded-xl border border-[#2A2A2E]">
@@ -215,15 +247,17 @@ export const CaseBriefingModal: React.FC<CaseBriefingModalProps> = ({
             }`}
           >
             <span>
-              {alreadyCompleted
-                ? 'Caso Concluído'
+              {alreadyHandled
+                ? processStatus?.status === 'TRANSITO_EM_JULGADO' ? 'Trânsito em Julgado' : 'Consulte o Recurso no CRM'
                 : isCurrentActiveCase
-                ? 'Caso em Andamento'
-                : hasAnotherActiveCase
-                ? 'Conclua o Caso Atual'
-                : !hasCareerAccess
-                ? `Requer ${requiredCareerTitle}`
-                : 'Aceitar Caso e Iniciar Diligências'}
+                  ? 'Caso em Andamento'
+                  : hasAnotherActiveCase
+                    ? 'Conclua o Caso Atual'
+                    : isAppealCase
+                      ? 'Fase Recursal via CRM'
+                      : !hasCareerAccess
+                        ? `Requer ${requiredCareerTitle}`
+                        : 'Aceitar Caso e Iniciar Diligências'}
             </span>
             {canAccept ? <ArrowRight size={16} /> : <LockKeyhole size={15} />}
           </button>
