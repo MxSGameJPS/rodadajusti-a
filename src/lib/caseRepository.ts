@@ -19,9 +19,22 @@ interface CaseRow {
   xp_reward: number;
   reputation_reward: number;
   min_career_tier: LegalCase['minCareerTier'];
+  repercussion_level?: string | null;
+  procedural_stage?: string | null;
+  process_key?: string | null;
+  appeal_of_case_id?: string | null;
+  appeal_type?: string | null;
+  appeal_trigger?: string | null;
+  appeal_deadline_days?: number | null;
+  court_name?: string | null;
   content: Record<string, unknown> | null;
   metadata: Record<string, unknown> | null;
 }
+
+const BASE_SELECT =
+  'id, code, title, area, difficulty, difficulty_stars, deadline_hours, honorarios_reward, xp_reward, reputation_reward, min_career_tier, content, metadata, sort_order, version';
+const PROCEDURAL_SELECT =
+  `${BASE_SELECT}, repercussion_level, procedural_stage, process_key, appeal_of_case_id, appeal_type, appeal_trigger, appeal_deadline_days, court_name`;
 
 function getLegacyCatalog(): LegalCase[] {
   return normalizeCaseCatalog([...GAME_CASES]);
@@ -66,6 +79,14 @@ function rowToCandidate(row: CaseRow): unknown {
     xpReward: row.xp_reward,
     reputationReward: row.reputation_reward,
     minCareerTier: row.min_career_tier,
+    repercussionLevel: row.repercussion_level || 'COMUM',
+    proceduralStage: row.procedural_stage || 'PRIMEIRA_INSTANCIA',
+    processKey: row.process_key || null,
+    appealOfCaseId: row.appeal_of_case_id || null,
+    appealType: row.appeal_type || null,
+    appealTrigger: row.appeal_trigger || null,
+    appealDeadlineDays: row.appeal_deadline_days || 15,
+    courtName: row.court_name || null,
     client: content.client,
     briefing: content.briefing,
     locations: content.locations,
@@ -76,6 +97,33 @@ function rowToCandidate(row: CaseRow): unknown {
   };
 }
 
+async function fetchPublishedRows() {
+  if (!supabase) return { data: null, error: new Error('Supabase indisponível') };
+
+  const modern = await supabase
+    .from('cases')
+    .select(PROCEDURAL_SELECT)
+    .eq('is_active', true)
+    .eq('status', 'published')
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (!modern.error) return modern;
+
+  console.warn(
+    '[Rota da Justiça] Colunas de repercussão/recursos ainda não estão disponíveis. Carregando catálogo compatível até a migration ser aplicada.',
+    modern.error,
+  );
+
+  return supabase
+    .from('cases')
+    .select(BASE_SELECT)
+    .eq('is_active', true)
+    .eq('status', 'published')
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
+}
+
 export async function loadCaseCatalog(): Promise<LegalCase[]> {
   const legacy = getLegacyCatalog();
 
@@ -84,15 +132,7 @@ export async function loadCaseCatalog(): Promise<LegalCase[]> {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('cases')
-      .select(
-        'id, code, title, area, difficulty, difficulty_stars, deadline_hours, honorarios_reward, xp_reward, reputation_reward, min_career_tier, content, metadata, sort_order, version',
-      )
-      .eq('is_active', true)
-      .eq('status', 'published')
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true });
+    const { data, error } = await fetchPublishedRows();
 
     if (error) throw error;
 
