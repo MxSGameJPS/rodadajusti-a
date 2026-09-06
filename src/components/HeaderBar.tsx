@@ -55,6 +55,11 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
       ? player.officeFinances.officeName.toUpperCase()
       : 'ADVOCACIA INDEPENDENTE'
     : 'RAMOS & ASSOCIADOS';
+  const tierDisplayTitle = independent
+    ? player.officeFinances.isOfficeOpen
+      ? 'Advogado • Escritório Próprio'
+      : 'Advogado Autônomo'
+    : currentTier.title;
 
   const tierKeys = Object.keys(CAREER_TIERS) as (keyof typeof CAREER_TIERS)[];
   const currentTierIndex = tierKeys.indexOf(player.careerTier);
@@ -137,7 +142,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C5A059]">Rota da Justiça</span>
               <span className="rounded border border-[#C5A059]/30 bg-[#C5A059]/10 px-1.5 py-0.5 font-mono text-[9px] text-[#C5A059]">
-                {currentTier.title}
+                {tierDisplayTitle}
               </span>
             </div>
 
