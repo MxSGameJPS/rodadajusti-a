@@ -34,6 +34,12 @@ const XP_STEP_BY_DIFFICULTY: Record<LegalCase['difficulty'], number> = {
   Complexo: 80,
 };
 
+type BalancedCaseMarker = LegalCase & {
+  baseXpReward?: number;
+  baseReputationReward?: number;
+  rewardBalanceApplied?: boolean;
+};
+
 export function getCareerRank(tier: CareerTierId): number {
   const rank = CAREER_ORDER.indexOf(tier);
   return rank === -1 ? 0 : rank;
@@ -55,14 +61,19 @@ export function getBalancedCaseXp(caseItem: LegalCase): number {
 }
 
 export function getCaseRewardBreakdown(caseItem: LegalCase) {
+  const marked = caseItem as BalancedCaseMarker;
   const repercussionLevel = getCaseRepercussionLevel(caseItem);
   const config = REPERCUSSION_CONFIG[repercussionLevel];
-  const configuredBaseXp = Number(caseItem.xpReward);
+  const configuredBaseXp = marked.rewardBalanceApplied
+    ? Number(marked.baseXpReward)
+    : Number(caseItem.xpReward);
   const baseXp = Number.isFinite(configuredBaseXp) && configuredBaseXp > 0
     ? Math.round(configuredBaseXp)
     : getBalancedCaseXp(caseItem);
   const totalXp = Math.max(baseXp, Math.round(baseXp * config.xpMultiplier));
-  const configuredReputation = Number(caseItem.reputationReward);
+  const configuredReputation = marked.rewardBalanceApplied
+    ? Number(marked.baseReputationReward)
+    : Number(caseItem.reputationReward);
   const baseReputation = Number.isFinite(configuredReputation) ? Math.round(configuredReputation) : 0;
   const totalReputation = baseReputation + config.reputationBonus;
 
@@ -87,6 +98,9 @@ export function normalizeCaseBalance(caseItem: LegalCase): LegalCase {
     ...caseItem,
     xpReward: rewards.totalXp,
     reputationReward: rewards.totalReputation,
+    baseXpReward: rewards.baseXp,
+    baseReputationReward: rewards.baseReputation,
+    rewardBalanceApplied: true,
     repercussionLevel: rewards.repercussionLevel,
     proceduralStage: getProceduralStage(caseItem),
     processKey: metadata.processKey || null,
