@@ -23,6 +23,7 @@ interface TravelMapTransitionProps {
 }
 
 const FALLBACK_ANIMATION_MS = 4200;
+const MAP_READY_TIMEOUT_MS = 7000;
 const ROUTE_SOURCE_ID = 'rota-live-route';
 const ROUTE_LAYER_ID = 'rota-live-route-layer';
 
@@ -60,6 +61,7 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
   const [route, setRoute] = useState<WorldRoute | null>(null);
   const [isLoadingRoute, setIsLoadingRoute] = useState(true);
   const [useRealMap, setUseRealMap] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
   const [mapFailure, setMapFailure] = useState(false);
 
   const startClock = useMemo(() => 8 + caseHoursSpent, [caseHoursSpent]);
@@ -75,6 +77,11 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
 
   useEffect(() => {
     let active = true;
+    setProgress(0);
+    setMapReady(false);
+    setMapFailure(false);
+    animationStartedRef.current = false;
+
     const prepare = async () => {
       const player = readCurrentPlayerSnapshot();
       if (!player) {
@@ -113,6 +120,16 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
   useEffect(() => {
     if (!useRealMap || !route || !profile || !mapContainerRef.current) return undefined;
     let disposed = false;
+    let overlaysMounted = false;
+    let mapBecameReady = false;
+    let readyTimeout = 0;
+
+    const fallbackToSafeMap = () => {
+      if (disposed || mapBecameReady) return;
+      setMapFailure(true);
+      setMapReady(false);
+      setUseRealMap(false);
+    };
 
     const mountMap = async () => {
       try {
@@ -150,26 +167,32 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
           return element;
         };
 
-        map.on('load', () => {
-          if (disposed) return;
-          map.addSource(ROUTE_SOURCE_ID, {
-            type: 'geojson',
-            data: {
-              type: 'Feature',
-              properties: {},
-              geometry: { type: 'LineString', coordinates: route.coordinates },
-            },
-          });
-          map.addLayer({
-            id: ROUTE_LAYER_ID,
-            type: 'line',
-            source: ROUTE_SOURCE_ID,
-            paint: {
-              'line-color': '#C5A059',
-              'line-width': 5,
-              'line-opacity': 0.92,
-            },
-          });
+        const mountOverlays = () => {
+          if (disposed || overlaysMounted) return;
+          overlaysMounted = true;
+
+          if (!map.getSource(ROUTE_SOURCE_ID)) {
+            map.addSource(ROUTE_SOURCE_ID, {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                properties: {},
+                geometry: { type: 'LineString', coordinates: route.coordinates },
+              },
+            });
+          }
+          if (!map.getLayer(ROUTE_LAYER_ID)) {
+            map.addLayer({
+              id: ROUTE_LAYER_ID,
+              type: 'line',
+              source: ROUTE_SOURCE_ID,
+              paint: {
+                'line-color': '#C5A059',
+                'line-width': 5,
+                'line-opacity': 0.92,
+              },
+            });
+          }
 
           mapMarkersRef.current.push(new maplibre.Marker({ element: createMarkerElement('A', '#355F87') })
             .setLngLat(first)
@@ -187,19 +210,37 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
 
           const bounds = new maplibre.LngLatBounds(first, first);
           route.coordinates.forEach((coordinate) => bounds.extend(coordinate));
-          map.fitBounds(bounds, { padding: 70, maxZoom: 15, duration: 700 });
+          window.requestAnimationFrame(() => {
+            if (disposed) return;
+            map.resize();
+            map.fitBounds(bounds, { padding: 70, maxZoom: 15, duration: 700 });
+          });
+        };
+
+        map.once('style.load', mountOverlays);
+        map.once('load', () => {
+          if (disposed) return;
+          mountOverlays();
+          mapBecameReady = true;
+          window.clearTimeout(readyTimeout);
+          map.resize();
+          setMapReady(true);
         });
+
+        map.on('error', () => {
+          if (!mapBecameReady) fallbackToSafeMap();
+        });
+
+        readyTimeout = window.setTimeout(fallbackToSafeMap, MAP_READY_TIMEOUT_MS);
       } catch {
-        if (!disposed) {
-          setMapFailure(true);
-          setUseRealMap(false);
-        }
+        fallbackToSafeMap();
       }
     };
 
     mountMap();
     return () => {
       disposed = true;
+      if (readyTimeout) window.clearTimeout(readyTimeout);
       mapMarkersRef.current.forEach((marker) => marker.remove());
       mapMarkersRef.current = [];
       if (carMarkerRef.current) carMarkerRef.current.remove();
@@ -210,7 +251,9 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
   }, [useRealMap, route, profile?.city, profile?.state]);
 
   useEffect(() => {
-    if (isLoadingRoute || animationStartedRef.current) return undefined;
+    const canStart = !isLoadingRoute && (!useRealMap || mapReady);
+    if (!canStart || animationStartedRef.current) return undefined;
+
     animationStartedRef.current = true;
     const duration = animationDuration(route);
     const startedAt = performance.now();
@@ -220,7 +263,7 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
       const next = Math.min(1, (now - startedAt) / duration);
       setProgress(next);
       if (next >= 1) {
-        finishTravel();
+        window.setTimeout(finishTravel, 450);
         return;
       }
       frame = window.requestAnimationFrame(tick);
@@ -230,15 +273,24 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
     return () => window.cancelAnimationFrame(frame);
     // A referência impede conclusão duplicada durante o unmount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoadingRoute, route]);
+  }, [isLoadingRoute, useRealMap, mapReady, route]);
 
   useEffect(() => {
-    if (!useRealMap || !route || !carMarkerRef.current || route.coordinates.length < 2) return;
-    const index = Math.min(route.coordinates.length - 1, Math.floor(progress * (route.coordinates.length - 1)));
-    const coordinate = route.coordinates[index];
+    if (!useRealMap || !mapReady || !route || !carMarkerRef.current || route.coordinates.length < 2) return;
+    const scaledIndex = progress * (route.coordinates.length - 1);
+    const lowerIndex = Math.floor(scaledIndex);
+    const upperIndex = Math.min(route.coordinates.length - 1, lowerIndex + 1);
+    const localProgress = scaledIndex - lowerIndex;
+    const lower = route.coordinates[lowerIndex];
+    const upper = route.coordinates[upperIndex];
+    const coordinate: [number, number] = [
+      lower[0] + (upper[0] - lower[0]) * localProgress,
+      lower[1] + (upper[1] - lower[1]) * localProgress,
+    ];
     carMarkerRef.current.setLngLat(coordinate);
-  }, [progress, useRealMap, route]);
+  }, [progress, useRealMap, mapReady, route]);
 
+  const mapPreparing = !isLoadingRoute && useRealMap && !mapReady;
   const status = progress < 0.18 ? 'Saindo do local atual' : progress < 0.82 ? 'Em deslocamento' : 'Chegando ao destino';
   const markerX = 16 + progress * 68;
   const markerY = 72 - Math.sin(progress * Math.PI) * 35;
@@ -253,7 +305,9 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
               <Navigation size={16} />
               <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Deslocamento em diligência</span>
             </div>
-            <h2 className="mt-1 text-lg font-bold font-serif text-[#E8E8E8]">{isLoadingRoute ? 'Calculando percurso...' : status}</h2>
+            <h2 className="mt-1 text-lg font-bold font-serif text-[#E8E8E8]">
+              {isLoadingRoute ? 'Calculando percurso...' : mapPreparing ? 'Preparando mapa da cidade...' : status}
+            </h2>
             {profile && <p className="mt-1 text-[10px] text-[#777]">{profile.city}/{profile.state} • percurso acelerado para não interromper o ritmo do jogo</p>}
           </div>
 
@@ -280,6 +334,15 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
             ) : useRealMap && route ? (
               <>
                 <div ref={mapContainerRef} className="absolute inset-0" />
+                {!mapReady && (
+                  <div className="absolute inset-0 z-[8] grid place-items-center bg-[#0D0F12]/88 text-center backdrop-blur-[2px]">
+                    <div>
+                      <Loader2 size={28} className="mx-auto animate-spin text-[#C5A059]" />
+                      <strong className="mt-3 block text-sm text-[#E8E8E8]">Carregando mapa de {profile?.city}</strong>
+                      <span className="mt-1 block text-[10px] text-[#8B8B91]">A animação só começa quando o mapa estiver pronto.</span>
+                    </div>
+                  </div>
+                )}
                 <div className="absolute left-3 top-3 z-10 rounded-xl border border-black/15 bg-[#09090B]/88 px-3 py-2 text-[10px] text-[#E6E1D8] shadow-xl backdrop-blur">
                   <strong className="block">Rota real • {formatRouteDistance(route.distanceMeters)}</strong>
                   <span className="text-[#A7A199]">cerca de {formatRouteDuration(route.durationSeconds)} em condições normais</span>
@@ -318,7 +381,7 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
               </>
             )}
 
-            {!isLoadingRoute && (
+            {!isLoadingRoute && !mapPreparing && (
               <div className="absolute bottom-3 left-1/2 z-20 w-[88%] -translate-x-1/2 rounded-xl border border-[#2A2A2E] bg-[#09090B]/90 p-3 backdrop-blur sm:w-[72%]">
                 <div className="mb-2 flex items-center justify-between text-[10px] font-mono text-[#888888]">
                   <span>{Math.round(progress * 100)}% do trajeto</span>
