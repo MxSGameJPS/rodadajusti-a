@@ -16,7 +16,10 @@ import {
   X,
 } from 'lucide-react';
 import { GAME_CASES } from '../../data/cases';
-import { getAvailableCasesForCareer, getCareerRank } from '../../lib/caseRules';
+import {
+  getAssignmentContext,
+  getProfessionalAssignedCase,
+} from '../../lib/processLifecycle';
 import {
   loadActiveSocialJuridicoFeatures,
   type SocialJuridicoFeature,
@@ -25,6 +28,8 @@ import {
 import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import type { ActiveCaseState, LegalCase, PlayerProfile, SocialJuridicoToolUse } from '../../types/game';
 import { sound } from '../../utils/sound';
+import { CaseMetadataBadges } from '../CaseLifecycle/CaseLifecycle';
+import { ProfessionalProcessHistory } from './ProfessionalProcessHistory';
 import styles from './ProfessionalSocialJuridicoExperience.module.css';
 
 const OPEN_SOCIAL_JURIDICO_EVENT = 'rota:open-social-juridico';
@@ -60,20 +65,11 @@ function FeatureIcon({ id }: { id: SocialJuridicoFeatureId }) {
 }
 
 function buildAssignedCase(player: PlayerProfile) {
-  if (player.activeCase) return null;
-  const lawyerRank = getCareerRank('ADVOGADO_CONTRATADO');
-  const currentRank = getCareerRank(player.careerTier);
-  const completed = new Set(
-    player.history.filter((record) => record.success).map((record) => record.caseId),
-  );
-
-  return getAvailableCasesForCareer(GAME_CASES, player.careerTier).find((caseItem) => {
-    const minRank = getCareerRank(caseItem.minCareerTier);
-    return minRank >= lawyerRank && minRank <= currentRank && !completed.has(caseItem.id);
-  }) || null;
+  return getProfessionalAssignedCase(player, GAME_CASES);
 }
 
 function startCaseFromCrm(player: PlayerProfile, caseItem: LegalCase) {
+  const context = getAssignmentContext(caseItem, player);
   const activeCase: ActiveCaseState = {
     caseId: caseItem.id,
     hoursSpent: 0,
@@ -86,7 +82,9 @@ function startCaseFromCrm(player: PlayerProfile, caseItem: LegalCase) {
       {
         id: `log-crm-${Date.now()}`,
         timestampGameHours: 0,
-        message: `Caso disponibilizado no CRM por Mariana Duarte, por determinação do Dr. Roberto Ramos: ${caseItem.title}`,
+        message: context.isAppeal
+          ? `Processo retomado em grau recursal no CRM: ${caseItem.title}`
+          : `Caso disponibilizado no CRM por Mariana Duarte, por determinação do Dr. Roberto Ramos: ${caseItem.title}`,
         type: 'alerta',
       },
     ],
@@ -120,6 +118,10 @@ export const ProfessionalSocialJuridicoExperience: React.FC<ProfessionalSocialJu
   const activeState = player.activeCase;
   const actions = activeState?.socialJuridicoActions || [];
   const assignedCase = useMemo(() => buildAssignedCase(player), [player]);
+  const assignedContext = useMemo(
+    () => assignedCase ? getAssignmentContext(assignedCase, player) : null,
+    [assignedCase, player],
+  );
   const crmFeature = features.find((feature) => feature.id === 'sj_crm') || null;
 
   const discoveredClues = useMemo(() => {
@@ -320,7 +322,7 @@ export const ProfessionalSocialJuridicoExperience: React.FC<ProfessionalSocialJu
                       <FolderKanban size={24} />
                       <div>
                         <span>CRM Jurídico</span>
-                        <strong>{activeState ? 'Caso em andamento' : assignedCase ? 'Novo caso atribuído' : 'Sem nova atribuição'}</strong>
+                        <strong>{activeState ? 'Caso em andamento' : assignedCase ? assignedContext?.title || 'Novo caso atribuído' : 'Sem nova atribuição'}</strong>
                         <p>{activeState ? currentCase?.title : assignedCase ? `${assignedCase.client.name} • ${assignedCase.area}` : 'Aguarde o Dr. Roberto distribuir um novo atendimento.'}</p>
                       </div>
                     </button>
@@ -337,7 +339,7 @@ export const ProfessionalSocialJuridicoExperience: React.FC<ProfessionalSocialJu
                   <div className={styles.viewHeading}>
                     <span>CRM Jurídico • Ramos & Associados</span>
                     <h3>Meus atendimentos</h3>
-                    <p>O Dr. Roberto define a distribuição e Mariana Duarte disponibiliza o caso no CRM. Nesta etapa da carreira, apenas um caso fica ativo por vez.</p>
+                    <p>O Dr. Roberto define a distribuição e Mariana Duarte disponibiliza o caso no CRM. Recursos e processos que retornam de outras instâncias aparecem aqui como continuação do mesmo processo.</p>
                   </div>
 
                   {!crmFeature && (
@@ -350,6 +352,7 @@ export const ProfessionalSocialJuridicoExperience: React.FC<ProfessionalSocialJu
                         <div><span className={styles.caseCode}>{currentCase.code}</span><span className={styles.activeStatus}>Em andamento</span></div>
                         <small>Responsável: {displayName}</small>
                       </div>
+                      <CaseMetadataBadges caseItem={currentCase} />
                       <h4>{currentCase.title}</h4>
                       <p>{currentCase.client.summary}</p>
                       <div className={styles.caseFacts}>
@@ -366,9 +369,10 @@ export const ProfessionalSocialJuridicoExperience: React.FC<ProfessionalSocialJu
                   {crmFeature && !activeState && assignedCase && (
                     <article className={styles.crmCaseCard}>
                       <div className={styles.crmCaseTop}>
-                        <div><span className={styles.caseCode}>{assignedCase.code}</span><span className={styles.newStatus}>Novo caso</span></div>
+                        <div><span className={styles.caseCode}>{assignedCase.code}</span><span className={styles.newStatus}>{assignedContext?.title || 'Novo caso'}</span></div>
                         <small>Atribuído hoje no CRM</small>
                       </div>
+                      <CaseMetadataBadges caseItem={assignedCase} />
                       <h4>{assignedCase.title}</h4>
                       <p>{assignedCase.client.summary}</p>
                       <div className={styles.caseFacts}>
@@ -377,9 +381,9 @@ export const ProfessionalSocialJuridicoExperience: React.FC<ProfessionalSocialJu
                         <div><span>Complexidade</span><strong>{assignedCase.difficulty}</strong></div>
                         <div><span>Supervisor</span><strong>Dr. Roberto Ramos</strong></div>
                       </div>
-                      <div className={styles.assignmentNote}><CheckCircle2 size={15} /> Mariana Duarte adicionou este atendimento ao seu CRM por determinação do Dr. Roberto Ramos.</div>
+                      <div className={styles.assignmentNote}><CheckCircle2 size={15} /> {assignedContext?.description || 'Mariana Duarte adicionou este atendimento ao seu CRM por determinação do Dr. Roberto Ramos.'}</div>
                       {assignmentError && <div className={styles.error}>{assignmentError}</div>}
-                      <button type="button" className={styles.acceptCaseButton} onClick={acceptAssignedCase}>Aceitar caso no CRM</button>
+                      <button type="button" className={styles.acceptCaseButton} onClick={acceptAssignedCase}>{assignedContext?.actionLabel || 'Aceitar caso no CRM'}</button>
                     </article>
                   )}
 
@@ -387,9 +391,11 @@ export const ProfessionalSocialJuridicoExperience: React.FC<ProfessionalSocialJu
                     <div className={styles.emptyCrm}>
                       <FolderKanban size={32} />
                       <h4>Nenhum novo caso atribuído</h4>
-                      <p>Você está sem atendimento ativo. O próximo caso aparecerá aqui após a distribuição do Dr. Roberto e o lançamento da Mariana no CRM.</p>
+                      <p>Você está sem atendimento ativo. O próximo caso ou recurso aparecerá aqui após a distribuição do Dr. Roberto e o lançamento da Mariana no CRM.</p>
                     </div>
                   )}
+
+                  {crmFeature && <ProfessionalProcessHistory player={player} />}
                 </div>
               )}
 
