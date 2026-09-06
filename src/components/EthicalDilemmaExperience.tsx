@@ -4,8 +4,10 @@ import {
   CheckCircle2,
   Gavel,
   Scale,
+  ShieldAlert,
   ShieldCheck,
   Sparkles,
+  Undo2,
 } from 'lucide-react';
 import type { LegalCase, PlayerProfile } from '../types/game';
 import {
@@ -26,6 +28,8 @@ import {
 } from '../lib/professionalRpg';
 import { GAME_CASES } from '../data/cases';
 import { sound } from '../utils/sound';
+
+const MISCONDUCT_FINANCIAL_PENALTY = 2000;
 
 function toneLabel(choice: EthicalDilemmaChoice) {
   if (choice.tone === 'ethical') return 'Caminho ético';
@@ -49,6 +53,17 @@ function toneText(choice: EthicalDilemmaChoice) {
   return 'text-[#FCA5A5]';
 }
 
+function requiresMisconductConfirmation(choice: EthicalDilemmaChoice) {
+  const ethicsDelta = choice.consequence.ethicsDelta ?? 0;
+  const characterDelta = choice.consequence.characterDelta ?? 0;
+  return (
+    choice.tone === 'corrupt' ||
+    ethicsDelta < 0 ||
+    characterDelta < 0 ||
+    Boolean(choice.incident)
+  );
+}
+
 function findPending(
   player: PlayerProfile,
   state: EthicalDilemmaState,
@@ -66,6 +81,7 @@ export const EthicalDilemmaExperience: React.FC = () => {
   const [event, setEvent] = useState<EthicalDilemmaDefinition | null>(null);
   const [caseData, setCaseData] = useState<LegalCase | null>(null);
   const [resolution, setResolution] = useState<EthicalChoiceResolution | null>(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState<EthicalDilemmaChoice | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -97,6 +113,7 @@ export const EthicalDilemmaExperience: React.FC = () => {
 
     const handleOpened = () => {
       setResolution(null);
+      setPendingConfirmation(null);
       sync();
       setIsOpen(true);
     };
@@ -123,10 +140,10 @@ export const EthicalDilemmaExperience: React.FC = () => {
 
   if (!player || !profile || !isOpen || (!event && !resolution)) return null;
 
-  const choose = (choice: EthicalDilemmaChoice) => {
-    sound.playPaper();
+  const resolveChoice = (choice: EthicalDilemmaChoice) => {
     const result = resolveEthicalDilemmaChoice(player, choice.id);
     if (!result) return;
+    setPendingConfirmation(null);
     setResolution(result);
     setState(result.state);
     setProfile(result.profile);
@@ -134,13 +151,116 @@ export const EthicalDilemmaExperience: React.FC = () => {
     setCaseData(GAME_CASES.find((item) => item.id === result.record.caseId) ?? caseData);
   };
 
+  const choose = (choice: EthicalDilemmaChoice) => {
+    sound.playPaper();
+    if (requiresMisconductConfirmation(choice)) {
+      setPendingConfirmation(choice);
+      return;
+    }
+    resolveChoice(choice);
+  };
+
+  const cancelMisconduct = () => {
+    sound.playClick();
+    setPendingConfirmation(null);
+  };
+
+  const confirmMisconduct = () => {
+    if (!pendingConfirmation) return;
+    sound.playPaper();
+    resolveChoice(pendingConfirmation);
+  };
+
   const continueGame = () => {
     sound.playClick();
     setResolution(null);
+    setPendingConfirmation(null);
     setEvent(null);
     setCaseData(null);
     setIsOpen(false);
   };
+
+  if (pendingConfirmation && event && caseData && !resolution) {
+    return (
+      <div className="fixed inset-0 z-[145] flex items-center justify-center overflow-y-auto bg-[#030304]/97 p-3 backdrop-blur-lg sm:p-6">
+        <div className="my-4 w-full max-w-2xl overflow-hidden rounded-2xl border border-[#EF4444]/55 bg-[#120D0E] shadow-2xl shadow-black/60">
+          <header className="border-b border-[#4A2024] bg-[#1B1012] px-5 py-5 sm:px-7">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#EF4444]/45 bg-[#EF4444]/10 text-[#F87171]">
+                <ShieldAlert size={25} />
+              </div>
+              <div>
+                <span className="block text-[9px] font-black uppercase tracking-[0.2em] text-[#F87171]">
+                  Confirmação obrigatória antes da ação
+                </span>
+                <h2 className="mt-1 font-serif text-xl font-black text-[#FFF1F2] sm:text-2xl">
+                  Esta escolha pode violar seus deveres profissionais
+                </h2>
+              </div>
+            </div>
+          </header>
+
+          <div className="space-y-5 p-5 sm:p-7">
+            <section className="rounded-2xl border border-[#EF4444]/35 bg-[#EF4444]/[0.07] p-5">
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={22} className="mt-0.5 shrink-0 text-[#F87171]" />
+                <div>
+                  <h3 className="text-sm font-black text-[#FFE4E6]">Você ainda não realizou esta ação.</h3>
+                  <p className="mt-2 text-xs leading-6 text-[#D8B4B8]">
+                    Você selecionou <strong>“{pendingConfirmation.label}”</strong>, no evento <strong>“{event.title}”</strong>. O jogo classifica esta escolha como antiética, arriscada ou incompatível com os deveres profissionais do advogado.
+                  </p>
+                  <p className="mt-2 text-xs leading-6 text-[#BFA0A4]">
+                    Você pode desistir agora sem registrar a decisão, sem perder Ética, Índole ou dinheiro e sem gerar incidente disciplinar. Se confirmar, a escolha será aplicada imediatamente e não poderá ser desfeita por este aviso.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-[#3B2427] bg-[#160F11] p-5">
+              <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-[#A66A72]">Consequências conhecidas se confirmar</span>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {pendingConfirmation.visibleSummary.map((summary) => (
+                  <div key={summary} className="rounded-xl border border-[#EF4444]/20 bg-[#120D0E] px-3 py-2.5 text-xs font-semibold text-[#E3C1C5]">
+                    {summary}
+                  </div>
+                ))}
+                <div className="rounded-xl border border-[#EF4444]/30 bg-[#1A0D10] px-3 py-2.5 text-xs font-bold text-[#FCA5A5] sm:col-span-2">
+                  Penalidade financeira da conduta: -R$ {MISCONDUCT_FINANCIAL_PENALTY.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </div>
+                {pendingConfirmation.incident && (
+                  <div className="rounded-xl border border-[#EF4444]/30 bg-[#1A0D10] px-3 py-2.5 text-xs font-bold text-[#FCA5A5] sm:col-span-2">
+                    Esta escolha também pode gerar registro disciplinar e consequências futuras ocultas.
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={cancelMisconduct}
+                className="flex items-center justify-center gap-2 rounded-xl border border-[#3A3A40] bg-[#171719] px-5 py-3.5 text-xs font-black uppercase tracking-[0.08em] text-[#D8D8DC] transition hover:border-[#606068] hover:bg-[#202024]"
+              >
+                <Undo2 size={16} />
+                Desistir e voltar às opções
+              </button>
+              <button
+                type="button"
+                onClick={confirmMisconduct}
+                className="rounded-xl bg-[#DC2626] px-5 py-3.5 text-xs font-black uppercase tracking-[0.08em] text-white transition-transform hover:scale-[1.01]"
+              >
+                Assumir consequências e realizar ação
+              </button>
+            </div>
+
+            <p className="text-center text-[9px] leading-relaxed text-[#765D61]">
+              A penalidade só é aplicada depois da confirmação vermelha acima. Voltar às opções mantém o dilema aberto para outra escolha.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (resolution) {
     const choice = resolution.choice;
@@ -297,7 +417,7 @@ export const EthicalDilemmaExperience: React.FC = () => {
           <div className="flex items-start gap-3 rounded-xl border border-[#2D2D32] bg-[#0E0E10] p-4 text-[10px] leading-relaxed text-[#74747A]">
             <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-[#60A5FA]" />
             <p>
-              A decisão fica salva imediatamente. Fechar o navegador não apaga um dilema pendente. Índole e risco de exposição não exibem o valor numérico completo, e uma escolha ilegal pode não produzir qualquer vantagem prática.
+              Escolhas éticas são registradas imediatamente. Escolhas antiéticas ou de risco passam antes por uma confirmação obrigatória, onde você pode desistir sem sofrer qualquer penalidade. Índole e risco de exposição não exibem o valor numérico completo, e uma escolha ilegal pode não produzir qualquer vantagem prática.
             </p>
           </div>
         </div>
