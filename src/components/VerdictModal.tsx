@@ -1,6 +1,7 @@
 import React from 'react';
 import { LegalCase, CaseHistoryRecord, PlayerProfile, CareerTierId, JudicialIssueCode } from '../types/game';
 import { CAREER_TIERS } from '../data/careers';
+import { GAME_CASES } from '../data/cases';
 import {
   Scale,
   Award,
@@ -16,8 +17,16 @@ import {
 } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { usePlayerDisplayName } from '../lib/playerTreatment';
+import { getCaseRewardBreakdown } from '../lib/caseRules';
+import {
+  getCourtName,
+  getProceduralStage,
+  getCaseRepercussionLevel,
+} from '../lib/caseMetadata';
+import { getProcessStatusInfo } from '../lib/processLifecycle';
 import { CelebrationBurst } from './CelebrationBurst/CelebrationBurst';
 import { VerdictFactorsPanel } from './VerdictFactorsPanel';
+import { CaseMetadataBadges, ProcessStatusPanel } from './CaseLifecycle/CaseLifecycle';
 
 interface VerdictModalProps {
   isOpen: boolean;
@@ -54,6 +63,23 @@ const ISSUE_LABELS: Record<JudicialIssueCode, string> = {
   WRONG_STRATEGY: 'Estratégia jurídica inadequada',
 };
 
+function decisionHeading(caseItem: LegalCase) {
+  const stage = getProceduralStage(caseItem);
+  const court = getCourtName(caseItem);
+  if (stage === 'PRIMEIRA_INSTANCIA') return `${court || 'Tribunal de Justiça'} • Sentença Publicada`;
+  if (stage === 'SEGUNDA_INSTANCIA') return `${court || 'Tribunal de Justiça'} • Acórdão Publicado`;
+  if (stage === 'STJ') return `${court || 'Superior Tribunal de Justiça'} • Julgamento Publicado`;
+  return `${court || 'Supremo Tribunal Federal'} • Julgamento Publicado`;
+}
+
+function displayVerdict(caseItem: LegalCase, result: CaseHistoryRecord) {
+  if (getProceduralStage(caseItem) === 'PRIMEIRA_INSTANCIA') return result.verdict;
+  if (result.verdict === 'EXTINTO SEM JULGAMENTO') return 'RECURSO NÃO CONHECIDO';
+  if (result.success) return 'RECURSO PROVIDO';
+  if (result.score >= 50) return 'RECURSO PARCIALMENTE PROVIDO';
+  return 'RECURSO DESPROVIDO';
+}
+
 export const VerdictModal: React.FC<VerdictModalProps> = ({
   isOpen,
   result,
@@ -71,6 +97,16 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
   const promotionMessage = promotedToTier
     ? PROMOTION_MESSAGES[promotedToTier] || 'Sua dedicação abriu uma nova etapa na sua trajetória jurídica.'
     : null;
+  const processStatus = getProcessStatusInfo(result, player, GAME_CASES);
+  const rewardBreakdown = getCaseRewardBreakdown(currentCase);
+  const hasRepercussion = getCaseRepercussionLevel(currentCase) !== 'COMUM';
+  const footerLabel = processStatus.status === 'PRAZO_RECURSAL_ABERTO'
+    ? 'Ir ao escritório • analisar recurso'
+    : processStatus.status === 'RECURSO_PARTE_CONTRARIA' || processStatus.status === 'RECURSO_EM_TRAMITACAO'
+      ? 'Retornar ao escritório • acompanhar recurso'
+      : result.supervisorReview
+        ? 'Retornar ao Escritório'
+        : 'Retornar ao Escritório e Avançar';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A0A0B]/90 backdrop-blur-lg overflow-y-auto">
@@ -93,21 +129,25 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
           </div>
 
           <span className="text-[10px] font-mono tracking-widest uppercase font-bold text-[#888888] block">
-            Tribunal de Justiça • Sentença Publicada
+            {decisionHeading(currentCase)}
           </span>
 
           <h2 className="text-2xl sm:text-3xl font-bold font-serif tracking-tight mt-1 text-[#E0E0E0]">
-            {result.verdict}
+            {displayVerdict(currentCase, result)}
           </h2>
 
-          <p className="text-xs sm:text-sm text-[#AAAAAA] mt-1 max-w-md mx-auto">
+          <div className="mt-3 flex justify-center">
+            <CaseMetadataBadges caseItem={currentCase} />
+          </div>
+
+          <p className="text-xs sm:text-sm text-[#AAAAAA] mt-2 max-w-md mx-auto">
             {currentCase.title}
           </p>
 
           {isWin && (
             <div className="mx-auto mt-4 flex max-w-md items-center justify-center gap-2 rounded-xl border border-[#34D399]/25 bg-[#34D399]/[0.07] px-4 py-2.5 text-xs font-semibold text-[#8BE7C3]">
               <CheckCircle2 size={16} className="shrink-0" />
-              <span>Parabéns! O resultado só foi reconhecido depois da análise da tese, da investigação e das provas efetivamente juntadas.</span>
+              <span>Resultado favorável nesta etapa processual. O processo só estará definitivamente encerrado quando houver trânsito em julgado.</span>
             </div>
           )}
 
@@ -149,7 +189,7 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
           <div className="p-4 bg-[#161618] rounded-xl border border-[#2A2A2E] space-y-2">
             <div className="flex items-center justify-between text-[#888888] text-xs">
               <span className="font-bold uppercase tracking-wider text-[#C5A059] font-serif">
-                Fundamentação do Magistrado:
+                Fundamentação do órgão julgador:
               </span>
               <span className="font-mono text-[11px]">{result.completedDate}</span>
             </div>
@@ -160,6 +200,17 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
 
           <VerdictFactorsPanel result={result} currentCase={currentCase} />
 
+          <ProcessStatusPanel record={result} player={player} catalog={GAME_CASES} />
+
+          {hasRepercussion && (
+            <div className="rounded-xl border border-[#C5A059]/30 bg-[#C5A059]/[0.06] p-4">
+              <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-[#DDBE76]">Bônus de repercussão</span>
+              <p className="mt-1 text-xs leading-relaxed text-[#CFC4AA]">
+                Este processo possui {rewardBreakdown.repercussionLabel.toLowerCase()}. A recompensa-base recebe multiplicador de <strong className="text-[#F1D79D]">{rewardBreakdown.xpMultiplier.toLocaleString('pt-BR')}× no XP</strong> e bônus de <strong className="text-[#F1D79D]">+{rewardBreakdown.repercussionReputationBonus}% de reputação</strong> quando a etapa é vencida.
+              </p>
+            </div>
+          )}
+
           {assessment && (
             <div className="rounded-xl border border-[#2A2A2E] bg-[#121316] p-4">
               <div className="flex items-start justify-between gap-3">
@@ -167,7 +218,7 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
                   <FileSearch size={17} className="text-[#C5A059]" />
                   <div>
                     <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-[#C5A059]">Análise judicial do processo</span>
-                    <strong className="mt-0.5 block text-xs text-[#E7E3DA]">O juiz avaliou a tese, o que você investigou e somente as provas anexadas.</strong>
+                    <strong className="mt-0.5 block text-xs text-[#E7E3DA]">O órgão julgador avaliou a tese, o que você investigou e somente as provas anexadas.</strong>
                   </div>
                 </div>
                 <ShieldCheck size={18} className={isWin ? 'text-[#34D399]' : 'text-[#F87171]'} />
@@ -296,7 +347,7 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
             }}
             className="w-full sm:w-auto px-8 py-3 rounded-xl bg-[#C5A059] hover:bg-[#D4B475] text-[#0A0A0B] font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-[#C5A059]/20 transition-all cursor-pointer transform active:scale-98"
           >
-            <span>{result.supervisorReview ? 'Retornar ao Escritório' : 'Retornar ao Escritório e Avançar'}</span>
+            <span>{footerLabel}</span>
             <ArrowRight size={16} />
           </button>
         </div>
