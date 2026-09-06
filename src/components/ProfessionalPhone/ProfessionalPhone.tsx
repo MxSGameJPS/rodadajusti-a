@@ -14,7 +14,10 @@ import {
   X,
 } from 'lucide-react';
 import { GAME_CASES } from '../../data/cases';
-import { isProfessionalEmploymentActive } from '../../lib/professionalEmployment';
+import {
+  isProfessionalEmploymentActive,
+  isRamosEmploymentActive,
+} from '../../lib/professionalEmployment';
 import { getProfessionalOwnerKey, readCurrentPlayerSnapshot } from '../../lib/professionalRpg';
 import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import type { PlayerProfile } from '../../types/game';
@@ -133,6 +136,7 @@ function sameRelevantPlayer(left: PlayerProfile | null, right: PlayerProfile) {
     left.cloudCareerId === right.cloudCareerId &&
     left.name === right.name &&
     left.careerTier === right.careerTier &&
+    left.officeDiscipline?.employmentStatus === right.officeDiscipline?.employmentStatus &&
     left.activeCase?.caseId === right.activeCase?.caseId &&
     left.activeCase?.hoursSpent === right.activeCase?.hoursSpent &&
     left.gameCurrentDay === right.gameCurrentDay &&
@@ -262,6 +266,7 @@ export const ProfessionalPhone: React.FC = () => {
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
   const welcomeTimerRef = useRef<number | null>(null);
   const displayName = usePlayerDisplayName(player, 'Advogado');
+  const ramosEmploymentActive = Boolean(player && isRamosEmploymentActive(player));
 
   const activeCase = useMemo(
     () => GAME_CASES.find((caseItem) => caseItem.id === player?.activeCase?.caseId) || null,
@@ -273,25 +278,25 @@ export const ProfessionalPhone: React.FC = () => {
       {
         id: 'MARIANA',
         name: 'Mariana Duarte',
-        role: 'Secretária • Ramos & Associados',
+        role: ramosEmploymentActive ? 'Secretária • Ramos & Associados' : 'Antigo contato • Ramos & Associados',
         avatar: '/personagens/mariana-duarte.png',
-        available: true,
+        available: ramosEmploymentActive,
       },
       {
         id: 'ROBERTO',
         name: 'Dr. Roberto Ramos',
-        role: 'Sócio responsável',
+        role: ramosEmploymentActive ? 'Sócio responsável' : 'Antigo empregador',
         avatar: '/personagens/dr-roberto-ramos.png',
-        available: true,
+        available: ramosEmploymentActive,
       },
       {
         id: 'CLIENT',
         name: activeCase?.client.name || 'Cliente do caso',
-        role: activeCase ? `${activeCase.code} • ${activeCase.area}` : 'Nenhum cliente atribuído',
+        role: activeCase ? `${activeCase.code} • ${activeCase.area}` : 'Nenhum cliente ativo',
         available: Boolean(activeCase),
       },
     ],
-    [activeCase],
+    [activeCase, ramosEmploymentActive],
   );
 
   useEffect(() => {
@@ -325,7 +330,7 @@ export const ProfessionalPhone: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!player || !phoneState || phoneState.handledWelcomeCall || welcomeTimerRef.current !== null) return undefined;
+    if (!ramosEmploymentActive || !player || !phoneState || phoneState.handledWelcomeCall || welcomeTimerRef.current !== null) return undefined;
 
     welcomeTimerRef.current = window.setTimeout(() => {
       setIncomingContactId('MARIANA');
@@ -338,10 +343,10 @@ export const ProfessionalPhone: React.FC = () => {
         welcomeTimerRef.current = null;
       }
     };
-  }, [player?.cloudCareerId, player?.name, phoneState?.handledWelcomeCall]);
+  }, [ramosEmploymentActive, player?.cloudCareerId, player?.name, phoneState?.handledWelcomeCall]);
 
   useEffect(() => {
-    if (!player || !phoneState || !activeCase || !player.activeCase) return;
+    if (!ramosEmploymentActive || !player || !phoneState || !activeCase || !player.activeCase) return;
     const notificationId = `case-assigned-${player.activeCase.caseId}`;
     if (phoneState.messages.some((message) => message.id === notificationId)) return;
 
@@ -355,7 +360,11 @@ export const ProfessionalPhone: React.FC = () => {
     const next = { ...phoneState, messages: [...phoneState.messages, notification] };
     setPhoneState(next);
     savePhoneState(player, next);
-  }, [activeCase?.id, phoneState, player]);
+  }, [activeCase?.id, phoneState, player, ramosEmploymentActive]);
+
+  useEffect(() => {
+    if (!ramosEmploymentActive && activeCase) setSelectedContactId('CLIENT');
+  }, [ramosEmploymentActive, activeCase?.id]);
 
   useEffect(() => {
     if (callStatus !== 'CONNECTED') return undefined;
@@ -531,6 +540,11 @@ export const ProfessionalPhone: React.FC = () => {
 
   const callTime = formatDuration(callSeconds);
   const responseOptions = callContactId ? callOptions(callContactId, Boolean(activeCase)) : [];
+  const phoneWorkspaceLabel = ramosEmploymentActive
+    ? 'Ramos & Associados'
+    : player.officeFinances.isOfficeOpen
+      ? player.officeFinances.officeName
+      : 'Advocacia independente';
 
   return (
     <>
@@ -570,7 +584,7 @@ export const ProfessionalPhone: React.FC = () => {
             <div className={styles.phoneSpeaker} />
             <header className={styles.phoneHeader}>
               <div>
-                <span>Ramos & Associados</span>
+                <span>{phoneWorkspaceLabel}</span>
                 <strong>{displayName}</strong>
               </div>
               <button type="button" onClick={() => setIsOpen(false)} aria-label="Fechar celular"><X size={17} /></button>
@@ -624,7 +638,11 @@ export const ProfessionalPhone: React.FC = () => {
 
                   <div className={styles.messages}>
                     {!selectedContact.available && (
-                      <div className={styles.emptyChat}>Quando um caso for atribuído no CRM, o cliente ficará disponível para contato.</div>
+                      <div className={styles.emptyChat}>
+                        {!ramosEmploymentActive && selectedContact.id !== 'CLIENT'
+                          ? 'Este contato pertence ao seu antigo vínculo com o Ramos & Associados. Novas comunicações profissionais do escritório foram encerradas.'
+                          : 'Quando houver um cliente ativo, ele ficará disponível para contato.'}
+                      </div>
                     )}
                     {selectedMessages.map((message) => (
                       <div key={message.id} className={message.direction === 'OUT' ? styles.outgoingMessage : styles.incomingMessageBubble}>
