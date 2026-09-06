@@ -281,6 +281,7 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
       <UnexpectedCaseEventModal
         isOpen={!!pendingEvent}
         event={pendingEvent}
+        resumeLabel={currentLocation?.name || 'diligência atual'}
         onResolve={resolveUnexpectedEvent}
         onCloseAfterResolution={() => setPendingEvent(null)}
       />
