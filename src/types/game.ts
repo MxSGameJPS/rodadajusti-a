@@ -406,6 +406,8 @@ export interface PlayerProfile {
   professionalExamAttempts: ProfessionalExamAttemptRecord[];
   oabRegistration: OabRegistration | null;
   cloudCareerId?: string | null;
+  homeCity?: string;
+  homeState?: string;
   gameCurrentDay: number;
   gameCurrentMonth: number;
   gameCurrentYear: number;
