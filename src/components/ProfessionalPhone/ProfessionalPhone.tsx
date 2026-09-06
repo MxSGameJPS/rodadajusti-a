@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckCheck,
+  FileText,
   MessageCircle,
   Phone,
   PhoneCall,
@@ -25,6 +26,7 @@ const OPEN_PHONE_EVENT = 'rota:open-professional-phone';
 type PhoneTab = 'WHATSAPP' | 'CALLS';
 type ContactId = 'MARIANA' | 'ROBERTO' | 'CLIENT';
 type CallStatus = 'IDLE' | 'DIALING' | 'CONNECTED';
+type CallDirection = 'IN' | 'OUT';
 
 interface PhoneMessage {
   id: string;
@@ -34,9 +36,26 @@ interface PhoneMessage {
   sentAt: string;
 }
 
+interface CallTranscriptLine {
+  id: string;
+  speaker: 'CONTACT' | 'PLAYER';
+  text: string;
+}
+
+interface CallHistoryRecord {
+  id: string;
+  contactId: ContactId;
+  direction: CallDirection;
+  startedAt: string;
+  durationSeconds: number;
+  transcript: CallTranscriptLine[];
+  caseId?: string;
+}
+
 interface PhoneConversationState {
   messages: PhoneMessage[];
   handledWelcomeCall: boolean;
+  callHistory: CallHistoryRecord[];
 }
 
 interface Contact {
@@ -47,6 +66,12 @@ interface Contact {
   available: boolean;
 }
 
+interface CallOption {
+  id: string;
+  label: string;
+  response: string;
+}
+
 function clockNow() {
   return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date());
 }
@@ -54,6 +79,7 @@ function clockNow() {
 function emptyPhoneState(): PhoneConversationState {
   return {
     handledWelcomeCall: false,
+    callHistory: [],
     messages: [
       {
         id: 'welcome-mariana',
@@ -85,6 +111,7 @@ function readPhoneState(player: PlayerProfile): PhoneConversationState {
     return {
       handledWelcomeCall: Boolean(parsed.handledWelcomeCall),
       messages: Array.isArray(parsed.messages) ? parsed.messages : emptyPhoneState().messages,
+      callHistory: Array.isArray(parsed.callHistory) ? parsed.callHistory : [],
     };
   } catch {
     return emptyPhoneState();
@@ -127,6 +154,95 @@ function autoReply(contactId: ContactId, hasActiveCase: boolean) {
   return 'Obrigado, doutor(a). Vou separar as informações e lhe retorno assim que possível.';
 }
 
+function callOpening(contactId: ContactId, hasActiveCase: boolean, clientName?: string) {
+  if (contactId === 'MARIANA') {
+    return hasActiveCase
+      ? 'Doutor, estou ligando para confirmar que o atendimento distribuído pelo Dr. Roberto já está no seu CRM. Confira o dossiê e os prazos antes de falar com o cliente.'
+      : 'Doutor, estou ligando para confirmar que seu celular profissional está funcionando. Quando o Dr. Roberto distribuir um atendimento, eu vou disponibilizá-lo no CRM e avisar você.';
+  }
+  if (contactId === 'ROBERTO') {
+    return hasActiveCase
+      ? 'Revise o caso que está no seu CRM com atenção. Quero que qualquer decisão estratégica importante seja tomada com base no dossiê e nos prazos registrados no Social Jurídico.'
+      : 'Ainda não há caso novo para você. Assim que eu fizer uma distribuição, a Mariana vai registrar o atendimento no CRM.';
+  }
+  return `Doutor, aqui é ${clientName || 'o cliente'}. Estou à disposição para esclarecer as informações do meu caso e enviar o que for necessário.`;
+}
+
+function callOptions(contactId: ContactId, hasActiveCase: boolean): CallOption[] {
+  if (contactId === 'MARIANA') {
+    return hasActiveCase
+      ? [
+          {
+            id: 'crm',
+            label: 'Obrigado, Mariana. Vou conferir o CRM agora.',
+            response: 'Perfeito. Se houver documento novo, prazo ou orientação do Dr. Roberto, eu registro no atendimento e aviso você pelo celular.',
+          },
+          {
+            id: 'orientacao',
+            label: 'O Dr. Roberto deixou alguma orientação específica?',
+            response: 'Por enquanto, a orientação é revisar o dossiê antes de qualquer contato externo. Se ele acrescentar algo, aparecerá no histórico do atendimento.',
+          },
+          {
+            id: 'prazo',
+            label: 'Me avise imediatamente se houver prazo urgente.',
+            response: 'Pode deixar. Os prazos ficam no Social Jurídico, e eu também aviso você por aqui quando houver algo que exija atenção imediata.',
+          },
+        ]
+      : [
+          {
+            id: 'entendido',
+            label: 'Entendido. Vou manter o celular disponível.',
+            response: 'Ótimo. O notebook fica para a operação no Social Jurídico e o celular para ligações e WhatsApp do escritório.',
+          },
+          {
+            id: 'casos',
+            label: 'Como vou saber quando chegar meu primeiro caso?',
+            response: 'O Dr. Roberto define a distribuição. Eu disponibilizo um atendimento por vez no seu CRM e aviso você pelo WhatsApp ou por ligação.',
+          },
+        ];
+  }
+
+  if (contactId === 'ROBERTO') {
+    return hasActiveCase
+      ? [
+          {
+            id: 'revisar',
+            label: 'Vou revisar o dossiê antes de falar com o cliente.',
+            response: 'É isso que espero. Primeiro entenda fatos, documentos e prazos. Depois escolha a estratégia e registre as providências no sistema.',
+          },
+          {
+            id: 'duvida',
+            label: 'Se eu tiver dúvida estratégica, posso retornar?',
+            response: 'Sim. Questões relevantes podem ser discutidas comigo, mas quero que você chegue com o problema identificado e uma proposta de encaminhamento.',
+          },
+        ]
+      : [
+          {
+            id: 'aguardar',
+            label: 'Certo, doutor. Vou aguardar a distribuição.',
+            response: 'Perfeito. Use esse tempo para conhecer as ferramentas do Social Jurídico e manter sua agenda organizada.',
+          },
+        ];
+  }
+
+  return [
+    {
+      id: 'documentos',
+      label: 'Vou revisar os documentos e retorno com as próximas orientações.',
+      response: 'Tudo bem, doutor. Se precisar de algum documento ou informação complementar, pode me solicitar por WhatsApp.',
+    },
+    {
+      id: 'fatos',
+      label: 'Antes de avançarmos, preciso confirmar alguns fatos do caso.',
+      response: 'Claro. Pode perguntar o que precisar. Quero que o senhor tenha todas as informações antes de decidir o próximo passo.',
+    },
+  ];
+}
+
+function formatDuration(seconds: number) {
+  return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
 export const ProfessionalPhone: React.FC = () => {
   const [player, setPlayer] = useState<PlayerProfile | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -137,7 +253,12 @@ export const ProfessionalPhone: React.FC = () => {
   const [incomingContactId, setIncomingContactId] = useState<ContactId | null>(null);
   const [callContactId, setCallContactId] = useState<ContactId | null>(null);
   const [callStatus, setCallStatus] = useState<CallStatus>('IDLE');
+  const [callDirection, setCallDirection] = useState<CallDirection>('OUT');
   const [callSeconds, setCallSeconds] = useState(0);
+  const [callTranscript, setCallTranscript] = useState<CallTranscriptLine[]>([]);
+  const [callResponseUsed, setCallResponseUsed] = useState(false);
+  const [awaitingCallReply, setAwaitingCallReply] = useState(false);
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
   const welcomeTimerRef = useRef<number | null>(null);
   const displayName = usePlayerDisplayName(player, 'Advogado');
 
@@ -247,11 +368,29 @@ export const ProfessionalPhone: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [callStatus, callContactId]);
 
+  useEffect(() => {
+    if (callStatus !== 'CONNECTED' || !callContactId || callTranscript.length > 0) return undefined;
+    const timer = window.setTimeout(() => {
+      setCallTranscript([
+        {
+          id: `line-contact-${Date.now()}`,
+          speaker: 'CONTACT',
+          text: callOpening(callContactId, Boolean(activeCase), activeCase?.client.name),
+        },
+      ]);
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [callStatus, callContactId, callTranscript.length, activeCase]);
+
   if (!player || !phoneState) return null;
 
   const selectedContact = contacts.find((contact) => contact.id === selectedContactId) || contacts[0];
   const callContact = contacts.find((contact) => contact.id === callContactId) || null;
   const selectedMessages = phoneState.messages.filter((message) => message.contactId === selectedContactId);
+  const selectedHistory = phoneState.callHistory.find((record) => record.id === selectedHistoryId) || null;
+  const selectedHistoryContact = selectedHistory
+    ? contacts.find((contact) => contact.id === selectedHistory.contactId) || null
+    : null;
 
   const updatePhoneState = (next: PhoneConversationState) => {
     setPhoneState(next);
@@ -262,13 +401,26 @@ export const ProfessionalPhone: React.FC = () => {
     updatePhoneState({ ...phoneState, handledWelcomeCall: true });
   };
 
+  const resetLiveCall = () => {
+    setCallContactId(null);
+    setCallStatus('IDLE');
+    setCallSeconds(0);
+    setCallTranscript([]);
+    setCallResponseUsed(false);
+    setAwaitingCallReply(false);
+  };
+
   const acceptIncomingCall = () => {
     if (!incomingContactId) return;
     sound.playClick();
     markWelcomeCallHandled();
+    setCallDirection('IN');
     setCallContactId(incomingContactId);
     setIncomingContactId(null);
     setCallSeconds(0);
+    setCallTranscript([]);
+    setCallResponseUsed(false);
+    setAwaitingCallReply(false);
     setCallStatus('CONNECTED');
     setTab('CALLS');
     setIsOpen(true);
@@ -284,17 +436,62 @@ export const ProfessionalPhone: React.FC = () => {
     const contact = contacts.find((item) => item.id === contactId);
     if (!contact?.available) return;
     sound.playClick();
+    setSelectedHistoryId(null);
+    setCallDirection('OUT');
     setCallContactId(contactId);
     setCallSeconds(0);
+    setCallTranscript([]);
+    setCallResponseUsed(false);
+    setAwaitingCallReply(false);
     setCallStatus('DIALING');
     setTab('CALLS');
   };
 
   const endCall = () => {
     sound.playClick();
-    setCallContactId(null);
-    setCallStatus('IDLE');
-    setCallSeconds(0);
+    if (callContactId && callTranscript.length > 0) {
+      const record: CallHistoryRecord = {
+        id: `call-${Date.now()}`,
+        contactId: callContactId,
+        direction: callDirection,
+        startedAt: clockNow(),
+        durationSeconds: callSeconds,
+        transcript: callTranscript,
+        caseId: player.activeCase?.caseId || undefined,
+      };
+      updatePhoneState({
+        ...phoneState,
+        callHistory: [record, ...phoneState.callHistory].slice(0, 40),
+      });
+    }
+    resetLiveCall();
+  };
+
+  const chooseCallResponse = (option: CallOption) => {
+    if (!callContactId || callResponseUsed || awaitingCallReply) return;
+    sound.playClick();
+    setCallResponseUsed(true);
+    setAwaitingCallReply(true);
+    setCallTranscript((current) => [
+      ...current,
+      {
+        id: `line-player-${Date.now()}`,
+        speaker: 'PLAYER',
+        text: option.label,
+      },
+    ]);
+
+    window.setTimeout(() => {
+      setCallTranscript((current) => [
+        ...current,
+        {
+          id: `line-contact-reply-${Date.now()}`,
+          speaker: 'CONTACT',
+          text: option.response,
+        },
+      ]);
+      setAwaitingCallReply(false);
+    }, 700);
   };
 
   const sendMessage = () => {
@@ -331,7 +528,8 @@ export const ProfessionalPhone: React.FC = () => {
     }, 1000);
   };
 
-  const callTime = `${String(Math.floor(callSeconds / 60)).padStart(2, '0')}:${String(callSeconds % 60).padStart(2, '0')}`;
+  const callTime = formatDuration(callSeconds);
+  const responseOptions = callContactId ? callOptions(callContactId, Boolean(activeCase)) : [];
 
   return (
     <>
@@ -356,7 +554,7 @@ export const ProfessionalPhone: React.FC = () => {
           <div className={styles.incomingCopy}>
             <span>Ligação recebida</span>
             <strong>{contacts.find((contact) => contact.id === incomingContactId)?.name}</strong>
-            <small>Celular profissional</small>
+            <small>Sem voz nesta versão • chamada será transcrita</small>
           </div>
           <div className={styles.incomingActions}>
             <button type="button" className={styles.rejectButton} onClick={rejectIncomingCall} aria-label="Recusar ligação"><PhoneOff size={17} /></button>
@@ -465,15 +663,37 @@ export const ProfessionalPhone: React.FC = () => {
                     <h3>{callContact.name}</h3>
                     <p>{callContact.role}</p>
                     <strong>{callStatus === 'CONNECTED' ? callTime : '...'}</strong>
+
                     {callStatus === 'CONNECTED' && (
-                      <div className={styles.callTranscript}>
-                        {callContact.id === 'MARIANA'
-                          ? 'Mariana: “Seu celular está funcionando. Use o notebook para o CRM e me chame por aqui quando precisar falar comigo durante a rotina.”'
-                          : callContact.id === 'ROBERTO'
-                            ? 'Dr. Roberto: “Mantenha o foco no atendimento que foi atribuído. Qualquer questão estratégica importante pode ser discutida comigo.”'
-                            : `${callContact.name}: “Doutor(a), estou à disposição para esclarecer as informações do meu caso.”`}
+                      <div className={styles.liveTranscriptWrap}>
+                        <div className={styles.transcriptHeader}>
+                          <div><FileText size={14} /><span>Transcrição ao vivo</span></div>
+                          <small>Áudio indisponível nesta versão</small>
+                        </div>
+                        <div className={styles.callTranscript} aria-live="polite">
+                          {callTranscript.length === 0 && <div className={styles.transcribing}>Transcrevendo fala...</div>}
+                          {callTranscript.map((line) => (
+                            <div key={line.id} className={line.speaker === 'PLAYER' ? styles.playerTranscriptLine : styles.contactTranscriptLine}>
+                              <span>{line.speaker === 'PLAYER' ? displayName : callContact.name}</span>
+                              <p>{line.text}</p>
+                            </div>
+                          ))}
+                          {awaitingCallReply && <div className={styles.transcribing}>Transcrevendo resposta...</div>}
+                        </div>
+
+                        {!callResponseUsed && callTranscript.length > 0 && (
+                          <div className={styles.callChoices}>
+                            <span>Responder na ligação</span>
+                            {responseOptions.map((option) => (
+                              <button key={option.id} type="button" onClick={() => chooseCallResponse(option)}>
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
+
                     <button type="button" className={styles.hangupButton} onClick={endCall}><PhoneOff size={19} /> Encerrar</button>
                   </div>
                 ) : (
@@ -491,6 +711,43 @@ export const ProfessionalPhone: React.FC = () => {
                         <PhoneCall size={17} />
                       </button>
                     ))}
+
+                    <div className={styles.historySection}>
+                      <div className={styles.historyTitle}>
+                        <FileText size={15} />
+                        <div><span>Histórico</span><strong>Transcrições de chamadas</strong></div>
+                      </div>
+
+                      {phoneState.callHistory.length === 0 ? (
+                        <p className={styles.emptyHistory}>As chamadas concluídas aparecerão aqui com a transcrição.</p>
+                      ) : (
+                        phoneState.callHistory.map((record) => {
+                          const contact = contacts.find((item) => item.id === record.contactId);
+                          const isSelected = selectedHistoryId === record.id;
+                          return (
+                            <article key={record.id} className={styles.historyRecord}>
+                              <button type="button" onClick={() => setSelectedHistoryId(isSelected ? null : record.id)}>
+                                <div>
+                                  <strong>{contact?.name || 'Contato profissional'}</strong>
+                                  <span>{record.direction === 'IN' ? 'Recebida' : 'Realizada'} • {record.startedAt} • {formatDuration(record.durationSeconds)}</span>
+                                </div>
+                                <FileText size={15} />
+                              </button>
+                              {isSelected && selectedHistory && selectedHistoryContact && (
+                                <div className={styles.historyTranscript}>
+                                  {selectedHistory.transcript.map((line) => (
+                                    <div key={line.id}>
+                                      <strong>{line.speaker === 'PLAYER' ? displayName : selectedHistoryContact.name}</strong>
+                                      <p>{line.text}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </article>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
