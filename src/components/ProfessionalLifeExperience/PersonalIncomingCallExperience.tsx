@@ -8,6 +8,7 @@ import {
   SOCIAL_LIFE_DECLINE_EVENT,
   isCommittedRelationship,
   readSocialLifeState,
+  type SocialEvent,
 } from '../../lib/socialLife';
 import type { PlayerProfile } from '../../types/game';
 import { sound } from '../../utils/sound';
@@ -19,10 +20,19 @@ interface IncomingPayload {
   contactId?: string;
 }
 
+function stripSpeakerPrefix(message: string) {
+  return message.replace(/^.*?:\s*/, '').trim();
+}
+
+function isWeekendTrip(event: SocialEvent | null) {
+  return event?.kind === 'WEEKEND_SERRA' || event?.kind === 'WEEKEND_BEACH' || event?.kind === 'WEEKEND_MOUNTAIN';
+}
+
 export const PersonalIncomingCallExperience: React.FC = () => {
   const [player, setPlayer] = useState<PlayerProfile | null>(null);
   const [stage, setStage] = useState<CallStage | null>(null);
   const [partnerName, setPartnerName] = useState('');
+  const [invitationEvent, setInvitationEvent] = useState<SocialEvent | null>(null);
   const [openingLine, setOpeningLine] = useState('');
   const [playerLine, setPlayerLine] = useState('');
   const [partnerReply, setPartnerReply] = useState('');
@@ -40,6 +50,7 @@ export const PersonalIncomingCallExperience: React.FC = () => {
 
       setPlayer(current);
       setPartnerName(social.profile.partnerName || 'Meu amor');
+      setInvitationEvent(social.pendingEvent);
       setOpeningLine('');
       setPlayerLine('');
       setPartnerReply('');
@@ -52,14 +63,16 @@ export const PersonalIncomingCallExperience: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (stage !== 'CONNECTED' || openingLine) return undefined;
+    if (stage !== 'CONNECTED' || openingLine || !invitationEvent) return undefined;
     const timer = window.setTimeout(() => {
-      setOpeningLine('Oi, amor. Eu sei que o trabalho está puxado, mas queria te ver fora desse ritmo. Vamos sair hoje à noite para jantar, conversar e tomar alguma coisa?');
+      setOpeningLine(stripSpeakerPrefix(invitationEvent.message));
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [stage, openingLine]);
+  }, [stage, openingLine, invitationEvent]);
 
   if (!stage || !player) return null;
+
+  const weekendTrip = isWeekendTrip(invitationEvent);
 
   const acceptCall = () => {
     sound.playClick();
@@ -70,6 +83,7 @@ export const PersonalIncomingCallExperience: React.FC = () => {
     sound.playClick();
     setStage(null);
     setPlayer(null);
+    setInvitationEvent(null);
   };
 
   const answerInvitation = (accept: boolean) => {
@@ -77,12 +91,16 @@ export const PersonalIncomingCallExperience: React.FC = () => {
     setAcceptedInvitation(accept);
     setPlayerLine(
       accept
-        ? 'Vamos sim. Quero sair um pouco do escritório e ficar com você.'
-        : 'Hoje eu não vou conseguir. Estou com coisa demais para resolver.',
+        ? weekendTrip
+          ? 'Vamos sim. Quero fazer essa viagem com você.'
+          : 'Vamos sim. Quero sair um pouco do escritório e ficar com você.'
+        : 'Dessa vez eu não vou conseguir. Estou com coisa demais para resolver.',
     );
     setPartnerReply(
       accept
-        ? 'Combinado. Então hoje à noite você fecha o notebook e vem comigo. Trabalho nenhum pode ocupar tudo.'
+        ? weekendTrip
+          ? 'Combinado. Então vamos organizar tudo e deixar o trabalho de lado por um pouco. Depois você escolhe como quer fazer a viagem.'
+          : 'Combinado. Então hoje você fecha o notebook e vem comigo. Trabalho nenhum pode ocupar tudo.'
         : 'Tudo bem. Só não deixa o trabalho virar a sua vida inteira, tá? A gente combina outro dia.',
     );
     setStage('ANSWERED');
@@ -96,6 +114,7 @@ export const PersonalIncomingCallExperience: React.FC = () => {
     sound.playClick();
     setStage(null);
     setPlayer(null);
+    setInvitationEvent(null);
     window.dispatchEvent(new CustomEvent(OPEN_SOCIAL_LIFE_EVENT));
   };
 
@@ -107,7 +126,7 @@ export const PersonalIncomingCallExperience: React.FC = () => {
           <div className={styles.ringingCopy}>
             <span>Ligação pessoal recebida</span>
             <strong>{partnerName}</strong>
-            <small>Sem voz nesta versão • chamada será transcrita</small>
+            <small>{invitationEvent?.title || 'Convite pessoal'} • chamada será transcrita</small>
           </div>
           <div className={styles.ringingActions}>
             <button type="button" className={styles.reject} onClick={closeCall} aria-label="Recusar ligação"><PhoneOff size={17} /></button>
@@ -122,7 +141,7 @@ export const PersonalIncomingCallExperience: React.FC = () => {
             <div className={styles.avatar}><Heart size={28} /></div>
             <span className={styles.callStatus}>Ligação pessoal • transcrição ao vivo</span>
             <h2>{partnerName}</h2>
-            <p className={styles.role}>Vida pessoal • relacionamento</p>
+            <p className={styles.role}>{invitationEvent?.title || 'Vida pessoal • relacionamento'}</p>
 
             <div className={styles.transcriptBox}>
               <div className={styles.transcriptHeader}><FileText size={14} /> Transcrição</div>
@@ -150,14 +169,14 @@ export const PersonalIncomingCallExperience: React.FC = () => {
             {stage === 'CONNECTED' && openingLine && (
               <div className={styles.choices}>
                 <span>Responder</span>
-                <button type="button" onClick={() => answerInvitation(true)}>Vamos sim. Quero sair um pouco do escritório.</button>
-                <button type="button" onClick={() => answerInvitation(false)}>Hoje não vou conseguir.</button>
+                <button type="button" onClick={() => answerInvitation(true)}>{weekendTrip ? 'Quero ir. Vamos organizar a viagem.' : 'Vamos sim. Quero sair um pouco do escritório.'}</button>
+                <button type="button" onClick={() => answerInvitation(false)}>Dessa vez não vou conseguir.</button>
               </div>
             )}
 
             {stage === 'ANSWERED' && (
               <button type="button" className={styles.finish} onClick={acceptedInvitation ? finishAccepted : closeCall}>
-                {acceptedInvitation ? 'Encerrar ligação e escolher o programa' : 'Encerrar ligação'}
+                {acceptedInvitation ? 'Encerrar ligação e ver opções' : 'Encerrar ligação'}
               </button>
             )}
           </section>

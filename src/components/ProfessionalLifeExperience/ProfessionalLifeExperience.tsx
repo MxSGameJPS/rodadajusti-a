@@ -1,13 +1,18 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  BatteryMedium,
   Beer,
+  BriefcaseBusiness,
   CalendarDays,
   Heart,
+  MapPin,
   MessageCircle,
   Music2,
   PhoneCall,
   Sparkles,
   UserRound,
+  Users,
+  Utensils,
   WalletCards,
   X,
 } from 'lucide-react';
@@ -23,13 +28,16 @@ import {
   completeSocialEvent,
   declineSocialEvent,
   gameDateKey,
+  getRelationshipLabel,
   isCommittedRelationship,
   readSocialLifeState,
   registerSocialOpportunity,
   updatePersonalLifeProfile,
   type RelationshipStatus,
   type SocialEvent,
+  type SocialEventKind,
   type SocialLifeState,
+  type SocialPlanOption,
 } from '../../lib/socialLife';
 import {
   appendProfessionalPhoneMessage,
@@ -42,26 +50,6 @@ import styles from './ProfessionalLifeExperience.module.css';
 
 const PLAYER_SAVE_KEY = 'rota_da_justica_save_v1';
 const BAR_AUDIO_PATH = '/audio/social/bar-ambience.mp3';
-
-type NightPackage = {
-  id: string;
-  label: string;
-  detail: string;
-  cost: number;
-  socialGain: number;
-};
-
-const BAR_PACKAGES: NightPackage[] = [
-  { id: 'quick', label: 'Uma cerveja e conversa', detail: 'Passagem rápida pelo bar, sem exagerar nos gastos.', cost: 45, socialGain: 4 },
-  { id: 'normal', label: 'Noite com a galera', detail: 'Cervejas, petiscos e algumas horas longe do escritório.', cost: 90, socialGain: 7 },
-  { id: 'full', label: 'Aproveitar a noite', detail: 'Rodada, petiscos e uma noite mais completa.', cost: 140, socialGain: 10 },
-];
-
-const DATE_PACKAGES: NightPackage[] = [
-  { id: 'simple-date', label: 'Saída simples a dois', detail: 'Um lugar tranquilo, conversa e uma bebida.', cost: 70, socialGain: 5 },
-  { id: 'date-night', label: 'Jantar e barzinho', detail: 'Jantar, bebida e tempo de qualidade longe do trabalho.', cost: 130, socialGain: 8 },
-  { id: 'special-date', label: 'Noite especial', detail: 'Um programa mais completo para cuidar da relação.', cost: 190, socialGain: 11 },
-];
 
 function samePlayer(left: PlayerProfile | null, right: PlayerProfile) {
   if (!left) return false;
@@ -79,16 +67,23 @@ function samePlayer(left: PlayerProfile | null, right: PlayerProfile) {
   );
 }
 
-function patchPlayerAfterNight(player: PlayerProfile, moneySpent: number) {
-  const nextDate = addGameDays(player, 1);
+function patchPlayerAfterSocialEvent(player: PlayerProfile, option: SocialPlanOption) {
+  const nextDate = addGameDays(player, option.daysAdvance);
   try {
     const raw = window.localStorage.getItem(PLAYER_SAVE_KEY);
     const current = raw ? (JSON.parse(raw) as PlayerProfile) : player;
+    const currentActiveCase = current.activeCase;
     window.localStorage.setItem(
       PLAYER_SAVE_KEY,
       JSON.stringify({
         ...current,
-        money: Math.max(0, Number(current.money || 0) - Math.max(0, moneySpent)),
+        money: Math.max(0, Number(current.money || 0) - Math.max(0, option.cost)),
+        activeCase: currentActiveCase
+          ? {
+              ...currentActiveCase,
+              hoursSpent: Math.max(0, Number(currentActiveCase.hoursSpent || 0) + Math.max(0, option.caseHoursCost)),
+            }
+          : currentActiveCase,
         ...nextDate,
       }),
     );
@@ -98,6 +93,81 @@ function patchPlayerAfterNight(player: PlayerProfile, moneySpent: number) {
   }
 }
 
+function eventIcon(kind: SocialEventKind) {
+  if (kind === 'BAR') return <Beer size={21} />;
+  if (kind === 'DATE_NIGHT') return <Heart size={21} />;
+  if (kind === 'LUNCH' || kind === 'DINNER') return <Utensils size={21} />;
+  if (kind === 'NETWORKING') return <BriefcaseBusiness size={21} />;
+  return <MapPin size={21} />;
+}
+
+function eventSceneCopy(event: SocialEvent) {
+  if (event.kind === 'BAR') {
+    return {
+      eyebrow: 'Depois do expediente',
+      title: 'Bar • música • conversa',
+      description: 'Por algumas horas, o personagem troca o escritório por uma mesa de bar. O relógio continua correndo e amanhã ainda existe trabalho.',
+    };
+  }
+  if (event.kind === 'DATE_NIGHT') {
+    return {
+      eyebrow: 'Vida a dois',
+      title: 'Uma noite longe dos processos',
+      description: 'O relacionamento também exige tempo. O trabalho fica de lado por algumas horas, mas os compromissos profissionais continuam no calendário.',
+    };
+  }
+  if (event.kind === 'LUNCH') {
+    return {
+      eyebrow: 'Intervalo do expediente',
+      title: 'Almoço • conversa • contatos',
+      description: 'Nem toda oportunidade profissional aparece no CRM. Algumas começam numa mesa de restaurante e voltam muito tempo depois.',
+    };
+  }
+  if (event.kind === 'DINNER') {
+    return {
+      eyebrow: 'Fim do dia',
+      title: 'Jantar • amizade • vida fora do trabalho',
+      description: 'Manter amizades também ocupa tempo e dinheiro. O equilíbrio social do personagem cresce quando a carreira não ocupa tudo.',
+    };
+  }
+  if (event.kind === 'NETWORKING') {
+    return {
+      eyebrow: 'Circulação profissional',
+      title: 'Networking • advocacia • oportunidades',
+      description: 'Você passa a noite entre advogados, empresários e novos contatos. Isso pode aumentar seu capital social, mas cobra energia e tempo.',
+    };
+  }
+  if (event.kind === 'WEEKEND_BEACH') {
+    return {
+      eyebrow: 'Fim de semana',
+      title: 'Praia • descanso • distância do escritório',
+      description: 'Dois mundos disputam sua agenda: o processo continua existindo, mas descansar pode devolver energia para a próxima semana.',
+    };
+  }
+  if (event.kind === 'WEEKEND_MOUNTAIN') {
+    return {
+      eyebrow: 'Fim de semana',
+      title: 'Montanha • pousada • conversa',
+      description: 'Um fim de semana fora pode recuperar energia e ainda criar novas conexões. O custo é abandonar algumas horas de preparação.',
+    };
+  }
+  return {
+    eyebrow: 'Fim de semana',
+    title: 'Serra • descanso • convivência',
+    description: 'A carreira não para, mas o personagem escolheu viver dois dias fora dela. O descanso pode ajudar; o tempo perdido pode cobrar seu preço.',
+  };
+}
+
+function usesBarAudio(kind: SocialEventKind) {
+  return kind === 'BAR' || kind === 'NETWORKING';
+}
+
+function riskTone(level: SocialEvent['professionalRisk'] extends infer T ? T extends { level: infer L } ? L : never : never) {
+  if (level === 'CRITICAL') return 'border-[#EF4444]/45 bg-[#EF4444]/10 text-[#FCA5A5]';
+  if (level === 'HIGH') return 'border-[#F59E0B]/40 bg-[#F59E0B]/10 text-[#FCD34D]';
+  return 'border-[#60A5FA]/30 bg-[#60A5FA]/[0.07] text-[#AFCDF6]';
+}
+
 export const ProfessionalLifeExperience: React.FC = () => {
   const [player, setPlayer] = useState<PlayerProfile | null>(null);
   const [social, setSocial] = useState<SocialLifeState | null>(null);
@@ -105,8 +175,8 @@ export const ProfessionalLifeExperience: React.FC = () => {
   const [setupOpen, setSetupOpen] = useState(false);
   const [draftStatus, setDraftStatus] = useState<RelationshipStatus>('SINGLE');
   const [draftPartner, setDraftPartner] = useState('');
-  const [nightEvent, setNightEvent] = useState<SocialEvent | null>(null);
-  const [nightPackage, setNightPackage] = useState<NightPackage | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<SocialEvent | null>(null);
+  const [selectedOption, setSelectedOption] = useState<SocialPlanOption | null>(null);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [audioAvailable, setAudioAvailable] = useState<boolean | null>(null);
   const [toastEventId, setToastEventId] = useState<string | null>(null);
@@ -178,18 +248,19 @@ export const ProfessionalLifeExperience: React.FC = () => {
     setSocial(next);
     setToastEventId(opportunity.id);
 
-    if (opportunity.channel === 'WHATSAPP') {
-      appendProfessionalPhoneMessage(player, {
-        id: `social-message-${opportunity.id}`,
-        contactId: opportunity.sourceContactId,
-        text: opportunity.message.replace(/^.*?:\s*/, ''),
-      });
-    } else {
+    if (opportunity.channel === 'CALL' && opportunity.sourceContactId === 'PARTNER') {
       callTimerRef.current = window.setTimeout(() => {
-        requestIncomingProfessionalCall(opportunity.sourceContactId);
+        requestIncomingProfessionalCall('PARTNER');
         callTimerRef.current = null;
       }, 2200);
+      return;
     }
+
+    appendProfessionalPhoneMessage(player, {
+      id: `social-message-${opportunity.id}`,
+      contactId: opportunity.sourceContactId,
+      text: opportunity.message.replace(/^.*?:\s*/, ''),
+    });
   }, [player, social, player ? gameDateKey(player) : '']);
 
   useEffect(() => () => {
@@ -200,13 +271,12 @@ export const ProfessionalLifeExperience: React.FC = () => {
     }
   }, []);
 
-  const packages = useMemo(() => (nightEvent?.kind === 'DATE_NIGHT' ? DATE_PACKAGES : BAR_PACKAGES), [nightEvent?.kind]);
-
   if (!player || !social) return null;
 
   const relationshipLabel = RELATIONSHIP_LABELS[social.profile.relationshipStatus];
   const hasPartner = isCommittedRelationship(social.profile.relationshipStatus);
   const pending = social.pendingEvent;
+  const sceneCopy = selectedEvent ? eventSceneCopy(selectedEvent) : null;
 
   const saveProfile = () => {
     if (isCommittedRelationship(draftStatus) && !draftPartner.trim()) return;
@@ -224,8 +294,8 @@ export const ProfessionalLifeExperience: React.FC = () => {
     if (!pending) return;
     sound.playClick();
     setToastEventId(null);
-    setNightEvent(pending);
-    setNightPackage(null);
+    setSelectedEvent(pending);
+    setSelectedOption(null);
     setIsOpen(false);
   };
 
@@ -234,15 +304,20 @@ export const ProfessionalLifeExperience: React.FC = () => {
     const next = declineSocialEvent(player, social);
     setSocial(next);
     setToastEventId(null);
-    setNightEvent(null);
-    setNightPackage(null);
+    setSelectedEvent(null);
+    setSelectedOption(null);
   };
 
-  const startNight = async (option: NightPackage) => {
-    if (!nightEvent || player.money < option.cost) return;
+  const startEvent = async (option: SocialPlanOption) => {
+    if (!selectedEvent || player.money < option.cost) return;
     sound.playClick();
-    setNightPackage(option);
+    setSelectedOption(option);
     setAudioAvailable(null);
+
+    if (!usesBarAudio(selectedEvent.kind)) {
+      setAudioAvailable(true);
+      return;
+    }
 
     const audio = new Audio(BAR_AUDIO_PATH);
     audio.loop = true;
@@ -280,16 +355,16 @@ export const ProfessionalLifeExperience: React.FC = () => {
     }
   };
 
-  const finishNight = () => {
-    if (!nightPackage || !nightEvent) return;
+  const finishEvent = () => {
+    if (!selectedOption || !selectedEvent) return;
     sound.playClick();
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
     const current = readSocialLifeState(player);
-    completeSocialEvent(player, current, nightPackage.cost, nightPackage.socialGain);
-    patchPlayerAfterNight(player, nightPackage.cost);
+    completeSocialEvent(player, current, selectedOption);
+    patchPlayerAfterSocialEvent(player, selectedOption);
     window.location.reload();
   };
 
@@ -314,8 +389,8 @@ export const ProfessionalLifeExperience: React.FC = () => {
         <aside className={styles.toast} aria-live="polite">
           <div className={styles.toastIcon}>{pending.channel === 'CALL' ? <PhoneCall size={20} /> : <MessageCircle size={20} />}</div>
           <div>
-            <span>{pending.channel === 'CALL' ? 'Convite recebido por ligação' : 'Nova mensagem no WhatsApp'}</span>
-            <strong>{pending.sourceContactId === 'PARTNER' ? social.profile.partnerName : 'Mariana Duarte'}</strong>
+            <span>{pending.channel === 'CALL' ? 'Convite recebido por ligação' : 'Novo convite no WhatsApp'}</span>
+            <strong>{pending.contactName}</strong>
             <p>{pending.title}</p>
           </div>
           <button type="button" onClick={openInvitation}>Responder</button>
@@ -328,7 +403,7 @@ export const ProfessionalLifeExperience: React.FC = () => {
             <div className={styles.modalHeader}>
               <div><UserRound size={21} /><div><span>Perfil do personagem</span><h2>Vida pessoal</h2></div></div>
             </div>
-            <p className={styles.intro}>Esta informação influencia quem procura você fora do expediente, os convites que aparecem no celular e parte dos gastos pessoais do personagem.</p>
+            <p className={styles.intro}>Esta informação influencia quem procura você fora do expediente, os convites que aparecem no celular, seu convívio social e parte das decisões de rotina.</p>
 
             <div className={styles.relationshipGrid}>
               {(['SINGLE', 'DATING', 'MARRIED', 'STABLE_UNION'] as RelationshipStatus[]).map((status) => (
@@ -368,29 +443,53 @@ export const ProfessionalLifeExperience: React.FC = () => {
 
             <div className={styles.socialStats}>
               <div><span>Estado civil</span><strong>{relationshipLabel}</strong>{hasPartner && <small>{social.profile.partnerName}</small>}</div>
-              <div><span>Convívio social</span><strong>{social.socialBalance}/100</strong><small>Equilíbrio fora do trabalho</small></div>
+              <div><span>Atributo social</span><strong>{social.socialBalance}/100</strong><small>Convívio e equilíbrio pessoal</small></div>
+              <div><span>Capital social</span><strong>{social.socialCapital}/100</strong><small>Networking e circulação</small></div>
+              <div><span>Energia</span><strong>{social.energy}/100</strong><small>{social.activeCondition?.label || 'Equilibrado'}</small></div>
               <div><span>Gastos sociais</span><strong>R$ {social.totalSpent.toLocaleString('pt-BR')}</strong><small>Acumulado do personagem</small></div>
             </div>
 
             {pending ? (
               <article className={styles.invitationCard}>
                 <div className={styles.invitationTop}>
-                  <div>{pending.kind === 'BAR' ? <Beer size={21} /> : <Heart size={21} />}</div>
-                  <div><span>{pending.channel === 'CALL' ? 'Ligação recebida' : 'WhatsApp recebido'}</span><h3>{pending.title}</h3></div>
+                  <div>{eventIcon(pending.kind)}</div>
+                  <div><span>{pending.channel === 'CALL' ? 'Ligação recebida' : 'WhatsApp recebido'} • {pending.contactRole}</span><h3>{pending.title}</h3></div>
                 </div>
                 <p>{pending.message}</p>
+                {pending.professionalRisk && pending.professionalRisk.level !== 'LOW' && (
+                  <div className={`mt-4 rounded-xl border p-3 text-[10px] leading-relaxed ${riskTone(pending.professionalRisk.level)}`}>
+                    <strong className="block uppercase tracking-[0.08em]">Conflito com a rotina profissional</strong>
+                    <span className="mt-1 block">{pending.professionalRisk.message}</span>
+                  </div>
+                )}
                 <div className={styles.invitationActions}>
-                  <button type="button" onClick={declineInvitation}>Hoje não</button>
-                  <button type="button" className={styles.primaryButton} onClick={openInvitation}>Aceitar convite</button>
+                  <button type="button" onClick={declineInvitation}>Recusar convite</button>
+                  <button type="button" className={styles.primaryButton} onClick={openInvitation}>Ver opções e aceitar</button>
                 </div>
               </article>
             ) : (
               <div className={styles.emptySocial}>
                 <CalendarDays size={26} />
                 <h3>Nenhum convite pendente</h3>
-                <p>A vida pessoal acontece conforme os dias avançam. Finais de semana aumentam a chance de convites, mas eles também podem surgir depois do expediente em dias úteis.</p>
+                <p>Almoços, jantares, viagens, happy hours e encontros aparecem conforme os dias avançam. Nem todo convite é conveniente para sua agenda profissional.</p>
               </div>
             )}
+
+            <section className={styles.historySection}>
+              <div className={styles.sectionTitle}><Users size={16} /><strong>Relações importantes</strong></div>
+              {([
+                ['ROBERTO', 'Dr. Roberto Ramos'],
+                ['MARIANA', 'Mariana Duarte'],
+                ['LAWYER_FELIPE', 'Dr. Felipe Martins'],
+                ['FRIEND_CARLOS', 'Carlos Nogueira'],
+                ...(hasPartner ? [['PARTNER', social.profile.partnerName || 'Parceiro(a)']] : []),
+              ] as Array<[keyof typeof social.relationships, string]>).map(([contactId, name]) => (
+                <div key={contactId} className={styles.historyRow}>
+                  <div><strong>{name}</strong><span>{getRelationshipLabel(social.relationships[contactId])}</span></div>
+                  <small>{social.relationships[contactId]}/100</small>
+                </div>
+              ))}
+            </section>
 
             <section className={styles.historySection}>
               <div className={styles.sectionTitle}><Sparkles size={16} /><strong>Últimos momentos</strong></div>
@@ -399,8 +498,8 @@ export const ProfessionalLifeExperience: React.FC = () => {
               ) : (
                 social.history.slice(0, 6).map((event) => (
                   <div key={event.id} className={styles.historyRow}>
-                    <div><strong>{event.title}</strong><span>{event.completedDateKey || event.createdDateKey}</span></div>
-                    <small>{event.status === 'COMPLETED' ? `Saiu • R$ ${event.moneySpent || 0}` : 'Convite recusado'}</small>
+                    <div><strong>{event.title}</strong><span>{event.contactName} • {event.completedDateKey || event.createdDateKey}</span></div>
+                    <small>{event.status === 'COMPLETED' ? `Participou • R$ ${event.moneySpent || 0}` : 'Convite recusado'}</small>
                   </div>
                 ))
               )}
@@ -421,35 +520,49 @@ export const ProfessionalLifeExperience: React.FC = () => {
         </div>
       )}
 
-      {nightEvent && !nightPackage && (
+      {selectedEvent && !selectedOption && (
         <div className={styles.backdrop}>
           <section className={styles.inviteDecision} role="dialog" aria-modal="true" aria-label="Escolher programa social">
             <header>
-              <div className={styles.bigIcon}>{nightEvent.kind === 'BAR' ? <Beer size={28} /> : <Heart size={28} />}</div>
-              <span>Você aceitou sair</span>
-              <h2>{nightEvent.kind === 'BAR' ? 'Como será a noite?' : 'Quanto você quer investir nessa noite a dois?'}</h2>
-              <p>O lazer consome dinheiro e faz o calendário avançar. Isso faz parte da vida real do personagem, não é uma recompensa gratuita.</p>
+              <div className={styles.bigIcon}>{eventIcon(selectedEvent.kind)}</div>
+              <span>{selectedEvent.contactName} • {selectedEvent.contactRole}</span>
+              <h2>{selectedEvent.title}</h2>
+              <p>Você pode aceitar ou voltar e recusar. Cada programa consome dinheiro e tempo, altera seus atributos sociais e pode afetar sua energia para compromissos profissionais.</p>
             </header>
 
+            {selectedEvent.professionalRisk && (
+              <div className={`mt-4 rounded-xl border p-4 text-xs leading-relaxed ${riskTone(selectedEvent.professionalRisk.level)}`}>
+                <strong className="block text-[10px] uppercase tracking-[0.1em]">Antes de decidir</strong>
+                <p className="mt-1">{selectedEvent.professionalRisk.message}</p>
+              </div>
+            )}
+
             <div className={styles.packageGrid}>
-              {packages.map((option) => (
-                <button type="button" key={option.id} disabled={player.money < option.cost} onClick={() => startNight(option)}>
+              {selectedEvent.options.map((option) => (
+                <button type="button" key={option.id} disabled={player.money < option.cost} onClick={() => startEvent(option)}>
                   <WalletCards size={18} />
-                  <div><strong>{option.label}</strong><p>{option.detail}</p><span>R$ {option.cost.toLocaleString('pt-BR')}</span></div>
+                  <div>
+                    <strong>{option.label}</strong>
+                    <p>{option.detail}</p>
+                    <span>R$ {option.cost.toLocaleString('pt-BR')}</span>
+                    <p>Social {option.socialGain >= 0 ? '+' : ''}{option.socialGain} • Capital {option.capitalGain >= 0 ? '+' : ''}{option.capitalGain} • Energia {option.energyDelta >= 0 ? '+' : ''}{option.energyDelta}</p>
+                    {option.caseHoursCost > 0 && <p>Consome cerca de {option.caseHoursCost}h da sua janela de preparação do caso ativo.</p>}
+                    {option.daysAdvance > 0 && <p>Calendário avança {option.daysAdvance} dia(s).</p>}
+                  </div>
                 </button>
               ))}
             </div>
 
             <div className={styles.inviteFooter}>
               <span>Saldo atual: <strong>R$ {player.money.toLocaleString('pt-BR')}</strong></span>
-              <button type="button" onClick={() => { setNightEvent(null); setIsOpen(true); }}>Voltar</button>
+              <button type="button" onClick={() => { setSelectedEvent(null); setIsOpen(true); }}>Voltar sem aceitar</button>
             </div>
           </section>
         </div>
       )}
 
-      {nightEvent && nightPackage && (
-        <div className={styles.nightScene} role="dialog" aria-modal="true" aria-label="Noite no bar">
+      {selectedEvent && selectedOption && sceneCopy && (
+        <div className={styles.nightScene} role="dialog" aria-modal="true" aria-label={selectedEvent.title}>
           <div className={styles.lightOne} />
           <div className={styles.lightTwo} />
           <div className={styles.lightThree} />
@@ -457,25 +570,38 @@ export const ProfessionalLifeExperience: React.FC = () => {
           <div className={styles.barNoise} />
 
           <section className={styles.nightContent}>
-            <div className={styles.barSign}>{nightEvent.kind === 'BAR' ? <Beer size={30} /> : <Heart size={30} />}</div>
-            <span>{nightEvent.kind === 'BAR' ? 'Depois do expediente' : 'Noite a dois'}</span>
-            <h2>{nightEvent.kind === 'BAR' ? 'Bar • música • conversa' : 'Uma noite longe dos processos'}</h2>
-            <p>{nightEvent.kind === 'BAR' ? 'Por algumas horas não existe prazo, audiência ou petição. O personagem está vivendo fora do escritório.' : `Você e ${social.profile.partnerName || 'seu par'} deixam o trabalho de lado por algumas horas.`}</p>
+            <div className={styles.barSign}>{eventIcon(selectedEvent.kind)}</div>
+            <span>{sceneCopy.eyebrow}</span>
+            <h2>{sceneCopy.title}</h2>
+            <p>{sceneCopy.description}</p>
 
             <div className={styles.nightReceipt}>
-              <div><span>Programa</span><strong>{nightPackage.label}</strong></div>
-              <div><span>Gasto da noite</span><strong>R$ {nightPackage.cost.toLocaleString('pt-BR')}</strong></div>
-              <div><span>Convívio</span><strong>+{nightPackage.socialGain}</strong></div>
+              <div><span>Programa</span><strong>{selectedOption.label}</strong></div>
+              <div><span>Gasto</span><strong>R$ {selectedOption.cost.toLocaleString('pt-BR')}</strong></div>
+              <div><span>Atributo social</span><strong>+{selectedOption.socialGain}</strong></div>
+              <div><span>Capital social</span><strong>{selectedOption.capitalGain >= 0 ? '+' : ''}{selectedOption.capitalGain}</strong></div>
+              <div><span>Energia</span><strong>{selectedOption.energyDelta >= 0 ? '+' : ''}{selectedOption.energyDelta}</strong></div>
+              <div><span>Tempo do caso</span><strong>{selectedOption.caseHoursCost ? `-${selectedOption.caseHoursCost}h` : 'sem impacto'}</strong></div>
             </div>
 
-            <button type="button" className={styles.audioButton} onClick={toggleAudio}>
-              <Music2 size={17} /> {audioEnabled ? 'Desligar som ambiente' : 'Ligar som ambiente'}
-            </button>
-            {audioAvailable === false && (
-              <small className={styles.audioHint}>O arquivo opcional <code>{BAR_AUDIO_PATH}</code> ainda não foi encontrado. A cena continua funcionando com os efeitos visuais.</small>
+            {usesBarAudio(selectedEvent.kind) && (
+              <>
+                <button type="button" className={styles.audioButton} onClick={toggleAudio}>
+                  <Music2 size={17} /> {audioEnabled ? 'Desligar som ambiente' : 'Ligar som ambiente'}
+                </button>
+                {audioAvailable === false && (
+                  <small className={styles.audioHint}>O áudio ambiente não pôde ser reproduzido. A cena continua normalmente com os efeitos visuais.</small>
+                )}
+              </>
             )}
 
-            <button type="button" className={styles.finishNight} onClick={finishNight}>Encerrar a noite e voltar para casa</button>
+            {selectedEvent.professionalRisk?.hasPlayableHearing && selectedOption.energyDelta < 0 && (
+              <div className="mx-auto mt-4 max-w-xl rounded-xl border border-[#F59E0B]/35 bg-[#F59E0B]/10 p-3 text-left text-xs leading-relaxed text-[#FCD34D]">
+                <div className="flex items-start gap-2"><BatteryMedium size={17} className="mt-0.5 shrink-0" /><span>Você sabe que existe uma audiência neste processo. Esta escolha pode fazer você chegar cansado e com menos horas de preparação.</span></div>
+              </div>
+            )}
+
+            <button type="button" className={styles.finishNight} onClick={finishEvent}>Encerrar compromisso e seguir a rotina</button>
           </section>
         </div>
       )}

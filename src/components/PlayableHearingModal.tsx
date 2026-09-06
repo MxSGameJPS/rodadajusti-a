@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Gavel, Info, Scale, UserRound, X } from 'lucide-react';
+import { AlertTriangle, BatteryMedium, CheckCircle2, Gavel, Info, Scale, UserRound, X } from 'lucide-react';
 import type { ActiveCaseState, Clue, LegalCase } from '../types/game';
 import {
   getCaseSpecificHearingConfig,
   type PlayableHearingAnswer,
   type PlayableHearingResult,
 } from '../lib/reactiveWorldStore';
+import { getSocialProfessionalCondition } from '../lib/socialLife';
+import { readCurrentPlayerSnapshot } from '../lib/professionalRpg';
 import { sound } from '../utils/sound';
 
 interface HearingChoice {
@@ -314,6 +316,11 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
     () => buildRounds(currentCase, activeState, selectedEvidenceIds),
     [currentCase, activeState, selectedEvidenceIds],
   );
+  const socialCondition = useMemo(() => {
+    if (!isOpen) return null;
+    const player = readCurrentPlayerSnapshot();
+    return player ? getSocialProfessionalCondition(player) : null;
+  }, [isOpen, currentCase.id, activeState.hoursSpent]);
   const [roundIndex, setRoundIndex] = useState(0);
   const [answers, setAnswers] = useState<PlayableHearingAnswer[]>([]);
   const [selectedChoice, setSelectedChoice] = useState<HearingChoice | null>(null);
@@ -323,6 +330,8 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
 
   const round = rounds[roundIndex];
   const runningImpact = answers.reduce((sum, answer) => sum + answer.impact, 0) + (selectedChoice?.impact || 0);
+  const socialModifier = socialCondition?.hearingModifier || 0;
+  const effectiveRunningImpact = runningImpact + (isFinished ? socialModifier : 0);
   const choiceFeedback = selectedChoice ? getChoiceFeedback(selectedChoice) : null;
 
   const choose = (choice: HearingChoice) => {
@@ -350,26 +359,33 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
 
   const finish = () => {
     const totalImpact = answers.reduce((sum, answer) => sum + answer.impact, 0);
+    const adjustedImpact = totalImpact + socialModifier;
     const positive = answers.filter((answer) => answer.impact > 0).length;
     const minPossible = rounds.reduce((sum, item) => sum + Math.min(...item.choices.map((choice) => choice.impact)), 0);
     const maxPossible = rounds.reduce((sum, item) => sum + Math.max(...item.choices.map((choice) => choice.impact)), 0);
     const range = Math.max(1, maxPossible - minPossible);
-    const performancePercent = Math.max(0, Math.min(100, Math.round(((totalImpact - minPossible) / range) * 100)));
-    const summary = performancePercent >= 75
+    const technicalPerformance = Math.max(0, Math.min(100, Math.round(((totalImpact - minPossible) / range) * 100)));
+    const performancePercent = Math.max(0, Math.min(100, technicalPerformance + socialModifier * 6));
+    const technicalSummary = technicalPerformance >= 75
       ? 'Sua condução foi técnica, objetiva e coerente com o que realmente estava nos autos.'
-      : performancePercent >= 55
+      : technicalPerformance >= 55
         ? 'A audiência foi conduzida de forma razoável, embora algumas decisões tenham reduzido a força da apresentação oral.'
-        : performancePercent >= 35
+        : technicalPerformance >= 35
           ? 'A audiência teve oscilações importantes. Parte da estratégia foi preservada, mas houve respostas que enfraqueceram a apresentação.'
           : 'A condução da audiência criou riscos adicionais e reduziu a credibilidade da tese perante o Juízo.';
+    const conditionSummary = socialModifier === 0 || !socialCondition
+      ? ''
+      : socialModifier < 0
+        ? ` Seu estado físico (${socialCondition.label.toLowerCase()}) também reduziu sua margem de concentração nesta audiência.`
+        : ' Você chegou descansado e isso contribuiu levemente para sua presença em audiência.';
 
     onComplete({
       caseId: currentCase.id,
-      scoreModifier: Math.max(-8, Math.min(8, totalImpact)),
+      scoreModifier: Math.max(-8, Math.min(8, adjustedImpact)),
       performancePercent,
       correctAnswers: positive,
       totalRounds: rounds.length,
-      summary,
+      summary: `${technicalSummary}${conditionSummary}`,
       answers,
       completedAt: new Date().toISOString(),
     });
@@ -401,6 +417,19 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
 
         {!isFinished ? (
           <div className="space-y-5 p-5 sm:p-6">
+            {socialCondition && socialCondition.hearingModifier !== 0 && (
+              <div className={`rounded-xl border p-4 ${socialCondition.hearingModifier < 0 ? 'border-[#F59E0B]/35 bg-[#F59E0B]/[0.07] text-[#FCD34D]' : 'border-[#34D399]/30 bg-[#34D399]/[0.06] text-[#8BE7C3]'}`}>
+                <div className="flex items-start gap-3">
+                  <BatteryMedium size={19} className="mt-0.5 shrink-0" />
+                  <div>
+                    <strong className="block text-[10px] font-black uppercase tracking-[0.12em]">Condição física: {socialCondition.label} • Energia {socialCondition.energy}/100</strong>
+                    <p className="mt-1 text-xs leading-relaxed text-[#C8C1B4]">{socialCondition.description}</p>
+                    {socialCondition.sourceTitle && <small className="mt-1 block text-[10px] opacity-75">Origem recente: {socialCondition.sourceTitle}</small>}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#C5A059]"><Scale size={14} /> Audiência • etapa {roundIndex + 1} de {rounds.length}</div>
               <div className="h-1.5 w-40 overflow-hidden rounded-full bg-[#242428]"><div className="h-full bg-[#C5A059] transition-all" style={{ width: `${((roundIndex + 1) / rounds.length) * 100}%` }} /></div>
@@ -473,17 +502,24 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
           </div>
         ) : (
           <div className="space-y-5 p-5 sm:p-6">
-            <div className={`rounded-xl border p-5 ${runningImpact >= 4 ? 'border-[#34D399]/30 bg-[#34D399]/[0.06]' : runningImpact <= -3 ? 'border-[#F87171]/30 bg-[#F87171]/[0.06]' : 'border-[#C5A059]/25 bg-[#C5A059]/[0.05]'}`}>
+            <div className={`rounded-xl border p-5 ${effectiveRunningImpact >= 4 ? 'border-[#34D399]/30 bg-[#34D399]/[0.06]' : effectiveRunningImpact <= -3 ? 'border-[#F87171]/30 bg-[#F87171]/[0.06]' : 'border-[#C5A059]/25 bg-[#C5A059]/[0.05]'}`}>
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#C5A059]"><Gavel size={15} /> Audiência encerrada</div>
               <h3 className="mt-2 font-serif text-xl font-black text-[#F0ECE3]">O processo segue para decisão</h3>
               <p className="mt-2 text-sm leading-7 text-[#AAA49B]">A atuação oral foi uma parte do processo. O juiz ainda avaliará tese, provas, investigação, prazo e intercorrências antes de decidir.</p>
             </div>
 
-            {runningImpact <= -3 && (
+            {socialCondition && socialModifier !== 0 && (
+              <div className={`flex items-start gap-2 rounded-xl border p-4 text-xs leading-relaxed ${socialModifier < 0 ? 'border-[#F59E0B]/25 bg-[#F59E0B]/[0.05] text-[#E6C37A]' : 'border-[#34D399]/25 bg-[#34D399]/[0.05] text-[#8BE7C3]'}`}>
+                <BatteryMedium size={16} className="mt-0.5 shrink-0" />
+                <span>{socialModifier < 0 ? 'Seu cansaço também pesou na atuação oral. Ele não decide o processo sozinho, mas reduziu sua margem de desempenho.' : 'Você chegou descansado e isso ajudou levemente sua presença em audiência.'}</span>
+              </div>
+            )}
+
+            {effectiveRunningImpact <= -3 && (
               <div className="flex items-start gap-2 rounded-xl border border-[#F87171]/25 bg-[#F87171]/[0.05] p-4 text-xs leading-relaxed text-[#F1A6A6]"><AlertTriangle size={16} className="mt-0.5 shrink-0" /> Sua atuação oral teve decisões desfavoráveis. Isso enfraquece a causa, mas não determina sozinho o resultado do processo.</div>
             )}
 
-            {runningImpact >= 4 && (
+            {effectiveRunningImpact >= 4 && (
               <div className="flex items-start gap-2 rounded-xl border border-[#34D399]/25 bg-[#34D399]/[0.05] p-4 text-xs leading-relaxed text-[#8BE7C3]"><CheckCircle2 size={16} className="mt-0.5 shrink-0" /> Sua condução oral foi consistente e poderá contribuir positivamente para a apreciação final.</div>
             )}
 

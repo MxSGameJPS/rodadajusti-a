@@ -139,17 +139,30 @@ export function buildProfessionalAgenda(player: PlayerProfile): ProfessionalAgen
   }
 
   const social = readSocialLifeState(player);
+  if (social.activeCondition && social.activeCondition.hearingModifier < 0) {
+    items.push({
+      id: `energy-${social.activeCondition.sourceEventId}`,
+      title: social.activeCondition.label === 'EXAUSTO' ? 'Você está exausto' : 'Você está cansado',
+      description: `Energia atual: ${social.energy}/100. ${social.activeCondition.sourceTitle} ainda está afetando sua disposição.`,
+      meta: 'Vida pessoal • pode influenciar audiência',
+      tone: social.activeCondition.label === 'EXAUSTO' ? 'danger' : 'warning',
+      action: 'SOCIAL',
+      urgent: social.activeCondition.label === 'EXAUSTO',
+    });
+  }
+
   if (social.pendingEvent) {
+    const risk = social.pendingEvent.professionalRisk;
     items.push({
       id: social.pendingEvent.id,
       title: social.pendingEvent.title,
-      description: social.pendingEvent.sourceContactId === 'PARTNER'
-        ? 'Seu relacionamento também faz parte da rotina do personagem.'
-        : 'Convite fora do expediente recebido no celular.',
-      meta: 'Vida social • decisão pendente',
-      tone: 'social',
+      description: `${social.pendingEvent.contactName}: ${social.pendingEvent.contactRole}`,
+      meta: risk && risk.level !== 'LOW'
+        ? `Vida social • atenção: ${risk.caseCode} está em andamento`
+        : 'Vida social • decisão pendente',
+      tone: risk?.level === 'CRITICAL' ? 'danger' : risk?.level === 'HIGH' ? 'warning' : 'social',
       action: 'SOCIAL',
-      urgent: false,
+      urgent: risk?.level === 'CRITICAL',
     });
   }
 
