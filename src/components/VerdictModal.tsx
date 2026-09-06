@@ -25,6 +25,7 @@ import {
 } from '../lib/caseMetadata';
 import { getProcessStatusInfo } from '../lib/processLifecycle';
 import { CelebrationBurst } from './CelebrationBurst/CelebrationBurst';
+import { CareerMomentumCard } from './CareerMomentum/CareerMomentumCard';
 import { VerdictFactorsPanel } from './VerdictFactorsPanel';
 import { CaseMetadataBadges, ProcessStatusPanel } from './CaseLifecycle/CaseLifecycle';
 
@@ -186,6 +187,14 @@ export const VerdictModal: React.FC<VerdictModalProps> = ({
         )}
 
         <div className="p-6 space-y-4 text-xs sm:text-sm bg-[#0A0A0B]">
+          <CareerMomentumCard
+            player={player}
+            context="VERDICT"
+            currentCase={currentCase}
+            result={result}
+            promotedToTier={promotedToTier}
+          />
+
           <div className="p-4 bg-[#161618] rounded-xl border border-[#2A2A2E] space-y-2">
             <div className="flex items-center justify-between text-[#888888] text-xs">
               <span className="font-bold uppercase tracking-wider text-[#C5A059] font-serif">
