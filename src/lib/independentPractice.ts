@@ -150,10 +150,11 @@ export function startIndependentMarketplaceCase(player: PlayerProfile, caseItem:
   const state = readIndependentPracticeState(player);
   if (!isSocialJuridicoProActive(player, state)) return false;
 
+  const firstLocation = caseItem.locations.find((location) => location.unlockedByDefault) || caseItem.locations[0];
   const activeCase: ActiveCaseState = {
     caseId: caseItem.id,
     hoursSpent: 0,
-    currentLocationId: caseItem.locations[0]?.id || 'LOC_ESCRITORIO_RAMOS',
+    currentLocationId: firstLocation?.id || 'LOC_BASE_PROFISSIONAL',
     discoveredClueIds: [],
     unlockedLocationIds: caseItem.locations.filter((location) => location.unlockedByDefault).map((location) => location.id),
     askedDialogueIds: [],
@@ -187,6 +188,54 @@ export function startIndependentMarketplaceCase(player: PlayerProfile, caseItem:
 
 export function isIndependentCase(player: PlayerProfile, caseId: string) {
   return readIndependentPracticeState(player).independentCaseIds.includes(caseId);
+}
+
+/**
+ * Os casos publicados existentes nasceram dentro da campanha do Ramos & Associados.
+ * Quando um deles chega pela conta própria do Social Jurídico, preservamos toda a
+ * mecânica jurídica (provas, estratégias, prazos e recompensas), mas retiramos a
+ * identidade do antigo empregador da experiência visível.
+ */
+export function getIndependentCasePresentation(player: PlayerProfile, caseItem: LegalCase): LegalCase {
+  if (!isIndependentCase(player, caseItem.id)) return caseItem;
+
+  const officeName = player.officeFinances.isOfficeOpen
+    ? player.officeFinances.officeName
+    : 'Base profissional temporária';
+  const city = player.homeCity?.trim() || 'Cidade-base da carreira';
+  const state = player.homeState?.trim();
+  const baseAddress = state ? `${city}/${state}` : city;
+
+  return {
+    ...caseItem,
+    briefing: {
+      ...caseItem.briefing,
+      mentorName: 'Triagem • Social Jurídico',
+      mentorQuote: 'Este atendimento chegou pela sua conta própria. Revise fatos, documentos, provas e prazos antes de definir a estratégia profissional.',
+    },
+    locations: caseItem.locations.map((location) => {
+      const isCampaignOffice =
+        location.category === 'escritorio' ||
+        /RAMOS|ESCRITORIO/i.test(location.id) ||
+        /Ramos\s*&\s*Associados/i.test(location.name);
+
+      if (!isCampaignOffice) return location;
+
+      return {
+        ...location,
+        name: officeName,
+        description: player.officeFinances.isOfficeOpen
+          ? 'Sua própria base de trabalho, com acesso ao processo e às ferramentas da sua carteira de clientes.'
+          : 'Base profissional temporária usada para organizar o atendimento enquanto você ainda não mantém escritório próprio.',
+        address: baseAddress,
+        characters: [],
+      };
+    }),
+  };
+}
+
+export function applyIndependentCasePresentations(player: PlayerProfile, catalog: LegalCase[]) {
+  return catalog.map((caseItem) => getIndependentCasePresentation(player, caseItem));
 }
 
 export function openOwnOffice(player: PlayerProfile, officeName: string) {
