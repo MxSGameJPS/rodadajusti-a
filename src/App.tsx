@@ -47,9 +47,27 @@ import {
   normalizeOfficePerformance,
 } from './lib/internCareerEngine';
 import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
+import { addGameDays, addGameMonths, elapsedGameDays, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
 import { sound } from './utils/sound';
 
 const STORAGE_KEY = 'rota_da_justica_save_v1';
+const INITIAL_GAME_DATE = getTodayGameDate();
+
+function getPlayerGameDate(player: Pick<PlayerProfile, 'gameCurrentDay' | 'gameCurrentMonth' | 'gameCurrentYear'>) {
+  return normalizeGameDate({
+    day: player.gameCurrentDay,
+    month: player.gameCurrentMonth,
+    year: player.gameCurrentYear,
+  });
+}
+
+function gameDateFields(date: { day: number; month: number; year: number }) {
+  return {
+    gameCurrentDay: date.day,
+    gameCurrentMonth: date.month,
+    gameCurrentYear: date.year,
+  };
+}
 
 const INITIAL_PLAYER_STATE: PlayerProfile = {
   name: '',
@@ -84,14 +102,20 @@ const INITIAL_PLAYER_STATE: PlayerProfile = {
   professionalExamAttempts: [],
   oabRegistration: null,
   cloudCareerId: null,
-  gameCurrentDay: 2,
-  gameCurrentMonth: 3,
-  gameCurrentYear: 2026,
+  gameCurrentDay: INITIAL_GAME_DATE.day,
+  gameCurrentMonth: INITIAL_GAME_DATE.month,
+  gameCurrentYear: INITIAL_GAME_DATE.year,
   unlockedAchievements: [],
   soundEnabled: true,
 };
 
 function normalizeSavedPlayer(saved: Partial<PlayerProfile>): PlayerProfile {
+  const normalizedSavedDate = normalizeGameDate({
+    day: saved.gameCurrentDay ?? INITIAL_GAME_DATE.day,
+    month: saved.gameCurrentMonth ?? INITIAL_GAME_DATE.month,
+    year: saved.gameCurrentYear ?? INITIAL_GAME_DATE.year,
+  });
+
   return {
     ...INITIAL_PLAYER_STATE,
     ...saved,
@@ -131,6 +155,7 @@ function normalizeSavedPlayer(saved: Partial<PlayerProfile>): PlayerProfile {
         : [],
     },
     officePerformance: normalizeOfficePerformance(saved.officePerformance),
+    ...gameDateFields(normalizedSavedDate),
   };
 }
 
@@ -190,6 +215,7 @@ export default function App() {
   const activeCaseData = GAME_CASES.find((c) => c.id === player.activeCase?.caseId) || null;
 
   const handleStartNewGame = (name: string) => {
+    const careerStartDate = getTodayGameDate();
     const freshProfile: PlayerProfile = {
       ...INITIAL_PLAYER_STATE,
       name,
@@ -207,6 +233,7 @@ export default function App() {
         incidents: [],
       },
       officePerformance: { ...DEFAULT_OFFICE_PERFORMANCE, completedTaskIds: [], evaluations: [] },
+      ...gameDateFields(careerStartDate),
     };
     setPlayer(freshProfile);
     setIsNewGameModalOpen(false);
