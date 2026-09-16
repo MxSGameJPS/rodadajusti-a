@@ -11,6 +11,7 @@ import { DisciplinaryDefenseExperienceV2 } from './components/DisciplinaryDefens
 import { EthicalDilemmaExperience } from './components/EthicalDilemmaExperience';
 import { MisconductConsequenceExperience } from './components/MisconductConsequenceExperience';
 import { PostOabEmploymentExperience } from './components/PostOabEmploymentExperience/PostOabEmploymentExperience';
+import { PwaMobileGate } from './Components/PwaMobileGate/PwaMobileGate';
 import { ProfessionalDemoRoute } from './components/ProfessionalDemoRoute/ProfessionalDemoRoute';
 import { PersonalIncomingCallExperience } from './components/ProfessionalLifeExperience/PersonalIncomingCallExperience';
 import { ProfessionalLifeExperience } from './components/ProfessionalLifeExperience/ProfessionalLifeExperience';
@@ -20,11 +21,22 @@ import { ProfessionalTreatmentGate } from './components/ProfessionalTreatmentGat
 import { hydrateCaseCatalog } from './lib/caseRepository';
 import './index.css';
 
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return;
+
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((error) => {
+      console.warn('[Rota PWA] Falha ao registrar service worker:', error);
+    });
+  });
+}
+
 function isProfessionalDemoRoute() {
   return window.location.pathname === '/demo/advogado' || window.location.pathname === '/demo/contratacao';
 }
 
 async function bootstrap() {
+  registerServiceWorker();
   await hydrateCaseCatalog();
 
   const root = createRoot(document.getElementById('root')!);
@@ -40,7 +52,8 @@ async function bootstrap() {
 
   root.render(
     <StrictMode>
-      <AccountSaveBoundary>
+      <PwaMobileGate>
+        <AccountSaveBoundary>
         <AuthRouteSync />
         <CinematicIntroGate>
           <AuthGate>
@@ -59,7 +72,8 @@ async function bootstrap() {
             </CareerIntroGate>
           </AuthGate>
         </CinematicIntroGate>
-      </AccountSaveBoundary>
+        </AccountSaveBoundary>
+      </PwaMobileGate>
     </StrictMode>,
   );
 }
