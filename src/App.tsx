@@ -47,7 +47,8 @@ import {
   normalizeOfficePerformance,
 } from './lib/internCareerEngine';
 import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
-import { addGameDays, addGameMonths, elapsedGameDays, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
+import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
+import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } from './lib/gameTime';
 import { sound } from './utils/sound';
 
 const STORAGE_KEY = 'rota_da_justica_save_v1';
@@ -66,6 +67,19 @@ function gameDateFields(date: { day: number; month: number; year: number }) {
     gameCurrentDay: date.day,
     gameCurrentMonth: date.month,
     gameCurrentYear: date.year,
+  };
+}
+
+function gameClockFields(player: PlayerProfile, minutesToAdd: number) {
+  const next = advanceGameClock(
+    getPlayerGameDate(player),
+    player.gameCurrentMinutes,
+    minutesToAdd,
+  );
+
+  return {
+    ...gameDateFields(next.date),
+    gameCurrentMinutes: next.minutes,
   };
 }
 
@@ -105,6 +119,7 @@ const INITIAL_PLAYER_STATE: PlayerProfile = {
   gameCurrentDay: INITIAL_GAME_DATE.day,
   gameCurrentMonth: INITIAL_GAME_DATE.month,
   gameCurrentYear: INITIAL_GAME_DATE.year,
+  gameCurrentMinutes: DEFAULT_GAME_START_MINUTES,
   unlockedAchievements: [],
   soundEnabled: true,
 };
@@ -156,6 +171,7 @@ function normalizeSavedPlayer(saved: Partial<PlayerProfile>): PlayerProfile {
     },
     officePerformance: normalizeOfficePerformance(saved.officePerformance),
     ...gameDateFields(normalizedSavedDate),
+    gameCurrentMinutes: normalizeGameMinutes(saved.gameCurrentMinutes),
   };
 }
 
@@ -234,6 +250,7 @@ export default function App() {
       },
       officePerformance: { ...DEFAULT_OFFICE_PERFORMANCE, completedTaskIds: [], evaluations: [] },
       ...gameDateFields(careerStartDate),
+      gameCurrentMinutes: DEFAULT_GAME_START_MINUTES,
     };
     setPlayer(freshProfile);
     setIsNewGameModalOpen(false);
@@ -273,16 +290,11 @@ export default function App() {
     setPlayer((prev) => {
       if (!prev.activeCase) return prev;
 
-      const previousHours = prev.activeCase.hoursSpent;
-      const newHoursSpent = previousHours + loc.travelTimeHours;
-      const nextDate = addGameDays(
-        getPlayerGameDate(prev),
-        elapsedGameDays(previousHours, newHoursSpent),
-      );
+      const newHoursSpent = prev.activeCase.hoursSpent + loc.travelTimeHours;
 
       return {
         ...prev,
-        ...gameDateFields(nextDate),
+        ...gameClockFields(prev, loc.travelTimeHours * 60),
         money: Math.max(0, prev.money - loc.travelCost),
         activeCase: {
           ...prev.activeCase,
@@ -329,16 +341,11 @@ export default function App() {
     setPlayer((prev) => {
       if (!prev.activeCase) return prev;
 
-      const previousHours = prev.activeCase.hoursSpent;
-      const newHoursSpent = previousHours + additionalHours;
-      const nextDate = addGameDays(
-        getPlayerGameDate(prev),
-        elapsedGameDays(previousHours, newHoursSpent),
-      );
+      const newHoursSpent = prev.activeCase.hoursSpent + additionalHours;
 
       return {
         ...prev,
-        ...gameDateFields(nextDate),
+        ...gameClockFields(prev, additionalHours * 60),
         activeCase: {
           ...prev.activeCase,
           hoursSpent: newHoursSpent,
@@ -378,16 +385,11 @@ export default function App() {
     setPlayer((prev) => {
       if (!prev.activeCase) return prev;
 
-      const previousHours = prev.activeCase.hoursSpent;
-      const newHoursSpent = previousHours + additionalHours;
-      const nextDate = addGameDays(
-        getPlayerGameDate(prev),
-        elapsedGameDays(previousHours, newHoursSpent),
-      );
+      const newHoursSpent = prev.activeCase.hoursSpent + additionalHours;
 
       return {
         ...prev,
-        ...gameDateFields(nextDate),
+        ...gameClockFields(prev, additionalHours * 60),
         activeCase: {
           ...prev.activeCase,
           hoursSpent: newHoursSpent,
@@ -420,17 +422,12 @@ export default function App() {
       if (duplicate) return prev;
 
       const safeTimeCost = Math.max(0, Number(tool.timeCostHours) || 0);
-      const previousHours = prev.activeCase.hoursSpent;
-      const nextHours = previousHours + safeTimeCost;
-      const nextDate = addGameDays(
-        getPlayerGameDate(prev),
-        elapsedGameDays(previousHours, nextHours),
-      );
+      const nextHours = prev.activeCase.hoursSpent + safeTimeCost;
       const actionId = `sj-${tool.featureId}-${Date.now()}`;
 
       return {
         ...prev,
-        ...gameDateFields(nextDate),
+        ...gameClockFields(prev, safeTimeCost * 60),
         activeCase: {
           ...prev.activeCase,
           hoursSpent: nextHours,
