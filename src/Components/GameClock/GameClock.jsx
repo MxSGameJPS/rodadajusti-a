@@ -67,7 +67,7 @@ export function GameClock({
   const inOfficeHours = player.gameCurrentMinutes >= 8 * 60 && player.gameCurrentMinutes < 18 * 60;
 
   useEffect(() => {
-    if (!open || weather || weatherLoading) return;
+    if (!open || weather) return;
 
     let active = true;
 
@@ -103,7 +103,7 @@ export function GameClock({
     return () => {
       active = false;
     };
-  }, [open, weather, weatherLoading, worldProfile, declaredCity?.city, declaredCity?.state]);
+  }, [open, weather, worldProfile, declaredCity?.city, declaredCity?.state]);
 
   return (
     <>
