@@ -411,6 +411,7 @@ export interface PlayerProfile {
   gameCurrentDay: number;
   gameCurrentMonth: number;
   gameCurrentYear: number;
+  gameCurrentMinutes: number;
   unlockedAchievements: string[];
   soundEnabled: boolean;
 }
