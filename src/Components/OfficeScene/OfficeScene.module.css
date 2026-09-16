@@ -19,8 +19,8 @@
   z-index: -4;
   background-position: center 51%;
   background-size: cover;
-  filter: saturate(0.82) contrast(1.05) brightness(0.82);
-  transform: scale(1.015);
+  filter: saturate(0.96) contrast(1.04) brightness(0.98);
+  transform: none;
 }
 
 .backgroundShade {
@@ -29,8 +29,8 @@
   z-index: -3;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(2, 4, 6, 0.7) 0%, rgba(4, 5, 6, 0.08) 27%, rgba(3, 4, 5, 0.08) 65%, rgba(2, 3, 4, 0.76) 100%),
-    linear-gradient(90deg, rgba(2, 3, 4, 0.72) 0%, transparent 28%, transparent 70%, rgba(2, 3, 4, 0.68) 100%);
+    linear-gradient(180deg, rgba(2, 4, 6, 0.44) 0%, rgba(4, 5, 6, 0.03) 24%, rgba(3, 4, 5, 0.02) 68%, rgba(2, 3, 4, 0.42) 100%),
+    linear-gradient(90deg, rgba(2, 3, 4, 0.48) 0%, transparent 27%, transparent 72%, rgba(2, 3, 4, 0.46) 100%);
 }
 
 .topBar {
@@ -186,9 +186,9 @@
   position: absolute;
   z-index: 18;
   top: 94px;
-  bottom: 82px;
+  bottom: 96px;
   left: 0;
-  width: 92px;
+  width: 108px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -265,7 +265,7 @@
   top: 94px;
   right: 0;
   bottom: 82px;
-  left: 92px;
+  left: 108px;
   overflow: hidden;
 }
 
@@ -279,13 +279,13 @@
 }
 
 .leftRail {
-  left: 28px;
-  width: clamp(355px, 29vw, 455px);
+  left: 30px;
+  width: clamp(410px, 29vw, 478px);
 }
 
 .rightRail {
-  right: 26px;
-  width: clamp(300px, 24vw, 380px);
+  right: 30px;
+  width: clamp(330px, 22vw, 372px);
 }
 
 .glassPanel {
@@ -310,7 +310,7 @@
 
 .panelHeading > span {
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 14px;
+  font-size: 15px;
   letter-spacing: 0.04em;
 }
 
@@ -389,7 +389,7 @@
   margin: 7px 0 4px;
   color: #eee9de;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 500;
   line-height: 1.1;
 }
@@ -397,7 +397,7 @@
 .caseCopy p {
   margin: 0;
   color: #b5aea2;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .caseDeadline {
@@ -406,7 +406,7 @@
   gap: 7px;
   margin-top: 10px;
   color: #bdb6aa;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .caseDeadline svg {
@@ -489,7 +489,7 @@
 
 .taskRow time {
   color: #87847e;
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .panelLink {
@@ -660,12 +660,12 @@
   right: 0;
   bottom: 0;
   left: 0;
-  height: 82px;
+  height: 96px;
   display: grid;
-  grid-template-columns: minmax(300px, 0.95fr) minmax(720px, 2.5fr) minmax(160px, 0.5fr);
+  grid-template-columns: minmax(320px, 0.95fr) minmax(760px, 2.5fr) minmax(170px, 0.5fr);
   align-items: center;
   gap: 20px;
-  padding: 0 26px 0 110px;
+  padding: 0 30px 0 126px;
   border-top: 1px solid rgba(206, 168, 91, 0.43);
   background: rgba(5, 8, 10, 0.93);
   box-shadow: 0 -16px 45px rgba(0, 0, 0, 0.28);
@@ -724,7 +724,7 @@
 }
 
 .dockActions button {
-  height: 48px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -749,8 +749,8 @@
 }
 
 .dockActions span {
-  font-size: 8px;
-  letter-spacing: 0.04em;
+  font-size: 9px;
+  letter-spacing: 0.05em;
 }
 
 .dockQuote {
@@ -1124,5 +1124,83 @@
 
   .notificationList button {
     min-height: 40px;
+  }
+}
+
+
+/* Fidelity pass: keep the office scene readable without crushing the artwork. */
+.glassPanel {
+  background: linear-gradient(135deg, rgba(5, 9, 12, 0.88), rgba(7, 10, 12, 0.78));
+  border-color: rgba(220, 182, 101, 0.34);
+}
+
+.leftRail .glassPanel:first-child {
+  min-height: 252px;
+}
+
+.leftRail .glassPanel:nth-child(2) {
+  min-height: 230px;
+}
+
+.rightRail .glassPanel:first-child {
+  min-height: 215px;
+}
+
+.rightRail .glassPanel:nth-child(2) {
+  min-height: 235px;
+}
+
+.caseVisual {
+  min-height: 118px;
+}
+
+.caseCopy h2 {
+  max-width: 260px;
+}
+
+.bottomDock,
+.topBar,
+.sidebar {
+  backdrop-filter: blur(10px);
+}
+
+.deskHotspots {
+  display: none !important;
+}
+
+@media (min-width: 1500px) {
+  .topBar {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .leftRail {
+    width: 490px;
+  }
+
+  .rightRail {
+    width: 370px;
+  }
+
+  .panelHeading {
+    min-height: 46px;
+  }
+
+  .caseCard {
+    grid-template-columns: 128px 1fr;
+    gap: 16px;
+    padding: 15px 16px 12px;
+  }
+
+  .taskRow {
+    min-height: 40px;
+  }
+
+  .performanceList > div {
+    min-height: 47px;
+  }
+
+  .notificationList button {
+    min-height: 49px;
   }
 }
