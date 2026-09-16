@@ -17,9 +17,10 @@
   position: absolute;
   inset: 0;
   z-index: -4;
-  background-position: center 51%;
+  background-position: center center;
   background-size: cover;
-  filter: saturate(0.96) contrast(1.04) brightness(0.98);
+  background-repeat: no-repeat;
+  filter: none;
   transform: none;
 }
 
@@ -29,8 +30,8 @@
   z-index: -3;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(2, 4, 6, 0.44) 0%, rgba(4, 5, 6, 0.03) 24%, rgba(3, 4, 5, 0.02) 68%, rgba(2, 3, 4, 0.42) 100%),
-    linear-gradient(90deg, rgba(2, 3, 4, 0.48) 0%, transparent 27%, transparent 72%, rgba(2, 3, 4, 0.46) 100%);
+    linear-gradient(180deg, rgba(2, 4, 6, 0.28) 0%, rgba(4, 5, 6, 0.01) 28%, rgba(3, 4, 5, 0.01) 72%, rgba(2, 3, 4, 0.28) 100%),
+    linear-gradient(90deg, rgba(2, 3, 4, 0.26) 0%, transparent 24%, transparent 76%, rgba(2, 3, 4, 0.26) 100%);
 }
 
 .topBar {
