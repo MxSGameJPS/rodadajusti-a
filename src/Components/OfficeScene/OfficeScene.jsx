@@ -117,9 +117,7 @@ export function OfficeScene({
     ? Math.max(0, activeCase.deadlineHours - player.activeCase.hoursSpent)
     : null;
 
-  const currentLocation = activeCase && player.activeCase
-    ? activeCase.locations.find((location) => location.id === player.activeCase.currentLocationId)?.name || 'Em diligência'
-    : 'Ramos & Associados';
+  const currentLocation = 'Ramos & Associados';
 
   const caseProgress = activeCase && player.activeCase
     ? Math.min(100, Math.max(12, Math.round((player.activeCase.hoursSpent / Math.max(1, activeCase.deadlineHours)) * 100)))
@@ -366,17 +364,6 @@ export function OfficeScene({
             </div>
           </article>
         </section>
-
-        <div className={styles.deskHotspots}>
-          <button type="button" className={styles.hotspotNotebook} onClick={openNotebook} title="Abrir notebook">
-            <Laptop size={20} />
-            <span>Notebook</span>
-          </button>
-          <button type="button" className={styles.hotspotFiles} onClick={() => setDrawer('CASES')} title="Abrir processos">
-            <Files size={20} />
-            <span>Processos</span>
-          </button>
-        </div>
       </main>
 
       <footer className={styles.bottomDock}>
