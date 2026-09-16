@@ -9,7 +9,6 @@ import {
   CalendarDays,
   CheckCircle2,
   Circle,
-  Clock3,
   Files,
   GraduationCap,
   Landmark,
@@ -39,6 +38,7 @@ import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import { sound } from '../../utils/sound';
 import { InternshipCareerPanel } from '../../components/InternshipCareerPanel';
 import { OfficeHub } from '../../components/OfficeHub';
+import { GameClock } from '../GameClock/GameClock';
 import styles from './OfficeScene.module.css';
 
 const OPEN_SOCIAL_JURIDICO_EVENT = 'rota:open-social-juridico';
@@ -199,11 +199,14 @@ export function OfficeScene({
         </div>
 
         <div className={styles.caseStatus}>
-          <div>
-            <Clock3 size={16} />
-            <span>Prazo Restante:</span>
-            <strong>{hoursLeft === null ? 'Livre' : `${hoursLeft}h`}</strong>
-          </div>
+          <GameClock
+            player={player}
+            hoursLeft={hoursLeft}
+            caseTitle={activeCase?.title || null}
+            cityLabel={cityLabel}
+            worldProfile={worldProfile}
+            declaredCity={declaredCity}
+          />
           <div>
             <MapPin size={16} />
             <span>Local Atual:</span>
