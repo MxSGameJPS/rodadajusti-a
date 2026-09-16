@@ -435,7 +435,7 @@ export default function App() {
   const handleCompleteOfficeTask = (taskId: string) => {
     if (player.activeCase) return;
 
-    const completedDate = `${String(player.gameCurrentDay).padStart(2, '0')}/${String(player.gameCurrentMonth).padStart(2, '0')}/${player.gameCurrentYear}`;
+    const completedDate = formatGameDate(getPlayerGameDate(player));
     const { performance, task } = completeOfficeTask({
       current: player.officePerformance,
       careerTier: player.careerTier,
@@ -465,7 +465,7 @@ export default function App() {
       money: nextMoney,
       careerTier: nextTier,
       officePerformance: performance,
-      gameCurrentDay: prev.gameCurrentDay + 1,
+      ...gameDateFields(addGameDays(getPlayerGameDate(prev), 1)),
     }));
 
     if (nextTier === 'ESTAGIARIO_SENIOR' && player.careerTier === 'ESTAGIARIO') {
@@ -495,7 +495,7 @@ export default function App() {
       socialJuridicoBonus,
     });
 
-    const completedDate = `${String(player.gameCurrentDay).padStart(2, '0')}/${String(player.gameCurrentMonth).padStart(2, '0')}/${player.gameCurrentYear}`;
+    const completedDate = formatGameDate(getPlayerGameDate(player));
     const { review: supervisorReview, discipline: nextDiscipline } = buildSupervisorReview({
       decision,
       caseId: activeCaseData.id,
@@ -593,14 +593,12 @@ export default function App() {
       history: [resultRecord, ...prev.history],
       officeDiscipline: nextDiscipline,
       officePerformance: nextOfficePerformance,
-      gameCurrentDay: prev.gameCurrentDay + 3,
+      ...gameDateFields(addGameDays(getPlayerGameDate(prev), 3)),
     }));
   };
 
   const handleOabExamComplete = (result: ProfessionalExamResult, exam: ProfessionalExam) => {
-    const completedDate = `${String(player.gameCurrentDay).padStart(2, '0')}/${String(
-      player.gameCurrentMonth
-    ).padStart(2, '0')}/${player.gameCurrentYear}`;
+    const completedDate = formatGameDate(getPlayerGameDate(player));
 
     setPlayer((prev) => {
       const attemptExists = prev.professionalExamAttempts.some(
@@ -655,12 +653,7 @@ export default function App() {
       reputation: Math.min(100, prev.reputation + course.reputationReward),
       academicDegree: course.degree,
       completedCourseIds: [...prev.completedCourseIds, course.id],
-      gameCurrentMonth:
-        prev.gameCurrentMonth + course.durationMonths > 12
-          ? (prev.gameCurrentMonth + course.durationMonths) % 12 || 12
-          : prev.gameCurrentMonth + course.durationMonths,
-      gameCurrentYear:
-        prev.gameCurrentYear + Math.floor((prev.gameCurrentMonth + course.durationMonths - 1) / 12),
+      ...gameDateFields(addGameMonths(getPlayerGameDate(prev), course.durationMonths)),
     }));
   };
 
@@ -718,8 +711,7 @@ export default function App() {
       ...prev,
       money: prev.money - totalFixedCosts,
       reputation: Math.min(100, prev.reputation + 3),
-      gameCurrentMonth: prev.gameCurrentMonth === 12 ? 1 : prev.gameCurrentMonth + 1,
-      gameCurrentYear: prev.gameCurrentMonth === 12 ? prev.gameCurrentYear + 1 : prev.gameCurrentYear,
+      ...gameDateFields(addGameMonths(getPlayerGameDate(prev), 1)),
     }));
   };
 
