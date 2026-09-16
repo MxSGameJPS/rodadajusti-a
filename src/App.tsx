@@ -35,6 +35,7 @@ import { OfficeManagementModal } from './components/OfficeManagementModal';
 import { OabExamModal } from './components/OabExamModal';
 import { SocialJuridicoExperience } from './components/SocialJuridicoExperience';
 import { InternshipCareerPanel } from './components/InternshipCareerPanel';
+import { OfficeScene } from './Components/OfficeScene/OfficeScene';
 import { InternPromotionCeremonyModal } from './components/InternPromotionCeremonyModal';
 import { evaluatePetition } from './lib/judicialDecisionEngine';
 import { buildSupervisorReview } from './lib/officeDisciplineEngine';
@@ -703,63 +704,79 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0A0A0B] text-[#E0E0E0] flex flex-col items-center justify-start antialiased selection:bg-[#C5A059]/30 selection:text-[#C5A059]">
-      <div
-        className={`w-full transition-all duration-300 ${
-          isMobileFrame
-            ? 'max-w-[440px] my-4 rounded-[36px] border-4 border-[#2A2A2E] shadow-2xl ring-1 ring-[#3A3A42] overflow-hidden min-h-[850px] bg-[#0A0A0B]'
-            : 'max-w-7xl mx-auto min-h-screen flex flex-col'
-        }`}
-      >
-        <HeaderBar
+      {currentView === 'HUB' && !isMobileFrame ? (
+        <OfficeScene
           player={player}
-          isMobileFrame={isMobileFrame}
-          setIsMobileFrame={setIsMobileFrame}
+          onSelectCaseToView={(c) => setSelectedCaseToBrief(c)}
+          onResumeActiveCase={() => setCurrentView('INVESTIGATION_MAP')}
           onOpenCareerModal={() => setIsCareerModalOpen(true)}
           onOpenAcademicModal={() => setIsAcademicModalOpen(true)}
           onOpenConcursoModal={() => setIsConcursoModalOpen(true)}
           onOpenOfficeModal={() => setIsOfficeModalOpen(true)}
+          onOpenOabExam={() => setIsOabExamOpen(true)}
+          onCompleteOfficeTask={handleCompleteOfficeTask}
           onToggleSound={handleToggleSound}
+          onEnableMobileFrame={() => setIsMobileFrame(true)}
         />
+      ) : (
+        <div
+          className={`w-full transition-all duration-300 ${
+            isMobileFrame
+              ? 'max-w-[440px] my-4 rounded-[36px] border-4 border-[#2A2A2E] shadow-2xl ring-1 ring-[#3A3A42] overflow-hidden min-h-[850px] bg-[#0A0A0B]'
+              : 'max-w-7xl mx-auto min-h-screen flex flex-col'
+          }`}
+        >
+          <HeaderBar
+            player={player}
+            isMobileFrame={isMobileFrame}
+            setIsMobileFrame={setIsMobileFrame}
+            onOpenCareerModal={() => setIsCareerModalOpen(true)}
+            onOpenAcademicModal={() => setIsAcademicModalOpen(true)}
+            onOpenConcursoModal={() => setIsConcursoModalOpen(true)}
+            onOpenOfficeModal={() => setIsOfficeModalOpen(true)}
+            onToggleSound={handleToggleSound}
+          />
 
-        <main className="flex-1 p-3 sm:p-5 flex flex-col">
-          {currentView === 'HUB' && (
-            <>
-              <InternshipCareerPanel player={player} onCompleteTask={handleCompleteOfficeTask} />
-              <OfficeHub
-                player={player}
-                onSelectCaseToView={(c) => setSelectedCaseToBrief(c)}
-                onResumeActiveCase={() => setCurrentView('INVESTIGATION_MAP')}
-                onOpenCareerModal={() => setIsCareerModalOpen(true)}
-                onOpenAcademicModal={() => setIsAcademicModalOpen(true)}
-                onOpenConcursoModal={() => setIsConcursoModalOpen(true)}
-                onOpenOfficeModal={() => setIsOfficeModalOpen(true)}
-                onOpenOabExam={() => setIsOabExamOpen(true)}
+          <main className="flex-1 p-3 sm:p-5 flex flex-col">
+            {currentView === 'HUB' && (
+              <>
+                <InternshipCareerPanel player={player} onCompleteTask={handleCompleteOfficeTask} />
+                <OfficeHub
+                  player={player}
+                  onSelectCaseToView={(c) => setSelectedCaseToBrief(c)}
+                  onResumeActiveCase={() => setCurrentView('INVESTIGATION_MAP')}
+                  onOpenCareerModal={() => setIsCareerModalOpen(true)}
+                  onOpenAcademicModal={() => setIsAcademicModalOpen(true)}
+                  onOpenConcursoModal={() => setIsConcursoModalOpen(true)}
+                  onOpenOfficeModal={() => setIsOfficeModalOpen(true)}
+                  onOpenOabExam={() => setIsOabExamOpen(true)}
+                />
+              </>
+            )}
+
+            {currentView === 'INVESTIGATION_MAP' && activeCaseData && player.activeCase && (
+              <InvestigationMap
+                currentCase={activeCaseData}
+                activeState={player.activeCase}
+                onTravelToLocation={handleTravelToLocation}
+                onOpenDossier={() => setIsDossierOpen(true)}
+                onOpenCourtroom={() => setIsCourtroomOpen(true)}
               />
-            </>
-          )}
+            )}
 
-          {currentView === 'INVESTIGATION_MAP' && activeCaseData && player.activeCase && (
-            <InvestigationMap
-              currentCase={activeCaseData}
-              activeState={player.activeCase}
-              onTravelToLocation={handleTravelToLocation}
-              onOpenDossier={() => setIsDossierOpen(true)}
-              onOpenCourtroom={() => setIsCourtroomOpen(true)}
-            />
-          )}
-
-          {currentView === 'LOCATION_SCENE' && activeCaseData && player.activeCase && (
-            <LocationSceneComponent
-              currentCase={activeCaseData}
-              activeState={player.activeCase}
-              onAskQuestion={handleAskQuestion}
-              onInspectSpot={handleInspectSpot}
-              onBackToMap={() => setCurrentView('INVESTIGATION_MAP')}
-              onOpenDossier={() => setIsDossierOpen(true)}
-            />
-          )}
-        </main>
-      </div>
+            {currentView === 'LOCATION_SCENE' && activeCaseData && player.activeCase && (
+              <LocationSceneComponent
+                currentCase={activeCaseData}
+                activeState={player.activeCase}
+                onAskQuestion={handleAskQuestion}
+                onInspectSpot={handleInspectSpot}
+                onBackToMap={() => setCurrentView('INVESTIGATION_MAP')}
+                onOpenDossier={() => setIsDossierOpen(true)}
+              />
+            )}
+          </main>
+        </div>
+      )}
 
       <NewGameModal isOpen={isNewGameModalOpen} onStartNewGame={handleStartNewGame} />
 
