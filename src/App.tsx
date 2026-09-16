@@ -270,14 +270,20 @@ export default function App() {
   const handleTravelToLocation = (loc: LocationScene) => {
     if (!player.activeCase || !activeCaseData) return;
 
-    const newHoursSpent = player.activeCase.hoursSpent + loc.travelTimeHours;
-    const newMoney = Math.max(0, player.money - loc.travelCost);
-
     setPlayer((prev) => {
       if (!prev.activeCase) return prev;
+
+      const previousHours = prev.activeCase.hoursSpent;
+      const newHoursSpent = previousHours + loc.travelTimeHours;
+      const nextDate = addGameDays(
+        getPlayerGameDate(prev),
+        elapsedGameDays(previousHours, newHoursSpent),
+      );
+
       return {
         ...prev,
-        money: newMoney,
+        ...gameDateFields(nextDate),
+        money: Math.max(0, prev.money - loc.travelCost),
         activeCase: {
           ...prev.activeCase,
           hoursSpent: newHoursSpent,
@@ -303,7 +309,6 @@ export default function App() {
 
     sound.playPaper();
     const additionalHours = Math.ceil(option.timeCostMinutes / 60);
-    const newHoursSpent = player.activeCase.hoursSpent + additionalHours;
 
     const updatedDiscoveredClues = [...player.activeCase.discoveredClueIds];
     const updatedUnlockedLocations = [...player.activeCase.unlockedLocationIds];
@@ -323,8 +328,17 @@ export default function App() {
 
     setPlayer((prev) => {
       if (!prev.activeCase) return prev;
+
+      const previousHours = prev.activeCase.hoursSpent;
+      const newHoursSpent = previousHours + additionalHours;
+      const nextDate = addGameDays(
+        getPlayerGameDate(prev),
+        elapsedGameDays(previousHours, newHoursSpent),
+      );
+
       return {
         ...prev,
+        ...gameDateFields(nextDate),
         activeCase: {
           ...prev.activeCase,
           hoursSpent: newHoursSpent,
@@ -350,7 +364,6 @@ export default function App() {
 
     sound.playPaper();
     const additionalHours = Math.ceil(spot.timeCostMinutes / 60);
-    const newHoursSpent = player.activeCase.hoursSpent + additionalHours;
 
     const updatedDiscoveredClues = [...player.activeCase.discoveredClueIds];
     if (spot.foundClueId && !updatedDiscoveredClues.includes(spot.foundClueId)) {
@@ -364,8 +377,17 @@ export default function App() {
 
     setPlayer((prev) => {
       if (!prev.activeCase) return prev;
+
+      const previousHours = prev.activeCase.hoursSpent;
+      const newHoursSpent = previousHours + additionalHours;
+      const nextDate = addGameDays(
+        getPlayerGameDate(prev),
+        elapsedGameDays(previousHours, newHoursSpent),
+      );
+
       return {
         ...prev,
+        ...gameDateFields(nextDate),
         activeCase: {
           ...prev.activeCase,
           hoursSpent: newHoursSpent,
@@ -398,11 +420,17 @@ export default function App() {
       if (duplicate) return prev;
 
       const safeTimeCost = Math.max(0, Number(tool.timeCostHours) || 0);
-      const nextHours = prev.activeCase.hoursSpent + safeTimeCost;
+      const previousHours = prev.activeCase.hoursSpent;
+      const nextHours = previousHours + safeTimeCost;
+      const nextDate = addGameDays(
+        getPlayerGameDate(prev),
+        elapsedGameDays(previousHours, nextHours),
+      );
       const actionId = `sj-${tool.featureId}-${Date.now()}`;
 
       return {
         ...prev,
+        ...gameDateFields(nextDate),
         activeCase: {
           ...prev.activeCase,
           hoursSpent: nextHours,
