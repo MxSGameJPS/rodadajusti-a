@@ -38,10 +38,10 @@ import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import { sound } from '../../utils/sound';
 import { InternshipCareerPanel } from '../../components/InternshipCareerPanel';
 import { OfficeHub } from '../../components/OfficeHub';
-import { OFFICE_SCENE_BACKGROUND } from './OfficeSceneBackground';
 import styles from './OfficeScene.module.css';
 
 const OPEN_SOCIAL_JURIDICO_EVENT = 'rota:open-social-juridico';
+const OFFICE_SCENE_BACKGROUND = '/fundos/escritorio.png';
 
 const NAV_ITEMS = [
   { id: 'OFFICE', label: 'Escritório', icon: Building2 },
