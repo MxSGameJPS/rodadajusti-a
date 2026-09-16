@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
   CalendarDays,
@@ -119,7 +120,7 @@ export function GameClock({
         </span>
       </button>
 
-      {open && (
+      {open && typeof document !== 'undefined' && createPortal(
         <div className={styles.backdrop} onMouseDown={() => setOpen(false)}>
           <section className={styles.modal} onMouseDown={(event) => event.stopPropagation()}>
             <header className={styles.modalHeader}>
@@ -209,7 +210,8 @@ export function GameClock({
               </small>
             </section>
           </section>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
