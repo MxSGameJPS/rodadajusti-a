@@ -34,6 +34,7 @@ import {
   normalizeOfficePerformance,
 } from '../../lib/internCareerEngine';
 import { getDeclaredPlayerCity, readWorldMapProfile } from '../../lib/worldMap';
+import { formatGameDate } from '../../lib/gameDate';
 import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import { sound } from '../../utils/sound';
 import { InternshipCareerPanel } from '../../components/InternshipCareerPanel';
@@ -113,6 +114,18 @@ export function OfficeScene({
       ? `${declaredCity.city} • ${declaredCity.state || 'BR'}`
       : 'Brasil';
 
+  const brandCityLabel = worldProfile?.city
+    ? `${worldProfile.city}${worldProfile.state ? ` - ${worldProfile.state}` : ''}`
+    : declaredCity.city
+      ? `${declaredCity.city}${declaredCity.state ? ` - ${declaredCity.state}` : ''}`
+      : 'Brasil';
+
+  const gameDateLabel = formatGameDate({
+    day: player.gameCurrentDay,
+    month: player.gameCurrentMonth,
+    year: player.gameCurrentYear,
+  });
+
   const hoursLeft = activeCase && player.activeCase
     ? Math.max(0, activeCase.deadlineHours - player.activeCase.hoursSpent)
     : null;
@@ -181,7 +194,7 @@ export function OfficeScene({
           <div className={styles.brandSeal}><Scale size={31} /></div>
           <div>
             <strong>ROTA DA JUSTIÇA</strong>
-            <span>RJ-2048 <i /> Carreira na Advocacia</span>
+            <span>{brandCityLabel} <i /> Data {gameDateLabel}</span>
           </div>
         </div>
 
