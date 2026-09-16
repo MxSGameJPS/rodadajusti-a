@@ -1205,3 +1205,265 @@
     min-height: 49px;
   }
 }
+
+
+/* PWA/mobile landscape: preserve the premium scene instead of shrinking desktop UI. */
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 620px) {
+  .scene {
+    width: 100vw;
+    height: 100dvh;
+    min-height: 0;
+    padding:
+      env(safe-area-inset-top)
+      env(safe-area-inset-right)
+      env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+  }
+
+  .topBar {
+    top: env(safe-area-inset-top);
+    right: env(safe-area-inset-right);
+    left: env(safe-area-inset-left);
+    height: 54px;
+    grid-template-columns: minmax(190px, 1fr) minmax(230px, 1fr) auto;
+    gap: 10px;
+    padding: 0 12px;
+  }
+
+  .brand {
+    gap: 9px;
+  }
+
+  .brandSeal {
+    width: 34px;
+    height: 34px;
+    padding-right: 8px;
+  }
+
+  .brandSeal svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .brand strong {
+    font-size: 15px;
+    letter-spacing: 0.035em;
+  }
+
+  .brand span {
+    margin-top: 1px;
+    font-size: 7px;
+    letter-spacing: 0.08em;
+  }
+
+  .brand i,
+  .topQuote,
+  .cityBlock,
+  .sidebar {
+    display: none;
+  }
+
+  .caseStatus {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px 10px;
+  }
+
+  .caseStatus > div {
+    grid-template-columns: 13px auto 1fr;
+    gap: 5px;
+  }
+
+  .caseStatus svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .caseStatus span,
+  .caseStatus strong {
+    font-size: 8px;
+  }
+
+  .utilityActions {
+    display: flex;
+  }
+
+  .utilityActions button {
+    width: 30px;
+    height: 30px;
+  }
+
+  .utilityActions button:last-child {
+    display: none;
+  }
+
+  .stage {
+    top: calc(54px + env(safe-area-inset-top));
+    right: env(safe-area-inset-right);
+    bottom: calc(62px + env(safe-area-inset-bottom));
+    left: env(safe-area-inset-left);
+  }
+
+  .leftRail {
+    top: auto;
+    bottom: 10px;
+    left: 10px;
+    width: min(330px, 42vw);
+    gap: 0;
+  }
+
+  .leftRail .glassPanel:first-child {
+    min-height: 0;
+  }
+
+  .leftRail .glassPanel:nth-child(2),
+  .rightRail {
+    display: none;
+  }
+
+  .glassPanel {
+    border-radius: 9px;
+    background: linear-gradient(135deg, rgba(5, 9, 12, 0.9), rgba(7, 10, 12, 0.8));
+    backdrop-filter: blur(8px);
+  }
+
+  .panelHeading {
+    min-height: 30px;
+    padding: 0 10px;
+  }
+
+  .panelHeading > span {
+    font-size: 9px;
+  }
+
+  .panelHeading button {
+    font-size: 7px;
+  }
+
+  .caseCard {
+    grid-template-columns: 64px 1fr;
+    gap: 8px;
+    padding: 8px 9px 5px;
+  }
+
+  .caseVisual {
+    min-height: 60px;
+  }
+
+  .caseVisual svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .caseVisual span,
+  .caseMeta {
+    font-size: 6px;
+  }
+
+  .caseCopy h2 {
+    max-width: none;
+    margin: 4px 0 2px;
+    font-size: 11px;
+    line-height: 1.08;
+  }
+
+  .caseCopy p,
+  .caseDeadline {
+    font-size: 7px;
+  }
+
+  .caseDeadline {
+    margin-top: 5px;
+  }
+
+  .caseFooter {
+    grid-template-columns: 1fr auto auto;
+    gap: 6px;
+    padding: 4px 9px 8px;
+  }
+
+  .caseFooter > strong {
+    font-size: 7px;
+  }
+
+  .caseFooter > button {
+    min-height: 27px;
+    padding: 0 8px;
+    font-size: 7px;
+  }
+
+  .bottomDock {
+    right: env(safe-area-inset-right);
+    bottom: env(safe-area-inset-bottom);
+    left: env(safe-area-inset-left);
+    height: 62px;
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 6px 10px;
+  }
+
+  .playerCard,
+  .dockQuote {
+    display: none;
+  }
+
+  .dockActions {
+    width: min(620px, 100%);
+    margin: 0 auto;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+
+  .dockActions button {
+    height: 48px;
+    flex-direction: column;
+    gap: 2px;
+    border-radius: 8px;
+  }
+
+  .dockActions svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .dockActions span {
+    display: block;
+    font-size: 6px;
+    letter-spacing: 0.03em;
+  }
+
+  .drawer {
+    width: 92vw;
+    max-width: 760px;
+  }
+
+  .drawer > header {
+    min-height: 54px;
+    padding: 0 16px;
+  }
+
+  .drawer > header h2 {
+    font-size: 17px;
+  }
+
+  .drawerContent {
+    padding: 12px;
+  }
+
+  .simpleDrawerGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .simpleDrawerGrid button {
+    min-height: 110px;
+    padding: 12px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) and (orientation: portrait) {
+  .scene {
+    min-height: 0;
+    height: 100dvh;
+  }
+}
