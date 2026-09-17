@@ -504,3 +504,13 @@
     min-height: 58px;
   }
 }
+
+
+.traveling .topHud,
+.traveling .eventBadge,
+.traveling .locationsToggle,
+.traveling .bottomHint {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}

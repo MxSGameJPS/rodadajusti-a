@@ -4,6 +4,7 @@ import type { LocationScene } from '../types/game';
 import { readCurrentPlayerSnapshot } from '../lib/professionalRpg';
 import styles from './TravelMapTransition.module.css';
 import { applyRotaJusticeMapTheme, buildOpenStreetMapStyle, loadMapLibre } from '../lib/maplibreClient';
+import { getActiveWorldMap } from '../lib/worldMapRuntime';
 import {
   fetchRoadRoute,
   formatRouteDistance,
@@ -168,6 +169,8 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
   const [isLoadingRoute, setIsLoadingRoute] = useState(true);
   const [mapMode, setMapMode] = useState<'PREPARING' | 'REAL' | 'FALLBACK'>('PREPARING');
   const [mapReady, setMapReady] = useState(false);
+  const [usingSharedMap, setUsingSharedMap] = useState(false);
+  const ownsMapRef = useRef(false);
 
   const startClock = useMemo(() => 8 + caseHoursSpent, [caseHoursSpent]);
   const currentClock = startClock + destination.travelTimeHours * progress;
@@ -186,6 +189,8 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
     setIsLoadingRoute(true);
     setMapMode('PREPARING');
     setMapReady(false);
+    setUsingSharedMap(false);
+    ownsMapRef.current = false;
     animationStartedRef.current = false;
     preloadCarFrames();
 
@@ -226,7 +231,7 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
   }, [caseId, origin.id, destination.id]);
 
   useEffect(() => {
-    if (mapMode !== 'REAL' || !route || !profile || !mapContainerRef.current) return undefined;
+    if (mapMode !== 'REAL' || !route || !profile) return undefined;
 
     let disposed = false;
     let readyTimeout = 0;
@@ -234,24 +239,142 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
     const fallback = () => {
       if (disposed) return;
       setMapReady(false);
+      setUsingSharedMap(false);
       setMapMode('FALLBACK');
+    };
+
+    const clearTravelLayers = (map: any) => {
+      try {
+        if (map.getLayer(ROUTE_LAYER_ID)) map.removeLayer(ROUTE_LAYER_ID);
+        if (map.getLayer(ROUTE_CASING_LAYER_ID)) map.removeLayer(ROUTE_CASING_LAYER_ID);
+        if (map.getLayer(ROUTE_GLOW_LAYER_ID)) map.removeLayer(ROUTE_GLOW_LAYER_ID);
+        if (map.getSource(ROUTE_SOURCE_ID)) map.removeSource(ROUTE_SOURCE_ID);
+      } catch {
+        // O mapa principal continua funcional mesmo se uma camada já tiver sido removida.
+      }
+    };
+
+    const decorateMap = async (map: any, maplibre: any, shared: boolean) => {
+      const first = route.coordinates[0];
+      const last = route.coordinates[route.coordinates.length - 1];
+      if (!first || !last) {
+        fallback();
+        return;
+      }
+
+      clearTravelLayers(map);
+
+      if (!shared) applyRotaJusticeMapTheme(map);
+
+      map.addSource(ROUTE_SOURCE_ID, {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'LineString', coordinates: route.coordinates },
+        },
+      });
+
+      map.addLayer({
+        id: ROUTE_GLOW_LAYER_ID,
+        type: 'line',
+        source: ROUTE_SOURCE_ID,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': '#E7C56E',
+          'line-width': ['interpolate', ['linear'], ['zoom'], 11, 10, 16, 22],
+          'line-opacity': 0.2,
+          'line-blur': 6,
+        },
+      });
+
+      map.addLayer({
+        id: ROUTE_CASING_LAYER_ID,
+        type: 'line',
+        source: ROUTE_SOURCE_ID,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': '#080A0B',
+          'line-width': ['interpolate', ['linear'], ['zoom'], 11, 6, 16, 11],
+          'line-opacity': 0.95,
+        },
+      });
+
+      map.addLayer({
+        id: ROUTE_LAYER_ID,
+        type: 'line',
+        source: ROUTE_SOURCE_ID,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': '#D8B45B',
+          'line-width': ['interpolate', ['linear'], ['zoom'], 11, 3, 16, 5.5],
+          'line-opacity': 1,
+        },
+      });
+
+      const originMarker = new maplibre.Marker({ element: createMarkerElement('A', '#355F87') })
+        .setLngLat(first)
+        .addTo(map);
+      const destinationMarker = new maplibre.Marker({ element: createMarkerElement('B', '#2E765E') })
+        .setLngLat(last)
+        .addTo(map);
+      markersRef.current.push(originMarker, destinationMarker);
+
+      const { element: carElement, image: carImage } = createCarElement();
+      carElement.style.zIndex = '20';
+      carImageRef.current = carImage;
+      carImage.src = carFrameSrc(carFrameIndexForBearing(routeBearingAtProgress(route, 0)));
+
+      carMarkerRef.current = new maplibre.Marker({
+        element: carElement,
+        rotationAlignment: 'map',
+        pitchAlignment: 'viewport',
+      })
+        .setLngLat(first)
+        .addTo(map);
+
+      const bounds = new maplibre.LngLatBounds(first, first);
+      route.coordinates.forEach((coordinate) => bounds.extend(coordinate));
+
+      window.requestAnimationFrame(() => {
+        if (disposed) return;
+        map.resize?.();
+        map.fitBounds(bounds, { padding: 92, maxZoom: 15.4, duration: shared ? 420 : 0 });
+        map.triggerRepaint?.();
+
+        window.requestAnimationFrame(() => {
+          if (disposed) return;
+          window.clearTimeout(readyTimeout);
+          setMapReady(true);
+        });
+      });
     };
 
     const mountMap = async () => {
       try {
         const maplibre = await loadMapLibre();
-        if (disposed || !mapContainerRef.current) return;
+        if (disposed) return;
 
-        const first = route.coordinates[0];
-        const last = route.coordinates[route.coordinates.length - 1];
-        if (!first || !last) {
+        const sharedMap = getActiveWorldMap();
+        if (sharedMap && sharedMap.isStyleLoaded?.()) {
+          mapRef.current = sharedMap;
+          ownsMapRef.current = false;
+          setUsingSharedMap(true);
+          await decorateMap(sharedMap, maplibre, true);
+          return;
+        }
+
+        if (!mapContainerRef.current) {
           fallback();
           return;
         }
 
-        // O CSS oficial do MapLibre define .maplibregl-map como position:relative.
-        // Na transição, o container precisa preencher uma área absoluta. Forçamos
-        // tamanho e posicionamento inline antes de criar o mapa para evitar canvas 0px.
+        const first = route.coordinates[0];
+        if (!first) {
+          fallback();
+          return;
+        }
+
         const container = mapContainerRef.current;
         container.style.position = 'absolute';
         container.style.inset = '0';
@@ -273,129 +396,17 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
           pitch: 48,
           bearing: -12,
         });
+
         mapRef.current = map;
+        ownsMapRef.current = true;
+        setUsingSharedMap(false);
 
         map.once('load', () => {
           if (disposed) return;
-
-          applyRotaJusticeMapTheme(map);
-
-          if (!map.getSource(ROUTE_SOURCE_ID)) {
-            map.addSource(ROUTE_SOURCE_ID, {
-              type: 'geojson',
-              data: {
-                type: 'Feature',
-                properties: {},
-                geometry: { type: 'LineString', coordinates: route.coordinates },
-              },
-            });
-          }
-
-          if (!map.getLayer(ROUTE_GLOW_LAYER_ID)) {
-            map.addLayer({
-              id: ROUTE_GLOW_LAYER_ID,
-              type: 'line',
-              source: ROUTE_SOURCE_ID,
-              layout: {
-                'line-cap': 'round',
-                'line-join': 'round',
-              },
-              paint: {
-                'line-color': '#E7C56E',
-                'line-width': ['interpolate', ['linear'], ['zoom'], 11, 10, 16, 22],
-                'line-opacity': 0.2,
-                'line-blur': 6,
-              },
-            });
-          }
-
-          if (!map.getLayer(ROUTE_CASING_LAYER_ID)) {
-            map.addLayer({
-              id: ROUTE_CASING_LAYER_ID,
-              type: 'line',
-              source: ROUTE_SOURCE_ID,
-              layout: {
-                'line-cap': 'round',
-                'line-join': 'round',
-              },
-              paint: {
-                'line-color': '#080A0B',
-                'line-width': ['interpolate', ['linear'], ['zoom'], 11, 6, 16, 11],
-                'line-opacity': 0.95,
-              },
-            });
-          }
-
-          if (!map.getLayer(ROUTE_LAYER_ID)) {
-            map.addLayer({
-              id: ROUTE_LAYER_ID,
-              type: 'line',
-              source: ROUTE_SOURCE_ID,
-              layout: {
-                'line-cap': 'round',
-                'line-join': 'round',
-              },
-              paint: {
-                'line-color': '#D8B45B',
-                'line-width': ['interpolate', ['linear'], ['zoom'], 11, 3, 16, 5.5],
-                'line-opacity': 1,
-              },
-            });
-          }
-
-          const originMarker = new maplibre.Marker({ element: createMarkerElement('A', '#355F87') })
-            .setLngLat(first)
-            .addTo(map);
-          const destinationMarker = new maplibre.Marker({ element: createMarkerElement('B', '#2E765E') })
-            .setLngLat(last)
-            .addTo(map);
-          markersRef.current.push(originMarker, destinationMarker);
-
-          const { element: carElement, image: carImage } = createCarElement();
-          carElement.style.zIndex = '20';
-          carImageRef.current = carImage;
-          carImage.src = carFrameSrc(carFrameIndexForBearing(routeBearingAtProgress(route, 0)));
-
-          carMarkerRef.current = new maplibre.Marker({
-            element: carElement,
-            rotationAlignment: 'map',
-            pitchAlignment: 'viewport',
-          })
-            .setLngLat(first)
-            .addTo(map);
-
-          const bounds = new maplibre.LngLatBounds(first, first);
-          route.coordinates.forEach((coordinate) => bounds.extend(coordinate));
-
-          window.requestAnimationFrame(() => {
-            if (disposed) return;
-            map.resize();
-            map.fitBounds(bounds, { padding: 84, maxZoom: 15.4, duration: 0 });
-            map.triggerRepaint();
-
-            // Só libera a animação depois de duas pinturas do navegador,
-            // garantindo que o canvas tenha largura/altura reais na tela.
-            window.requestAnimationFrame(() => {
-              if (disposed) return;
-              window.requestAnimationFrame(() => {
-                if (disposed) return;
-                window.clearTimeout(readyTimeout);
-                setMapReady(true);
-              });
-            });
-          });
+          void decorateMap(map, maplibre, false);
         });
 
-        map.on('error', (event: any) => {
-          if (!map.loaded()) return;
-          // Erros pontuais de tile não derrubam a viagem. O timeout cuida apenas
-          // do caso em que o mapa nunca chega a montar de fato.
-          if (event?.error?.message) console.warn('[Rota da Justiça] mapa:', event.error.message);
-        });
-
-        readyTimeout = window.setTimeout(() => {
-          if (!mapReady) fallback();
-        }, MAP_READY_TIMEOUT_MS);
+        readyTimeout = window.setTimeout(fallback, MAP_READY_TIMEOUT_MS);
       } catch {
         fallback();
       }
@@ -406,13 +417,22 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
     return () => {
       disposed = true;
       if (readyTimeout) window.clearTimeout(readyTimeout);
+
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
+
       if (carMarkerRef.current) carMarkerRef.current.remove();
       carMarkerRef.current = null;
       carImageRef.current = null;
-      if (mapRef.current) mapRef.current.remove();
+
+      const map = mapRef.current;
+      if (map) {
+        clearTravelLayers(map);
+        if (ownsMapRef.current) map.remove();
+      }
+
       mapRef.current = null;
+      ownsMapRef.current = false;
     };
   }, [mapMode, route, profile?.city, profile?.state]);
 
@@ -463,7 +483,7 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
   const localizedDestination = profile ? getLocalizedLocationLabel(destination, profile) : destination.address;
 
   return (
-    <section className={styles.scene}>
+    <section className={`${styles.scene} ${usingSharedMap ? styles.sharedScene : ''}`}>
       <div className={styles.mapLayer}>
         {isLoadingRoute ? (
           <div className={styles.loadingState}>
@@ -473,13 +493,15 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
           </div>
         ) : mapMode === 'REAL' && route ? (
           <>
-            <div
-              ref={mapContainerRef}
-              className={styles.map}
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', minHeight: '100%' }}
-            />
+            {!usingSharedMap && (
+              <div
+                ref={mapContainerRef}
+                className={styles.map}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', minHeight: '100%' }}
+              />
+            )}
             <div className={styles.mapShade} aria-hidden="true" />
-            {!mapReady && (
+            {!mapReady && !usingSharedMap && (
               <div className={styles.loadingState}>
                 <Loader2 size={34} />
                 <strong>Carregando mapa de {profile?.city}</strong>
