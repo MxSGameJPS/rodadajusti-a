@@ -26,6 +26,7 @@ interface RealCityMapPanelProps {
   currentLocationId: string;
   unlockedLocationIds: string[];
   onTravelToLocation: (location: LocationScene) => void;
+  immersive?: boolean;
 }
 
 const ROUTE_SOURCE_ID = 'rota-preview-route';
@@ -46,6 +47,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   currentLocationId,
   unlockedLocationIds,
   onTravelToLocation,
+  immersive = false,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -137,6 +139,8 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
           minZoom: 3,
           maxZoom: 18,
           attributionControl: true,
+          pitch: immersive ? 48 : 0,
+          bearing: immersive ? -12 : 0,
         });
         mapRef.current = map;
         map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
@@ -180,7 +184,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
           if (points.length > 1) {
             const bounds = new maplibre.LngLatBounds();
             points.forEach((point) => bounds.extend(point));
-            map.fitBounds(bounds, { padding: 68, maxZoom: 14.4, duration: 850 });
+            map.fitBounds(bounds, { padding: immersive ? 150 : 68, maxZoom: immersive ? 15.2 : 14.4, duration: 850 });
           }
         });
       } catch {
@@ -196,7 +200,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       if (mapRef.current) mapRef.current.remove();
       mapRef.current = null;
     };
-  }, [profile?.city, profile?.state, profile?.center.lng, profile?.center.lat, currentCase.id, currentLocationId, unlockedKey, isEditingCity, officeDisplayName, officeLocation?.id]);
+  }, [profile?.city, profile?.state, profile?.center.lng, profile?.center.lat, currentCase.id, currentLocationId, unlockedKey, isEditingCity, officeDisplayName, officeLocation?.id, immersive]);
 
   useEffect(() => {
     if (!profile || !selectedLocation || !currentLocation || selectedLocation.id === currentLocation.id) {
@@ -283,8 +287,8 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   const setupVisible = !profile || isEditingCity;
 
   return (
-    <section className={styles.shell}>
-      <header className={styles.header}>
+    <section className={`${styles.shell} ${immersive ? styles.immersive : ''}`}>
+      {!immersive && <header className={styles.header}>
         <div className={styles.titleRow}>
           <div className={styles.icon}><Navigation size={19} /></div>
           <div>
@@ -297,7 +301,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
             <Settings2 size={13} /> {isEditingCity ? 'Cancelar' : 'Trocar cidade'}
           </button>
         )}
-      </header>
+      </header>}
 
       {setupVisible ? (
         <div className={styles.setup}>
@@ -319,6 +323,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
         <>
           <div className={styles.mapWrap}>
             <div ref={mapContainerRef} className={styles.map} />
+            {immersive && <div className={styles.mapAtmosphere} aria-hidden="true" />}
             <div className={styles.cityBadge}>
               <strong><Building2 size={12} style={{ display: 'inline', marginRight: 5 }} /> {officeDisplayName}</strong>
               <span>Região central virtual • {profile.city}/{profile.state}</span>
@@ -349,11 +354,11 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
               </div>
             )}
           </div>
-          <div className={styles.legend}>
+          {!immersive && <div className={styles.legend}>
             <span><strong>Mapa:</strong> OpenStreetMap + MapLibre</span>
             <span><strong>Rotas:</strong> malha viária real quando disponível</span>
             <span><strong>NPCs:</strong> pontos fictícios e seguros dentro da cidade</span>
-          </div>
+          </div>}
         </>
       )}
     </section>
