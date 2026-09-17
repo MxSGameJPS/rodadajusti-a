@@ -40,7 +40,57 @@ function markerGlyph(location?: LocationScene, isOffice = false) {
   if (location.category === 'tribunal') return '⚖';
   if (location.category === 'delegacia') return 'DP';
   if (location.category === 'residencia') return '⌂';
-  if (location.category === 'banco') return '
+  if (location.category === 'banco') return 'R$';
+  if (location.category === 'cartorio') return 'DOC';
+  if (location.category === 'empresa') return 'EMP';
+  return '•';
+}
+
+function markerCategoryClass(location?: LocationScene, isOffice = false) {
+  if (isOffice) return styles.markerOffice;
+  if (!location) return styles.markerGeneric;
+
+  const byCategory: Record<LocationScene['category'], string> = {
+    tribunal: styles.markerTribunal,
+    delegacia: styles.markerPolice,
+    residencia: styles.markerHome,
+    banco: styles.markerBank,
+    cartorio: styles.markerRegistry,
+    empresa: styles.markerCompany,
+    escritorio: styles.markerOffice,
+  };
+
+  return byCategory[location.category] || styles.markerGeneric;
+}
+
+function buildGameMarker(
+  label: string,
+  glyph: string,
+  className: string,
+  isCurrent: boolean,
+) {
+  const element = document.createElement('button');
+  element.type = 'button';
+  element.className = `${styles.gameMarker} ${className} ${isCurrent ? styles.gameMarkerCurrent : ''}`;
+
+  const pin = document.createElement('span');
+  pin.className = styles.gameMarkerPin;
+
+  const icon = document.createElement('span');
+  icon.className = styles.gameMarkerGlyph;
+  icon.textContent = glyph;
+  pin.appendChild(icon);
+
+  const caption = document.createElement('span');
+  caption.className = styles.gameMarkerLabel;
+  caption.textContent = label;
+
+  element.appendChild(pin);
+  element.appendChild(caption);
+  element.title = label;
+
+  return element;
+}
 
 export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   currentCase,
