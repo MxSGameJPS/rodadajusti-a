@@ -11,7 +11,7 @@ import { DisciplinaryDefenseExperienceV2 } from './components/DisciplinaryDefens
 import { EthicalDilemmaExperience } from './components/EthicalDilemmaExperience';
 import { MisconductConsequenceExperience } from './components/MisconductConsequenceExperience';
 import { PostOabEmploymentExperience } from './components/PostOabEmploymentExperience/PostOabEmploymentExperience';
-import { PwaMobileGate } from './Components/PwaMobileGate/PwaMobileGate';
+import { PwaMobileGate } from './components/PwaMobileGate/PwaMobileGate';
 import { ProfessionalDemoRoute } from './components/ProfessionalDemoRoute/ProfessionalDemoRoute';
 import { PersonalIncomingCallExperience } from './components/ProfessionalLifeExperience/PersonalIncomingCallExperience';
 import { ProfessionalLifeExperience } from './components/ProfessionalLifeExperience/ProfessionalLifeExperience';

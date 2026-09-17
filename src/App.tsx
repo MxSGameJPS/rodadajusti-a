@@ -35,7 +35,7 @@ import { OfficeManagementModal } from './components/OfficeManagementModal';
 import { OabExamModal } from './components/OabExamModal';
 import { SocialJuridicoExperience } from './components/SocialJuridicoExperience';
 import { InternshipCareerPanel } from './components/InternshipCareerPanel';
-import { OfficeScene } from './Components/OfficeScene/OfficeScene';
+import { OfficeScene } from './components/OfficeScene/OfficeScene';
 import { InternPromotionCeremonyModal } from './components/InternPromotionCeremonyModal';
 import { evaluatePetition } from './lib/judicialDecisionEngine';
 import { buildSupervisorReview } from './lib/officeDisciplineEngine';
