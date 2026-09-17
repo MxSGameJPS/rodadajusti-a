@@ -1,10 +1,11 @@
-const CACHE_VERSION = 'rota-da-justica-pwa-v2';
+const CACHE_VERSION = 'rota-da-justica-pwa-v3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const MAP_CACHE = `${CACHE_VERSION}-map`;
 
 const APP_SHELL = [
   '/',
+  '/jogo',
   '/index.html',
   '/manifest.webmanifest',
   '/icons/rota-192.png',
@@ -13,12 +14,27 @@ const APP_SHELL = [
   '/fundos/escritorio.png',
 ];
 
+async function precacheAppShell() {
+  const cache = await caches.open(STATIC_CACHE);
+
+  // Um recurso opcional indisponível não pode impedir a instalação inteira do PWA.
+  await Promise.allSettled(
+    APP_SHELL.map(async (url) => {
+      try {
+        const response = await fetch(url, { cache: 'reload' });
+        if (response && response.ok) {
+          await cache.put(url, response.clone());
+        }
+      } catch {
+        // O recurso será buscado normalmente em runtime.
+      }
+    }),
+  );
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches
-      .open(STATIC_CACHE)
-      .then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting()),
+    precacheAppShell().then(() => self.skipWaiting()),
   );
 });
 
@@ -37,20 +53,28 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 async function networkFirst(request) {
   try {
     const response = await fetch(request);
 
     if (response && response.ok) {
       const cache = await caches.open(RUNTIME_CACHE);
-      cache.put(request, response.clone());
+      await cache.put(request, response.clone());
     }
 
     return response;
   } catch {
     const cached = await caches.match(request);
-
     if (cached) return cached;
+
+    const jogoShell = await caches.match('/jogo');
+    if (jogoShell) return jogoShell;
 
     return caches.match('/index.html');
   }
@@ -61,9 +85,9 @@ async function staleWhileRevalidate(request, cacheName = RUNTIME_CACHE) {
   const cached = await cache.match(request);
 
   const networkPromise = fetch(request)
-    .then((response) => {
+    .then(async (response) => {
       if (response && (response.ok || response.type === 'opaque')) {
-        cache.put(request, response.clone());
+        await cache.put(request, response.clone());
       }
       return response;
     })

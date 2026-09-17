@@ -1,5 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download, MoreVertical, RotateCw, Share2, Smartphone } from 'lucide-react';
+import {
+  clearDeferredInstallPrompt,
+  getDeferredInstallPrompt,
+  subscribeToInstallPrompt,
+} from '../../lib/pwaInstallPrompt';
 import styles from './PwaMobileGate.module.css';
 
 const DISMISS_KEY = 'rota_pwa_install_dismissed_v1';
@@ -27,6 +32,7 @@ function detectPortrait() {
 }
 
 function isIos() {
+  if (typeof navigator === 'undefined') return false;
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
@@ -44,7 +50,7 @@ export function PwaMobileGate({ children }) {
   const [isMobile, setIsMobile] = useState(detectMobile);
   const [isStandalone, setIsStandalone] = useState(detectStandalone);
   const [isPortrait, setIsPortrait] = useState(detectPortrait);
-  const [installPrompt, setInstallPrompt] = useState(null);
+  const [installPrompt, setInstallPrompt] = useState(() => getDeferredInstallPrompt());
   const [installDismissed, setInstallDismissed] = useState(() => {
     try {
       return window.sessionStorage.getItem(DISMISS_KEY) === '1';
@@ -53,18 +59,13 @@ export function PwaMobileGate({ children }) {
     }
   });
 
-  const ios = useMemo(() => (typeof navigator === 'undefined' ? false : isIos()), []);
+  const ios = useMemo(() => isIos(), []);
 
   useEffect(() => {
     const syncDeviceState = () => {
       setIsMobile(detectMobile());
       setIsStandalone(detectStandalone());
       setIsPortrait(detectPortrait());
-    };
-
-    const handleBeforeInstallPrompt = (event) => {
-      event.preventDefault();
-      setInstallPrompt(event);
     };
 
     const handleInstalled = () => {
@@ -74,9 +75,12 @@ export function PwaMobileGate({ children }) {
       void tryLockLandscape();
     };
 
+    const unsubscribePrompt = subscribeToInstallPrompt((prompt) => {
+      setInstallPrompt(prompt);
+    });
+
     window.addEventListener('resize', syncDeviceState);
     window.addEventListener('orientationchange', syncDeviceState);
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleInstalled);
 
     const orientationMedia = window.matchMedia?.('(orientation: portrait)');
@@ -85,9 +89,9 @@ export function PwaMobileGate({ children }) {
     syncDeviceState();
 
     return () => {
+      unsubscribePrompt();
       window.removeEventListener('resize', syncDeviceState);
       window.removeEventListener('orientationchange', syncDeviceState);
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleInstalled);
       orientationMedia?.removeEventListener?.('change', syncDeviceState);
     };
@@ -110,10 +114,13 @@ export function PwaMobileGate({ children }) {
   };
 
   const requestInstall = async () => {
-    if (!installPrompt) return;
+    const prompt = installPrompt || getDeferredInstallPrompt();
+    if (!prompt) return;
 
-    await installPrompt.prompt();
-    const result = await installPrompt.userChoice;
+    await prompt.prompt();
+    const result = await prompt.userChoice;
+
+    clearDeferredInstallPrompt();
     setInstallPrompt(null);
 
     if (result?.outcome === 'accepted') {
@@ -142,7 +149,7 @@ export function PwaMobileGate({ children }) {
 
             {ios ? (
               <div className={styles.instructions}>
-                <span><Share2 size={18} /> Toque em <strong>Compartilhar</strong>.</span>
+                <span><Share2 size={18} /> No Safari, toque em <strong>Compartilhar</strong>.</span>
                 <span><Download size={18} /> Escolha <strong>Adicionar à Tela de Início</strong>.</span>
               </div>
             ) : installPrompt ? (
@@ -151,7 +158,7 @@ export function PwaMobileGate({ children }) {
               </button>
             ) : (
               <div className={styles.instructions}>
-                <span><MoreVertical size={18} /> Abra o menu do navegador.</span>
+                <span><MoreVertical size={18} /> Aguarde alguns segundos ou abra o menu do navegador.</span>
                 <span><Download size={18} /> Escolha <strong>Instalar app</strong> ou <strong>Adicionar à tela inicial</strong>.</span>
               </div>
             )}
@@ -159,7 +166,7 @@ export function PwaMobileGate({ children }) {
             <button type="button" className={styles.secondaryButton} onClick={dismissInstall}>
               Continuar no navegador
             </button>
-            <small>Mesmo no navegador, o jogo exigirá o celular na horizontal.</small>
+            <small>O PWA exige HTTPS em produção. No desenvolvimento, teste a instalação com o build de produção.</small>
           </div>
         </div>
       )}

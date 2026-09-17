@@ -19,16 +19,23 @@ import { ProfessionalPhone } from './components/ProfessionalPhone/ProfessionalPh
 import { ProfessionalProfileEmploymentGate } from './components/ProfessionalProfileEmploymentGate';
 import { ProfessionalTreatmentGate } from './components/ProfessionalTreatmentGate';
 import { hydrateCaseCatalog } from './lib/caseRepository';
+import './lib/pwaInstallPrompt';
 import './index.css';
 
-function registerServiceWorker() {
+async function registerServiceWorker() {
   if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return;
 
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((error) => {
-      console.warn('[Rota PWA] Falha ao registrar service worker:', error);
+  try {
+    const registration = await navigator.serviceWorker.register('/sw.js', {
+      scope: '/',
+      updateViaCache: 'none',
     });
-  });
+
+    // Garante que um SW antigo em cache não impeça a nova versão do PWA de assumir.
+    void registration.update();
+  } catch (error) {
+    console.warn('[Rota PWA] Falha ao registrar service worker:', error);
+  }
 }
 
 function isProfessionalDemoRoute() {
@@ -36,7 +43,7 @@ function isProfessionalDemoRoute() {
 }
 
 async function bootstrap() {
-  registerServiceWorker();
+  void registerServiceWorker();
   await hydrateCaseCatalog();
 
   const root = createRoot(document.getElementById('root')!);
