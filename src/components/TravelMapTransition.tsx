@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Car, Clock3, Loader2, MapPin, Navigation, Route, SkipForward, Wallet } from 'lucide-react';
 import type { LocationScene } from '../types/game';
 import { readCurrentPlayerSnapshot } from '../lib/professionalRpg';
+import styles from './TravelMapTransition.module.css';
 import { applyRotaJusticeMapTheme, buildOpenStreetMapStyle, loadMapLibre } from '../lib/maplibreClient';
 import {
   fetchRoadRoute,
@@ -439,136 +440,112 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
   const localizedDestination = profile ? getLocalizedLocationLabel(destination, profile) : destination.address;
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#050506]/95 p-3 backdrop-blur-md sm:p-5">
-      <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-[#2A2A2E] bg-[#0C0C0E] shadow-2xl">
-        <div className="flex flex-col gap-3 border-b border-[#2A2A2E] bg-[#141416] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-[#C5A059]">
-              <Navigation size={16} />
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Deslocamento em diligência</span>
-            </div>
-            <h2 className="mt-1 font-serif text-lg font-bold text-[#E8E8E8]">
-              {isLoadingRoute ? 'Calculando percurso...' : mapPreparing ? 'Preparando mapa da cidade...' : status}
-            </h2>
-            {profile && <p className="mt-1 text-[10px] text-[#777]">{profile.city}/{profile.state} • percurso acelerado para não interromper o ritmo do jogo</p>}
+    <section className={styles.scene}>
+      <div className={styles.mapLayer}>
+        {isLoadingRoute ? (
+          <div className={styles.loadingState}>
+            <Loader2 size={36} />
+            <strong>Calculando percurso...</strong>
+            <span>Preparando a malha viária de {profile?.city || 'sua cidade'}.</span>
           </div>
-
-          <button
-            type="button"
-            onClick={finishTravel}
-            className="flex items-center justify-center gap-2 rounded-xl border border-[#35353A] bg-[#1A1A1D] px-4 py-2 text-xs font-semibold text-[#BBBBBB] transition-colors hover:border-[#C5A059]/50 hover:text-[#E8E8E8]"
-          >
-            <SkipForward size={14} />
-            Pular animação
-          </button>
-        </div>
-
-        <div className="p-4 sm:p-6">
-          <div className="relative h-[350px] overflow-hidden rounded-2xl border border-[#2A2A2E] bg-[#111317] sm:h-[440px]">
-            {isLoadingRoute ? (
-              <div className="absolute inset-0 grid place-items-center bg-[#0D0F12] text-center">
-                <div>
-                  <Loader2 size={30} className="mx-auto animate-spin text-[#C5A059]" />
-                  <strong className="mt-3 block text-sm text-[#E8E8E8]">Buscando ruas e rota</strong>
-                  <span className="mt-1 block text-[10px] text-[#777]">O jogo tenta usar a malha viária real sem consumir APIs pagas.</span>
-                </div>
-              </div>
-            ) : mapMode === 'REAL' && route ? (
-              <>
-                <div
-                  ref={mapContainerRef}
-                  className="absolute inset-0 h-full w-full"
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', minHeight: '100%' }}
-                />
-                {!mapReady && (
-                  <div className="absolute inset-0 z-[8] grid place-items-center bg-[#0D0F12]/88 text-center backdrop-blur-[2px]">
-                    <div>
-                      <Loader2 size={28} className="mx-auto animate-spin text-[#C5A059]" />
-                      <strong className="mt-3 block text-sm text-[#E8E8E8]">Carregando mapa de {profile?.city}</strong>
-                      <span className="mt-1 block text-[10px] text-[#8B8B91]">O carro só parte quando o mapa estiver realmente visível.</span>
-                    </div>
-                  </div>
-                )}
-                <div className="absolute left-3 top-3 z-10 rounded-xl border border-black/15 bg-[#09090B]/88 px-3 py-2 text-[10px] text-[#E6E1D8] shadow-xl backdrop-blur">
-                  <strong className="block">Rota real • {formatRouteDistance(route.distanceMeters)}</strong>
-                  <span className="text-[#A7A199]">cerca de {formatRouteDuration(route.durationSeconds)} em condições normais</span>
-                  {route.source === 'FALLBACK' && <span className="block text-[#E6B85E]">Roteador indisponível • geometria aproximada</span>}
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="absolute inset-0 opacity-70 [background-image:linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] [background-size:34px_34px]" />
-                <div className="absolute left-[8%] top-[12%] h-16 w-28 rounded-lg border border-[#25282D] bg-[#171A1F] sm:w-40" />
-                <div className="absolute left-[42%] top-[8%] h-24 w-24 rounded-lg border border-[#25282D] bg-[#171A1F] sm:w-40" />
-                <div className="absolute right-[7%] top-[18%] h-14 w-32 rounded-lg border border-[#25282D] bg-[#171A1F] sm:w-44" />
-                <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                  <path d="M 15 72 C 34 28, 64 28, 85 72" fill="none" stroke="#34363B" strokeWidth="7" strokeLinecap="round" />
-                  <path d="M 15 72 C 34 28, 64 28, 85 72" fill="none" stroke="#C5A059" strokeWidth="1.4" strokeLinecap="round" strokeDasharray="2.5 2.3" opacity="0.95" />
-                </svg>
-                <div className="absolute left-[9%] top-[64%] max-w-[36%]">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#60A5FA] bg-[#0D1520] text-[#60A5FA]"><MapPin size={17} /></div>
-                  <strong className="mt-2 block truncate text-[10px] text-[#DADADA]">{origin.name}</strong>
-                </div>
-                <div className="absolute right-[7%] top-[64%] max-w-[36%] text-right">
-                  <div className="ml-auto flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#C5A059] bg-[#201A0D] text-[#C5A059]"><MapPin size={17} /></div>
-                  <strong className="mt-2 block truncate text-[10px] text-[#DADADA]">{destination.name}</strong>
-                </div>
-                <div
-                  className="absolute z-20 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-[#F5D99B] bg-[#C5A059] text-[#0A0A0B] shadow-xl transition-[left,top] duration-75 ease-linear"
-                  style={{ left: `${markerX}%`, top: `${markerY}%` }}
-                >
-                  <Car size={18} />
-                </div>
-                <div className="absolute left-1/2 top-4 -translate-x-1/2 rounded-lg border border-[#C5A059]/25 bg-[#09090B]/90 px-3 py-2 text-center text-[9px] text-[#A9A49B] backdrop-blur">
-                  Mapa real indisponível nesta tentativa. O deslocamento continua pelo modo seguro.
-                </div>
-              </>
-            )}
-
-            {!isLoadingRoute && !mapPreparing && (
-              <div className="absolute bottom-3 left-1/2 z-20 w-[88%] -translate-x-1/2 rounded-xl border border-[#2A2A2E] bg-[#09090B]/90 p-3 backdrop-blur sm:w-[72%]">
-                <div className="mb-2 flex items-center justify-between font-mono text-[10px] text-[#888888]">
-                  <span>{Math.round(progress * 100)}% do trajeto</span>
-                  <span>animação acelerada</span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-[#242429]">
-                  <div className="h-full rounded-full bg-[#C5A059]" style={{ width: `${progress * 100}%` }} />
-                </div>
+        ) : mapMode === 'REAL' && route ? (
+          <>
+            <div
+              ref={mapContainerRef}
+              className={styles.map}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', minHeight: '100%' }}
+            />
+            <div className={styles.mapShade} aria-hidden="true" />
+            {!mapReady && (
+              <div className={styles.loadingState}>
+                <Loader2 size={34} />
+                <strong>Carregando mapa de {profile?.city}</strong>
+                <span>O veículo parte quando a cidade estiver pronta.</span>
               </div>
             )}
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
-            <div className="rounded-xl border border-[#2A2A2E] bg-[#151517] p-4">
-              <div className="flex items-center gap-2 text-[#C5A059]"><Clock3 size={16} /><span className="text-[10px] font-bold uppercase tracking-wider">Relógio do caso</span></div>
-              <strong className="mt-1 block font-mono text-lg text-[#E8E8E8]">{formatCaseClock(currentClock)}</strong>
-              <span className="text-[10px] text-[#777777]">+{travelledHours.toFixed(1)}h simuladas</span>
-            </div>
-
-            <div className="rounded-xl border border-[#2A2A2E] bg-[#151517] p-4">
-              <div className="flex items-center gap-2 text-[#34D399]"><Wallet size={16} /><span className="text-[10px] font-bold uppercase tracking-wider">Custo do jogo</span></div>
-              <strong className="mt-1 block font-mono text-lg text-[#E8E8E8]">R$ {travelledCost.toFixed(0)}</strong>
-              <span className="text-[10px] text-[#777777]">Previsto: R$ {destination.travelCost}</span>
-            </div>
-
-            <div className="rounded-xl border border-[#2A2A2E] bg-[#151517] p-4">
-              <div className="flex items-center gap-2 text-[#60A5FA]"><Route size={16} /><span className="text-[10px] font-bold uppercase tracking-wider">Rota urbana</span></div>
-              <strong className="mt-1 block text-sm text-[#E8E8E8]">{route ? formatRouteDistance(route.distanceMeters) : 'Modo simulado'}</strong>
-              <span className="text-[10px] text-[#777777]">{route ? formatRouteDuration(route.durationSeconds) : 'sem rota real nesta viagem'}</span>
-            </div>
-
-            <div className="rounded-xl border border-[#2A2A2E] bg-[#151517] p-4">
-              <div className="flex items-center gap-2 text-[#60A5FA]"><Navigation size={16} /><span className="text-[10px] font-bold uppercase tracking-wider">Destino</span></div>
-              <strong className="mt-1 block truncate text-sm text-[#E8E8E8]">{destination.name}</strong>
-              <span className="block truncate text-[10px] text-[#777777]">{localizedDestination}</span>
+          </>
+        ) : (
+          <div className={styles.fallbackMap}>
+            <div className={styles.fallbackGrid} />
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M 15 72 C 34 28, 64 28, 85 72" fill="none" stroke="#11161A" strokeWidth="8" strokeLinecap="round" />
+              <path d="M 15 72 C 34 28, 64 28, 85 72" fill="none" stroke="#D8B45B" strokeWidth="1.6" strokeLinecap="round" opacity="0.95" />
+            </svg>
+            <div className={styles.fallbackOrigin}><MapPin size={18} /><span>{origin.name}</span></div>
+            <div className={styles.fallbackDestination}><MapPin size={18} /><span>{destination.name}</span></div>
+            <div
+              className={styles.fallbackCar}
+              style={{ left: `${markerX}%`, top: `${markerY}%` }}
+            >
+              <Car size={19} />
             </div>
           </div>
-
-          <p className="mt-3 text-center text-[9px] leading-relaxed text-[#626268]">
-            A rota visual usa dados abertos quando disponíveis. O tempo e o custo aplicados ao processo continuam seguindo o balanceamento do caso, que também representa estacionamento, espera e outras etapas da diligência.
-          </p>
-        </div>
+        )}
       </div>
-    </div>
+
+      <header className={styles.topHud}>
+        <div className={styles.travelIdentity}>
+          <Navigation size={19} />
+          <div>
+            <span>DESLOCAMENTO EM DILIGÊNCIA</span>
+            <strong>{isLoadingRoute ? 'Calculando percurso' : mapPreparing ? 'Preparando mapa' : status}</strong>
+          </div>
+        </div>
+
+        <div className={styles.routeHeadline}>
+          <small>ROTA</small>
+          <strong>{origin.name}</strong>
+          <ArrowRight size={15} />
+          <strong>{destination.name}</strong>
+        </div>
+
+        <button type="button" className={styles.skipButton} onClick={finishTravel}>
+          <SkipForward size={15} />
+          Pular animação
+        </button>
+      </header>
+
+      {!isLoadingRoute && !mapPreparing && (
+        <div className={styles.progressPanel}>
+          <div>
+            <span>{Math.round(progress * 100)}% do trajeto</span>
+            <strong>{status}</strong>
+          </div>
+          <div className={styles.progressTrack}>
+            <i style={{ width: `${progress * 100}%` }} />
+          </div>
+        </div>
+      )}
+
+      <footer className={styles.bottomHud}>
+        <article>
+          <Clock3 size={18} />
+          <span>RELÓGIO DO CASO</span>
+          <strong>{formatCaseClock(currentClock)}</strong>
+          <small>+{travelledHours.toFixed(1)}h simuladas</small>
+        </article>
+
+        <article>
+          <Route size={18} />
+          <span>ROTA URBANA</span>
+          <strong>{route ? formatRouteDistance(route.distanceMeters) : 'Simulada'}</strong>
+          <small>{route ? formatRouteDuration(route.durationSeconds) : 'rota segura'}</small>
+        </article>
+
+        <article>
+          <Wallet size={18} />
+          <span>CUSTO</span>
+          <strong>R$ {travelledCost.toFixed(0)}</strong>
+          <small>previsto R$ {destination.travelCost}</small>
+        </article>
+
+        <article className={styles.destinationCard}>
+          <MapPin size={18} />
+          <span>DESTINO</span>
+          <strong>{destination.name}</strong>
+          <small>{localizedDestination}</small>
+        </article>
+      </footer>
+    </section>
   );
 };
