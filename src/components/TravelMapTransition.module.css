@@ -438,3 +438,19 @@
     height: 10px;
   }
 }
+
+
+.sharedScene {
+  background: transparent;
+}
+
+.sharedScene .mapLayer {
+  background: transparent;
+  pointer-events: none;
+}
+
+.sharedScene .mapShade {
+  background:
+    linear-gradient(180deg, rgba(4, 6, 8, 0.62) 0%, transparent 16%, transparent 72%, rgba(4, 6, 8, 0.72) 100%),
+    radial-gradient(circle at 50% 50%, transparent 28%, rgba(0, 0, 0, 0.18) 100%);
+}

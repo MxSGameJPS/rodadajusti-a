@@ -1,6 +1,7 @@
-const CACHE_VERSION = 'rota-da-justica-pwa-v1';
+const CACHE_VERSION = 'rota-da-justica-pwa-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
+const MAP_CACHE = `${CACHE_VERSION}-map`;
 
 const APP_SHELL = [
   '/',
@@ -28,7 +29,7 @@ self.addEventListener('activate', (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => ![STATIC_CACHE, RUNTIME_CACHE].includes(key))
+            .filter((key) => ![STATIC_CACHE, RUNTIME_CACHE, MAP_CACHE].includes(key))
             .map((key) => caches.delete(key)),
         ),
       )
@@ -55,13 +56,13 @@ async function networkFirst(request) {
   }
 }
 
-async function staleWhileRevalidate(request) {
-  const cache = await caches.open(RUNTIME_CACHE);
+async function staleWhileRevalidate(request, cacheName = RUNTIME_CACHE) {
+  const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
 
   const networkPromise = fetch(request)
     .then((response) => {
-      if (response && response.ok) {
+      if (response && (response.ok || response.type === 'opaque')) {
         cache.put(request, response.clone());
       }
       return response;
@@ -78,7 +79,18 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  if (url.origin !== self.location.origin) return;
+  if (url.origin !== self.location.origin) {
+    const mapHosts = new Set([
+      'tiles.openfreemap.org',
+      'unpkg.com',
+      'fonts.openmaptiles.org',
+    ]);
+
+    if (mapHosts.has(url.hostname)) {
+      event.respondWith(staleWhileRevalidate(request, MAP_CACHE));
+    }
+    return;
+  }
 
   if (request.mode === 'navigate') {
     event.respondWith(networkFirst(request));

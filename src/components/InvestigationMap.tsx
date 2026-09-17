@@ -127,7 +127,7 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
 
   return (
     <>
-      <section className={styles.scene}>
+      <section className={`${styles.scene} ${travelTarget ? styles.traveling : ''}`}>
         <RealCityMapPanel
           currentCase={currentCase}
           currentLocationId={activeState.currentLocationId}

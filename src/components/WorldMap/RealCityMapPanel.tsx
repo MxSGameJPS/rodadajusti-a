@@ -3,6 +3,7 @@ import { Building2, Loader2, MapPin, Navigation, Route, Settings2 } from 'lucide
 import type { LegalCase, LocationScene, PlayerProfile } from '../../types/game';
 import { readCurrentPlayerSnapshot } from '../../lib/professionalRpg';
 import { applyRotaJusticeMapTheme, buildOpenStreetMapStyle, loadMapLibre } from '../../lib/maplibreClient';
+import { registerActiveWorldMap, unregisterActiveWorldMap } from '../../lib/worldMapRuntime';
 import {
   WORLD_MAP_UPDATED_EVENT,
   fetchRoadRoute,
@@ -113,6 +114,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   const [selectedLocation, setSelectedLocation] = useState<LocationScene | null>(null);
   const [route, setRoute] = useState<WorldRoute | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [mapReadyVersion, setMapReadyVersion] = useState(0);
 
   const unlockedKey = unlockedLocationIds.join('|');
   const unlockedSet = useMemo(() => new Set(unlockedLocationIds), [unlockedKey]);
@@ -174,6 +176,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   useEffect(() => {
     if (!profile || isEditingCity || !mapContainerRef.current) return undefined;
     let disposed = false;
+    let mountedMap: any = null;
 
     const mount = async () => {
       try {
@@ -192,7 +195,10 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
           pitch: immersive ? 48 : 0,
           bearing: immersive ? -12 : 0,
         });
+
+        mountedMap = map;
         mapRef.current = map;
+        registerActiveWorldMap(map);
         map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
 
         map.on('load', () => {
@@ -200,76 +206,130 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
 
           if (immersive) {
             applyRotaJusticeMapTheme(map);
-            map.easeTo({
-              pitch: 52,
-              bearing: -14,
-              duration: 650,
-            });
           }
 
-          const points: [number, number][] = [];
-          const officePoint = getRamosOfficePoint(profile);
-          const currentPoint = currentLocation
-            ? getWorldPointForLocation(profile, currentCase.id, currentLocation)
-            : officePoint;
-          points.push([officePoint.lng, officePoint.lat]);
-
-          const officeElement = buildGameMarker(
-            officeDisplayName,
-            markerGlyph(officeLocation || undefined, true),
-            markerCategoryClass(officeLocation || undefined, true),
-            officeLocation?.id === currentLocationId,
-          );
-          if (officeLocation) officeElement.addEventListener('click', () => setSelectedLocation(officeLocation));
-          markersRef.current.push(new maplibre.Marker({ element: officeElement, anchor: 'bottom' })
-            .setLngLat([officePoint.lng, officePoint.lat])
-            .addTo(map));
-
-          currentCase.locations.forEach((location) => {
-            if (!unlockedSet.has(location.id)) return;
-            if (location.category === 'escritorio' || /ESCRITORIO_RAMOS/i.test(location.id)) return;
-            const point = getWorldPointForLocation(profile, currentCase.id, location);
-            points.push([point.lng, point.lat]);
-            const element = buildGameMarker(
-              location.name,
-              markerGlyph(location),
-              markerCategoryClass(location),
-              location.id === currentLocationId,
-            );
-            element.addEventListener('click', () => setSelectedLocation(location));
-            markersRef.current.push(new maplibre.Marker({ element, anchor: 'bottom' })
-              .setLngLat([point.lng, point.lat])
-              .addTo(map));
-          });
-
-          if (immersive) {
-            map.easeTo({
-              center: [currentPoint.lng, currentPoint.lat],
-              zoom: 15.15,
-              pitch: 55,
-              bearing: -16,
-              duration: 950,
-            });
-          } else if (points.length > 1) {
-            const bounds = new maplibre.LngLatBounds();
-            points.forEach((point) => bounds.extend(point));
-            map.fitBounds(bounds, { padding: 68, maxZoom: 14.4, duration: 850 });
-          }
+          setMapReadyVersion((value) => value + 1);
         });
       } catch {
-        if (!disposed) setMapError('O mapa real não pôde ser carregado agora. As diligências continuam disponíveis pelos cartões abaixo.');
+        if (!disposed) {
+          setMapError('O mapa real não pôde ser carregado agora. As diligências continuam disponíveis pelos locais do caso.');
+        }
       }
     };
 
-    mount();
+    void mount();
+
     return () => {
       disposed = true;
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
-      if (mapRef.current) mapRef.current.remove();
-      mapRef.current = null;
+
+      if (mountedMap) {
+        unregisterActiveWorldMap(mountedMap);
+        mountedMap.remove();
+      }
+
+      if (mapRef.current === mountedMap) mapRef.current = null;
     };
-  }, [profile?.city, profile?.state, profile?.center.lng, profile?.center.lat, currentCase.id, currentLocationId, unlockedKey, isEditingCity, officeDisplayName, officeLocation?.id, immersive]);
+  }, [
+    profile?.city,
+    profile?.state,
+    profile?.center.lng,
+    profile?.center.lat,
+    isEditingCity,
+    immersive,
+  ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !profile || isEditingCity || mapReadyVersion === 0) return undefined;
+
+    let active = true;
+
+    const syncMarkers = async () => {
+      const maplibre = await loadMapLibre();
+      if (!active || mapRef.current !== map) return;
+
+      markersRef.current.forEach((marker) => marker.remove());
+      markersRef.current = [];
+
+      const points: [number, number][] = [];
+      const officePoint = getRamosOfficePoint(profile);
+      const currentPoint = currentLocation
+        ? getWorldPointForLocation(profile, currentCase.id, currentLocation)
+        : officePoint;
+      points.push([officePoint.lng, officePoint.lat]);
+
+      const officeElement = buildGameMarker(
+        officeDisplayName,
+        markerGlyph(officeLocation || undefined, true),
+        markerCategoryClass(officeLocation || undefined, true),
+        officeLocation?.id === currentLocationId,
+      );
+
+      if (officeLocation) {
+        officeElement.addEventListener('click', () => setSelectedLocation(officeLocation));
+      }
+
+      markersRef.current.push(
+        new maplibre.Marker({ element: officeElement, anchor: 'bottom' })
+          .setLngLat([officePoint.lng, officePoint.lat])
+          .addTo(map),
+      );
+
+      currentCase.locations.forEach((location) => {
+        if (!unlockedSet.has(location.id)) return;
+        if (location.category === 'escritorio' || /ESCRITORIO_RAMOS/i.test(location.id)) return;
+
+        const point = getWorldPointForLocation(profile, currentCase.id, location);
+        points.push([point.lng, point.lat]);
+
+        const element = buildGameMarker(
+          location.name,
+          markerGlyph(location),
+          markerCategoryClass(location),
+          location.id === currentLocationId,
+        );
+
+        element.addEventListener('click', () => setSelectedLocation(location));
+        markersRef.current.push(
+          new maplibre.Marker({ element, anchor: 'bottom' })
+            .setLngLat([point.lng, point.lat])
+            .addTo(map),
+        );
+      });
+
+      if (immersive) {
+        map.easeTo({
+          center: [currentPoint.lng, currentPoint.lat],
+          zoom: Math.max(14.7, map.getZoom?.() || 15.15),
+          pitch: 55,
+          bearing: -16,
+          duration: 520,
+        });
+      } else if (points.length > 1) {
+        const bounds = new maplibre.LngLatBounds();
+        points.forEach((point) => bounds.extend(point));
+        map.fitBounds(bounds, { padding: 68, maxZoom: 14.4, duration: 520 });
+      }
+    };
+
+    void syncMarkers();
+
+    return () => {
+      active = false;
+    };
+  }, [
+    mapReadyVersion,
+    profile,
+    currentCase.id,
+    currentLocationId,
+    unlockedKey,
+    isEditingCity,
+    officeDisplayName,
+    officeLocation?.id,
+    immersive,
+  ]);
 
   useEffect(() => {
     if (!profile || !selectedLocation || !currentLocation || selectedLocation.id === currentLocation.id) {

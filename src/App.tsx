@@ -52,6 +52,7 @@ import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } fr
 import { sound } from './utils/sound';
 
 const STORAGE_KEY = 'rota_da_justica_save_v1';
+const VIEW_STORAGE_KEY = 'rota_da_justica_view_v1';
 const INITIAL_GAME_DATE = getTodayGameDate();
 
 function getPlayerGameDate(player: Pick<PlayerProfile, 'gameCurrentDay' | 'gameCurrentMonth' | 'gameCurrentYear'>) {
@@ -187,7 +188,18 @@ export default function App() {
   });
 
   const [isMobileFrame, setIsMobileFrame] = useState<boolean>(false);
-  const [currentView, setCurrentView] = useState<'HUB' | 'INVESTIGATION_MAP' | 'LOCATION_SCENE'>('HUB');
+  const [currentView, setCurrentView] = useState<'HUB' | 'INVESTIGATION_MAP' | 'LOCATION_SCENE'>(() => {
+    if (!player.activeCase) return 'HUB';
+
+    try {
+      const savedView = localStorage.getItem(VIEW_STORAGE_KEY);
+      if (savedView === 'INVESTIGATION_MAP' || savedView === 'LOCATION_SCENE') return savedView;
+    } catch {
+      // Mantém o mapa como recuperação segura quando a persistência estiver indisponível.
+    }
+
+    return 'INVESTIGATION_MAP';
+  });
 
   const [isNewGameModalOpen, setIsNewGameModalOpen] = useState<boolean>(!player.name);
   const [selectedCaseToBrief, setSelectedCaseToBrief] = useState<LegalCase | null>(null);
@@ -212,6 +224,14 @@ export default function App() {
       // ignore
     }
   }, [player]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEW_STORAGE_KEY, currentView);
+    } catch {
+      // A navegação continua funcionando durante a sessão.
+    }
+  }, [currentView]);
 
   useEffect(() => {
     const refreshPlayerFromSave = () => {
@@ -798,7 +818,7 @@ export default function App() {
               </>
             )}
 
-            {currentView === 'INVESTIGATION_MAP' && activeCaseData && player.activeCase && (
+            {currentView !== 'HUB' && activeCaseData && player.activeCase && (
               <InvestigationMap
                 currentCase={activeCaseData}
                 activeState={player.activeCase}
