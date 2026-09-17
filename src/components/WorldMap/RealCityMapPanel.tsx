@@ -209,6 +209,9 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
 
           const points: [number, number][] = [];
           const officePoint = getRamosOfficePoint(profile);
+          const currentPoint = currentLocation
+            ? getWorldPointForLocation(profile, currentCase.id, currentLocation)
+            : officePoint;
           points.push([officePoint.lng, officePoint.lat]);
 
           const officeElement = buildGameMarker(
@@ -239,10 +242,18 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
               .addTo(map));
           });
 
-          if (points.length > 1) {
+          if (immersive) {
+            map.easeTo({
+              center: [currentPoint.lng, currentPoint.lat],
+              zoom: 15.15,
+              pitch: 55,
+              bearing: -16,
+              duration: 950,
+            });
+          } else if (points.length > 1) {
             const bounds = new maplibre.LngLatBounds();
             points.forEach((point) => bounds.extend(point));
-            map.fitBounds(bounds, { padding: immersive ? 150 : 68, maxZoom: immersive ? 15.2 : 14.4, duration: 850 });
+            map.fitBounds(bounds, { padding: 68, maxZoom: 14.4, duration: 850 });
           }
         });
       } catch {
