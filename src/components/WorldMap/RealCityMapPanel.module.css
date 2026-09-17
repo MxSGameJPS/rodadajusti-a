@@ -431,3 +431,190 @@
     width: min(360px, calc(100% - 20px));
   }
 }
+
+
+.gameMarker {
+  --marker-accent: #c5a059;
+  --marker-fill: #15191c;
+  width: 138px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #ece6da;
+  cursor: pointer;
+  filter: drop-shadow(0 12px 14px rgba(0, 0, 0, 0.46));
+  transition: transform 160ms ease, filter 160ms ease;
+}
+
+.gameMarker:hover {
+  transform: translateY(-3px) scale(1.035);
+  filter: drop-shadow(0 15px 18px rgba(0, 0, 0, 0.56));
+}
+
+.gameMarkerPin {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--marker-accent) 72%, white 8%);
+  border-radius: 11px 11px 11px 3px;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--marker-fill) 78%, white 6%), var(--marker-fill));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 0 4px rgba(0, 0, 0, 0.22),
+    0 0 22px color-mix(in srgb, var(--marker-accent) 24%, transparent);
+  transform: rotate(-45deg);
+}
+
+.gameMarkerPin::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid color-mix(in srgb, var(--marker-accent) 28%, transparent);
+  border-radius: 8px 8px 8px 2px;
+}
+
+.gameMarkerGlyph {
+  position: relative;
+  z-index: 1;
+  max-width: 32px;
+  overflow: hidden;
+  transform: rotate(45deg);
+  color: var(--marker-accent);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.gameMarkerLabel {
+  max-width: 132px;
+  overflow: hidden;
+  padding: 4px 7px;
+  border: 1px solid rgba(197, 160, 89, 0.2);
+  border-radius: 4px;
+  background: rgba(5, 8, 10, 0.86);
+  color: #e5ded1;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 9px;
+  line-height: 1.15;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+}
+
+.gameMarkerCurrent .gameMarkerPin {
+  animation: currentMarkerPulse 1.8s ease-in-out infinite;
+}
+
+.gameMarkerCurrent .gameMarkerLabel {
+  border-color: rgba(231, 197, 110, 0.7);
+  color: #f1d88f;
+}
+
+@keyframes currentMarkerPulse {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 0 0 4px rgba(197, 160, 89, 0.12),
+      0 0 18px rgba(197, 160, 89, 0.24);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 0 0 8px rgba(197, 160, 89, 0.05),
+      0 0 34px rgba(231, 197, 110, 0.42);
+  }
+}
+
+.markerOffice {
+  --marker-accent: #e4bd63;
+  --marker-fill: #211b10;
+}
+
+.markerTribunal {
+  --marker-accent: #e6c97f;
+  --marker-fill: #1d1a13;
+}
+
+.markerPolice {
+  --marker-accent: #7aa3c7;
+  --marker-fill: #101a22;
+}
+
+.markerHome {
+  --marker-accent: #b7a990;
+  --marker-fill: #181715;
+}
+
+.markerBank {
+  --marker-accent: #74b28d;
+  --marker-fill: #101d16;
+}
+
+.markerRegistry {
+  --marker-accent: #b894d1;
+  --marker-fill: #19131e;
+}
+
+.markerCompany {
+  --marker-accent: #d29b69;
+  --marker-fill: #21170f;
+}
+
+.markerGeneric {
+  --marker-accent: #c5a059;
+  --marker-fill: #181817;
+}
+
+.immersive :global(.maplibregl-ctrl-group) {
+  overflow: hidden;
+  border: 1px solid rgba(197, 160, 89, 0.22);
+  border-radius: 6px;
+  background: rgba(6, 9, 11, 0.86);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.32);
+}
+
+.immersive :global(.maplibregl-ctrl-group button) {
+  background-color: transparent;
+  filter: invert(78%) sepia(20%) saturate(580%) hue-rotate(358deg) brightness(90%);
+}
+
+.immersive :global(.maplibregl-ctrl-attrib) {
+  border-radius: 4px 0 0 0;
+  background: rgba(5, 8, 10, 0.72);
+  color: #7b776f;
+}
+
+.immersive :global(.maplibregl-ctrl-attrib a) {
+  color: #a79263;
+}
+
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+  .gameMarker {
+    width: 104px;
+  }
+
+  .gameMarkerPin {
+    width: 36px;
+    height: 36px;
+  }
+
+  .gameMarkerGlyph {
+    font-size: 9px;
+  }
+
+  .gameMarkerLabel {
+    max-width: 100px;
+    font-size: 7px;
+  }
+}

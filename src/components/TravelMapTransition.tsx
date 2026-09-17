@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Car, Clock3, Loader2, MapPin, Navigation, Route, SkipForward, Wallet } from 'lucide-react';
 import type { LocationScene } from '../types/game';
 import { readCurrentPlayerSnapshot } from '../lib/professionalRpg';
-import { buildOpenStreetMapStyle, loadMapLibre } from '../lib/maplibreClient';
+import { applyRotaJusticeMapTheme, buildOpenStreetMapStyle, loadMapLibre } from '../lib/maplibreClient';
 import {
   fetchRoadRoute,
   formatRouteDistance,
@@ -25,6 +25,8 @@ interface TravelMapTransitionProps {
 const FALLBACK_ANIMATION_MS = 4200;
 const MAP_READY_TIMEOUT_MS = 8000;
 const ROUTE_SOURCE_ID = 'rota-live-route';
+const ROUTE_GLOW_LAYER_ID = 'rota-live-route-glow';
+const ROUTE_CASING_LAYER_ID = 'rota-live-route-casing';
 const ROUTE_LAYER_ID = 'rota-live-route-layer';
 
 const formatCaseClock = (caseHours: number) => {
@@ -76,6 +78,63 @@ function routeCoordinateAtProgress(route: WorldRoute, progress: number): [number
     lower[0] + (upper[0] - lower[0]) * localProgress,
     lower[1] + (upper[1] - lower[1]) * localProgress,
   ];
+}
+
+function routeBearingAtProgress(route: WorldRoute, progress: number) {
+  if (route.coordinates.length < 2) return 0;
+
+  const maxIndex = route.coordinates.length - 1;
+  const scaled = Math.max(0, Math.min(0.9999, progress)) * maxIndex;
+  const index = Math.min(maxIndex - 1, Math.floor(scaled));
+  const origin = route.coordinates[index];
+  const destination = route.coordinates[index + 1];
+
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const toDegrees = (value: number) => (value * 180) / Math.PI;
+  const lat1 = toRadians(origin[1]);
+  const lat2 = toRadians(destination[1]);
+  const deltaLng = toRadians(destination[0] - origin[0]);
+
+  const y = Math.sin(deltaLng) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2)
+    - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLng);
+
+  return (toDegrees(Math.atan2(y, x)) + 360) % 360;
+}
+
+function createCarElement() {
+  const element = document.createElement('div');
+  element.style.width = '46px';
+  element.style.height = '30px';
+  element.style.position = 'relative';
+  element.style.border = '2px solid #f0d488';
+  element.style.borderRadius = '11px 11px 8px 8px';
+  element.style.background = 'linear-gradient(180deg,#d9b55f 0%,#9d742d 100%)';
+  element.style.boxShadow = '0 0 0 4px rgba(5,8,10,.62),0 8px 24px rgba(0,0,0,.55),0 0 24px rgba(217,181,95,.28)';
+  element.style.pointerEvents = 'none';
+
+  const cabin = document.createElement('span');
+  cabin.style.position = 'absolute';
+  cabin.style.left = '11px';
+  cabin.style.right = '11px';
+  cabin.style.top = '4px';
+  cabin.style.height = '10px';
+  cabin.style.borderRadius = '5px 5px 3px 3px';
+  cabin.style.background = '#172127';
+  cabin.style.border = '1px solid rgba(240,212,136,.58)';
+  element.appendChild(cabin);
+
+  const hood = document.createElement('span');
+  hood.style.position = 'absolute';
+  hood.style.left = '17px';
+  hood.style.right = '17px';
+  hood.style.top = '-5px';
+  hood.style.height = '7px';
+  hood.style.borderRadius = '5px 5px 0 0';
+  hood.style.background = '#f0d488';
+  element.appendChild(hood);
+
+  return element;
 }
 
 export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
@@ -198,11 +257,15 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
           attributionControl: true,
           interactive: false,
           fadeDuration: 0,
+          pitch: 48,
+          bearing: -12,
         });
         mapRef.current = map;
 
         map.once('load', () => {
           if (disposed) return;
+
+          applyRotaJusticeMapTheme(map);
 
           if (!map.getSource(ROUTE_SOURCE_ID)) {
             map.addSource(ROUTE_SOURCE_ID, {
@@ -215,15 +278,54 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
             });
           }
 
+          if (!map.getLayer(ROUTE_GLOW_LAYER_ID)) {
+            map.addLayer({
+              id: ROUTE_GLOW_LAYER_ID,
+              type: 'line',
+              source: ROUTE_SOURCE_ID,
+              layout: {
+                'line-cap': 'round',
+                'line-join': 'round',
+              },
+              paint: {
+                'line-color': '#E7C56E',
+                'line-width': ['interpolate', ['linear'], ['zoom'], 11, 10, 16, 22],
+                'line-opacity': 0.2,
+                'line-blur': 6,
+              },
+            });
+          }
+
+          if (!map.getLayer(ROUTE_CASING_LAYER_ID)) {
+            map.addLayer({
+              id: ROUTE_CASING_LAYER_ID,
+              type: 'line',
+              source: ROUTE_SOURCE_ID,
+              layout: {
+                'line-cap': 'round',
+                'line-join': 'round',
+              },
+              paint: {
+                'line-color': '#080A0B',
+                'line-width': ['interpolate', ['linear'], ['zoom'], 11, 6, 16, 11],
+                'line-opacity': 0.95,
+              },
+            });
+          }
+
           if (!map.getLayer(ROUTE_LAYER_ID)) {
             map.addLayer({
               id: ROUTE_LAYER_ID,
               type: 'line',
               source: ROUTE_SOURCE_ID,
+              layout: {
+                'line-cap': 'round',
+                'line-join': 'round',
+              },
               paint: {
-                'line-color': '#C5A059',
-                'line-width': 5,
-                'line-opacity': 0.95,
+                'line-color': '#D8B45B',
+                'line-width': ['interpolate', ['linear'], ['zoom'], 11, 3, 16, 5.5],
+                'line-opacity': 1,
               },
             });
           }
@@ -236,12 +338,15 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
             .addTo(map);
           markersRef.current.push(originMarker, destinationMarker);
 
-          const carElement = createMarkerElement('🚗', '#C5A059', '#111');
-          carElement.style.width = '42px';
-          carElement.style.height = '42px';
+          const carElement = createCarElement();
           carElement.style.zIndex = '20';
-          carMarkerRef.current = new maplibre.Marker({ element: carElement })
+          carMarkerRef.current = new maplibre.Marker({
+            element: carElement,
+            rotationAlignment: 'map',
+            pitchAlignment: 'map',
+          })
             .setLngLat(first)
+            .setRotation(routeBearingAtProgress(route, 0))
             .addTo(map);
 
           const bounds = new maplibre.LngLatBounds(first, first);
@@ -250,7 +355,7 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
           window.requestAnimationFrame(() => {
             if (disposed) return;
             map.resize();
-            map.fitBounds(bounds, { padding: 72, maxZoom: 15, duration: 0 });
+            map.fitBounds(bounds, { padding: 84, maxZoom: 15.4, duration: 0 });
             map.triggerRepaint();
 
             // Só libera a animação depois de duas pinturas do navegador,
@@ -322,7 +427,9 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
   useEffect(() => {
     if (mapMode !== 'REAL' || !mapReady || !route || !carMarkerRef.current) return;
     const coordinate = routeCoordinateAtProgress(route, progress);
+    const bearing = routeBearingAtProgress(route, progress);
     carMarkerRef.current.setLngLat(coordinate);
+    carMarkerRef.current.setRotation?.(bearing);
   }, [progress, mapMode, mapReady, route]);
 
   const mapPreparing = !isLoadingRoute && mapMode === 'REAL' && !mapReady;
