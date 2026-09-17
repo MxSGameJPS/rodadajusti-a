@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Car, Clock3, Loader2, MapPin, Navigation, Route, SkipForward, Wallet } from 'lucide-react';
+import { ArrowRight, Car, Clock3, Loader2, MapPin, Navigation, Route, SkipForward, Wallet } from 'lucide-react';
 import type { LocationScene } from '../types/game';
 import { readCurrentPlayerSnapshot } from '../lib/professionalRpg';
 import styles from './TravelMapTransition.module.css';
