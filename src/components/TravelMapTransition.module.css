@@ -382,3 +382,59 @@
     font-size: 6px;
   }
 }
+
+
+.carMarker {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  transform-origin: center center;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5));
+}
+
+.carShadow {
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  bottom: 12px;
+  width: 40px;
+  height: 14px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.48);
+  filter: blur(5px);
+}
+
+.carSprite {
+  position: relative;
+  z-index: 1;
+  width: 64px;
+  height: 64px;
+  display: block;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter:
+    drop-shadow(0 3px 3px rgba(0, 0, 0, 0.38))
+    drop-shadow(0 0 7px rgba(216, 180, 91, 0.12));
+}
+
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+  .carMarker {
+    width: 54px;
+    height: 54px;
+  }
+
+  .carSprite {
+    width: 50px;
+    height: 50px;
+  }
+
+  .carShadow {
+    bottom: 9px;
+    width: 32px;
+    height: 10px;
+  }
+}

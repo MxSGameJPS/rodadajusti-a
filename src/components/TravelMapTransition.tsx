@@ -29,6 +29,31 @@ const ROUTE_SOURCE_ID = 'rota-live-route';
 const ROUTE_GLOW_LAYER_ID = 'rota-live-route-glow';
 const ROUTE_CASING_LAYER_ID = 'rota-live-route-casing';
 const ROUTE_LAYER_ID = 'rota-live-route-layer';
+const CAR_FRAME_COUNT = 64;
+const CAR_FRAME_BEARING_OFFSET = 0;
+
+function carFrameSrc(index: number) {
+  return `/carframes/car_${String(index).padStart(3, '0')}.png`;
+}
+
+function carFrameIndexForBearing(bearing: number) {
+  const normalized = ((bearing + CAR_FRAME_BEARING_OFFSET) % 360 + 360) % 360;
+  return Math.round((normalized / 360) * CAR_FRAME_COUNT) % CAR_FRAME_COUNT;
+}
+
+let carFramesPreloaded = false;
+
+function preloadCarFrames() {
+  if (carFramesPreloaded || typeof window === 'undefined') return;
+  carFramesPreloaded = true;
+
+  window.requestIdleCallback?.(() => {
+    for (let index = 0; index < CAR_FRAME_COUNT; index += 1) {
+      const image = new Image();
+      image.src = carFrameSrc(index);
+    }
+  });
+}
 
 const formatCaseClock = (caseHours: number) => {
   const totalMinutes = Math.round(caseHours * 60);
@@ -105,37 +130,22 @@ function routeBearingAtProgress(route: WorldRoute, progress: number) {
 
 function createCarElement() {
   const element = document.createElement('div');
-  element.style.width = '46px';
-  element.style.height = '30px';
-  element.style.position = 'relative';
-  element.style.border = '2px solid #f0d488';
-  element.style.borderRadius = '11px 11px 8px 8px';
-  element.style.background = 'linear-gradient(180deg,#d9b55f 0%,#9d742d 100%)';
-  element.style.boxShadow = '0 0 0 4px rgba(5,8,10,.62),0 8px 24px rgba(0,0,0,.55),0 0 24px rgba(217,181,95,.28)';
+  element.className = styles.carMarker;
   element.style.pointerEvents = 'none';
 
-  const cabin = document.createElement('span');
-  cabin.style.position = 'absolute';
-  cabin.style.left = '11px';
-  cabin.style.right = '11px';
-  cabin.style.top = '4px';
-  cabin.style.height = '10px';
-  cabin.style.borderRadius = '5px 5px 3px 3px';
-  cabin.style.background = '#172127';
-  cabin.style.border = '1px solid rgba(240,212,136,.58)';
-  element.appendChild(cabin);
+  const shadow = document.createElement('span');
+  shadow.className = styles.carShadow;
+  element.appendChild(shadow);
 
-  const hood = document.createElement('span');
-  hood.style.position = 'absolute';
-  hood.style.left = '17px';
-  hood.style.right = '17px';
-  hood.style.top = '-5px';
-  hood.style.height = '7px';
-  hood.style.borderRadius = '5px 5px 0 0';
-  hood.style.background = '#f0d488';
-  element.appendChild(hood);
+  const image = document.createElement('img');
+  image.className = styles.carSprite;
+  image.src = carFrameSrc(0);
+  image.alt = '';
+  image.draggable = false;
+  image.decoding = 'async';
+  element.appendChild(image);
 
-  return element;
+  return { element, image };
 }
 
 export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
@@ -148,6 +158,7 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const carMarkerRef = useRef<any>(null);
+  const carImageRef = useRef<HTMLImageElement | null>(null);
   const markersRef = useRef<any[]>([]);
   const completedRef = useRef(false);
   const animationStartedRef = useRef(false);
@@ -176,6 +187,7 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
     setMapMode('PREPARING');
     setMapReady(false);
     animationStartedRef.current = false;
+    preloadCarFrames();
 
     const prepare = async () => {
       const player = readCurrentPlayerSnapshot();
@@ -339,15 +351,17 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
             .addTo(map);
           markersRef.current.push(originMarker, destinationMarker);
 
-          const carElement = createCarElement();
+          const { element: carElement, image: carImage } = createCarElement();
           carElement.style.zIndex = '20';
+          carImageRef.current = carImage;
+          carImage.src = carFrameSrc(carFrameIndexForBearing(routeBearingAtProgress(route, 0)));
+
           carMarkerRef.current = new maplibre.Marker({
             element: carElement,
             rotationAlignment: 'map',
-            pitchAlignment: 'map',
+            pitchAlignment: 'viewport',
           })
             .setLngLat(first)
-            .setRotation(routeBearingAtProgress(route, 0))
             .addTo(map);
 
           const bounds = new maplibre.LngLatBounds(first, first);
@@ -396,6 +410,7 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
       markersRef.current = [];
       if (carMarkerRef.current) carMarkerRef.current.remove();
       carMarkerRef.current = null;
+      carImageRef.current = null;
       if (mapRef.current) mapRef.current.remove();
       mapRef.current = null;
     };
@@ -429,8 +444,16 @@ export const TravelMapTransition: React.FC<TravelMapTransitionProps> = ({
     if (mapMode !== 'REAL' || !mapReady || !route || !carMarkerRef.current) return;
     const coordinate = routeCoordinateAtProgress(route, progress);
     const bearing = routeBearingAtProgress(route, progress);
+    const frameIndex = carFrameIndexForBearing(bearing);
+
     carMarkerRef.current.setLngLat(coordinate);
-    carMarkerRef.current.setRotation?.(bearing);
+
+    if (carImageRef.current) {
+      const nextSrc = carFrameSrc(frameIndex);
+      if (!carImageRef.current.src.endsWith(nextSrc)) {
+        carImageRef.current.src = nextSrc;
+      }
+    }
   }, [progress, mapMode, mapReady, route]);
 
   const mapPreparing = !isLoadingRoute && mapMode === 'REAL' && !mapReady;
