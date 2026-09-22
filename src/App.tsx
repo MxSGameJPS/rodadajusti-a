@@ -193,7 +193,7 @@ export default function App() {
 
     try {
       const savedView = localStorage.getItem(VIEW_STORAGE_KEY);
-      if (savedView === 'INVESTIGATION_MAP' || savedView === 'LOCATION_SCENE') return savedView;
+      if (savedView === 'HUB' || savedView === 'INVESTIGATION_MAP' || savedView === 'LOCATION_SCENE') return savedView;
     } catch {
       // Mantém o mapa como recuperação segura quando a persistência estiver indisponível.
     }
@@ -825,6 +825,7 @@ export default function App() {
                 onTravelToLocation={handleTravelToLocation}
                 onOpenDossier={() => setIsDossierOpen(true)}
                 onOpenCourtroom={() => setIsCourtroomOpen(true)}
+                onBackToOffice={() => setCurrentView('HUB')}
               />
             )}
 
