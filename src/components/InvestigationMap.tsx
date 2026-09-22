@@ -39,6 +39,7 @@ import {
   type UnexpectedCaseEventChoice,
 } from '../lib/reactiveWorldStore';
 import { UnexpectedCaseEventModal } from './UnexpectedCaseEventModal';
+import { SessionLogoutButton } from './SessionLogoutButton';
 import styles from './InvestigationMap.module.css';
 
 interface InvestigationMapProps {
@@ -47,6 +48,7 @@ interface InvestigationMapProps {
   onTravelToLocation: (location: LocationScene) => void;
   onOpenDossier: () => void;
   onOpenCourtroom: () => void;
+  onBackToOffice: () => void;
 }
 
 export const InvestigationMap: React.FC<InvestigationMapProps> = ({
@@ -55,6 +57,7 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
   onTravelToLocation,
   onOpenDossier,
   onOpenCourtroom,
+  onBackToOffice,
 }) => {
   const [travelTarget, setTravelTarget] = useState<LocationScene | null>(null);
   const [locationsOpen, setLocationsOpen] = useState(false);
@@ -166,6 +169,19 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
             <button
               type="button"
               onClick={() => {
+                sound.playClick();
+                onBackToOffice();
+              }}
+              title="Voltar ao escritório"
+              aria-label="Voltar ao escritório"
+            >
+              <Building2 size={17} />
+              <span>Escritório</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
                 sound.playPaper();
                 onOpenDossier();
               }}
@@ -186,6 +202,8 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
               <Scale size={17} />
               <span>Protocolar</span>
             </button>
+
+            <SessionLogoutButton />
           </div>
         </header>
 
