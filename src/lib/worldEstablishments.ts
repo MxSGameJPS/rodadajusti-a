@@ -1,4 +1,8 @@
-import type { WorldGeoPoint, WorldMapProfile } from './worldMap';
+import {
+  geocodeBrazilianPublicPlace,
+  type WorldGeoPoint,
+  type WorldMapProfile,
+} from './worldMap';
 import { supabase } from './supabase';
 
 export type EstablishmentPresenceScope = 'CITY' | 'UNIVERSAL';
@@ -550,6 +554,36 @@ export function getWorldPointForEstablishment(
   const angle = (((seed % 3600) / 10) * Math.PI) / 180;
   const radius = 0.75 + ((seed >>> 7) % 260) / 100;
   return pointAtDistance(profile.center, radius, angle);
+}
+
+export async function resolveWorldPointForEstablishment(
+  profile: WorldMapProfile,
+  establishment: WorldEstablishment,
+): Promise<WorldGeoPoint> {
+  const hasExplicitCoordinates = establishment.presenceScope === 'CITY'
+    && establishment.latitude != null
+    && establishment.longitude != null;
+
+  if (hasExplicitCoordinates) {
+    return {
+      lat: establishment.latitude as number,
+      lng: establishment.longitude as number,
+    };
+  }
+
+  if (establishment.streetName) {
+    const geocoded = await geocodeBrazilianPublicPlace(
+      establishment.streetName,
+      establishment.numberReference || '',
+      establishment.district || '',
+      profile.city,
+      profile.state,
+    );
+
+    if (geocoded?.point) return geocoded.point;
+  }
+
+  return getWorldPointForEstablishment(profile, establishment);
 }
 
 export function establishmentTypeLabel(type: string) {
