@@ -209,6 +209,7 @@ export interface PersonalFinanceTransaction {
 
 export interface PersonalFinanceState {
   transactions: PersonalFinanceTransaction[];
+  lastCompensationMonthKey: string | null;
 }
 
 export type HomeFurnitureKind = 'BED' | 'SOFA' | 'DESK' | 'CHAIR' | 'APPLIANCE' | 'OTHER';
