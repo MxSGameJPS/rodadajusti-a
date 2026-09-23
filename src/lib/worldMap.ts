@@ -27,9 +27,10 @@ export interface WorldRoute {
 const PROFILE_PREFIX = 'rota_world_map_v1:';
 const GEOCODE_PREFIX = 'rota_world_geocode_v1:';
 const ADDRESS_GEOCODE_PREFIX = 'rota_world_address_geocode_v2:';
+const PUBLIC_PLACE_GEOCODE_PREFIX = 'rota_world_public_place_geocode_v1:';
 const ROUTE_PREFIX = 'rota_world_route_v1:';
 const ROAD_SNAP_PREFIX = 'rota_world_road_snap_v1:';
-const STABLE_WORLD_POINT_PREFIX = 'rota_world_stable_point_v2:';
+const STABLE_WORLD_POINT_PREFIX = 'rota_world_stable_point_v3:';
 const PLAYER_SAVE_KEY = 'rota_da_justica_save_v1';
 
 export const WORLD_MAP_UPDATED_EVENT = 'rota:world-map-updated';
@@ -209,6 +210,109 @@ export async function geocodeBrazilianCity(city: string, state: string): Promise
   } finally {
     window.clearTimeout(timeout);
   }
+}
+
+export interface PublicPlaceGeocodeResult {
+  point: WorldGeoPoint;
+  displayName: string;
+}
+
+export async function geocodeBrazilianPublicPlace(
+  street: string,
+  number: string,
+  district: string,
+  city: string,
+  state: string,
+): Promise<PublicPlaceGeocodeResult | null> {
+  const cleanStreet = street.trim();
+  const cleanNumber = number.trim();
+  const cleanDistrict = district.trim();
+  const cleanCity = city.trim();
+  const cleanState = state.trim().toUpperCase();
+
+  if (!cleanStreet || !cleanCity || cleanState.length !== 2) return null;
+
+  const cacheKey = [
+    PUBLIC_PLACE_GEOCODE_PREFIX,
+    normalize(cleanStreet),
+    normalize(cleanNumber),
+    normalize(cleanDistrict),
+    normalize(cleanCity),
+    normalize(cleanState),
+  ].join(':');
+
+  if (hasWindow()) {
+    try {
+      const cached = window.localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached) as PublicPlaceGeocodeResult;
+        if (parsed?.point && isPoint(parsed.point)) return parsed;
+      }
+    } catch {
+      // Cache é somente otimização.
+    }
+  }
+
+  const queries = [
+    [cleanStreet, cleanNumber, cleanDistrict, cleanCity, cleanState, 'Brasil'].filter(Boolean).join(', '),
+    [cleanStreet, cleanDistrict, cleanCity, cleanState, 'Brasil'].filter(Boolean).join(', '),
+    [cleanStreet, cleanCity, cleanState, 'Brasil'].filter(Boolean).join(', '),
+  ];
+
+  for (const addressQuery of queries) {
+    await waitForNominatimSlot();
+
+    const query = new URLSearchParams({
+      q: addressQuery,
+      format: 'jsonv2',
+      limit: '1',
+      countrycodes: 'br',
+      addressdetails: '1',
+      'accept-language': 'pt-BR',
+    });
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 9000);
+
+    try {
+      const response = await fetch(`${NOMINATIM_BASE_URL}/search?${query.toString()}`, {
+        signal: controller.signal,
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) continue;
+
+      const results = await response.json() as Array<{
+        lat?: string;
+        lon?: string;
+        display_name?: string;
+      }>;
+
+      const first = results[0];
+      const lat = Number(first?.lat);
+      const lng = Number(first?.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+      const result: PublicPlaceGeocodeResult = {
+        point: { lat, lng },
+        displayName: first.display_name || addressQuery,
+      };
+
+      if (hasWindow()) {
+        try {
+          window.localStorage.setItem(cacheKey, JSON.stringify(result));
+        } catch {
+          // O ponto continua utilizável na sessão.
+        }
+      }
+
+      return result;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  return null;
 }
 
 export interface WorldAddressProfile {
