@@ -963,3 +963,42 @@
     font-size: 6px;
   }
 }
+
+
+.markerUniversity {
+  --marker-accent: #7fb4f4;
+  --marker-fill: #101923;
+}
+
+.catalogStatus {
+  position: absolute;
+  z-index: 7;
+  top: 158px;
+  left: 22px;
+  max-width: min(520px, calc(100% - 44px));
+  padding: 6px 9px;
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  border-radius: 7px;
+  background: rgba(8, 15, 13, 0.82);
+  color: #92d8b8;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.35;
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+
+.catalogStatusError {
+  border-color: rgba(248, 113, 113, 0.28);
+  background: rgba(28, 10, 12, 0.9);
+  color: #fca5a5;
+}
+
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+  .catalogStatus {
+    top: 104px;
+    left: 10px;
+    max-width: min(430px, calc(100% - 20px));
+    font-size: 7px;
+  }
+}
