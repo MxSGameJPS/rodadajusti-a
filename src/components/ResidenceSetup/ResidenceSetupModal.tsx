@@ -101,7 +101,7 @@ export const ResidenceSetupModal: React.FC<ResidenceSetupModalProps> = ({
             <div>
               <strong className="text-xs text-[#CADCF2]">Seu endereço não será público</strong>
               <p className="mt-1 text-[10px] leading-5 text-[#8FA5BF]">
-                Rua e número ficam apenas no save privado do personagem. Eles não são enviados para o catálogo público do Rota Admin e não aparecem para outros jogadores. O endereço serve para posicionar a casa e calcular deslocamentos.
+                Rua e número não são publicados no catálogo do Rota Admin nem exibidos para outros jogadores. Durante a validação, o endereço é consultado no serviço de geocodificação configurado para o mapa; a carreira usa o resultado para posicionar a casa e calcular deslocamentos.
               </p>
             </div>
           </div>
