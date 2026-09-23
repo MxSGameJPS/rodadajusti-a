@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Building2, Loader2, MapPin, X } from 'lucide-react';
+import { Building2, GraduationCap, Home, Loader2, MapPin, ShoppingCart, X } from 'lucide-react';
 import type { PlayerProfile } from '../../types/game';
 import {
   applyRotaJusticeMapTheme,
@@ -17,13 +17,25 @@ import {
   getWorldPointForEstablishment,
   loadWorldEstablishments,
   type WorldEstablishment,
+  type WorldEstablishmentOffer,
 } from '../../lib/worldEstablishments';
+import {
+  getHomePoint,
+  getUniversityName,
+  getUniversityPoint,
+} from '../../lib/lifeSimulation';
 import styles from '../WorldMap/RealCityMapPanel.module.css';
 
 interface CityWorldMapModalProps {
   player: PlayerProfile;
   isOpen: boolean;
   onClose: () => void;
+  onOpenHome: () => void;
+  onStudyAtUniversity: () => void;
+  onPurchaseOffer: (
+    establishment: WorldEstablishment,
+    offer: WorldEstablishmentOffer,
+  ) => { ok: boolean; message: string };
 }
 
 function buildEstablishmentMarker(establishment: WorldEstablishment) {
@@ -71,10 +83,35 @@ function buildEstablishmentMarker(establishment: WorldEstablishment) {
   return element;
 }
 
+function buildLifeMarker(label: string, glyph: string, tone: 'HOME' | 'UNIVERSITY') {
+  const element = document.createElement('button');
+  element.type = 'button';
+  element.className = [
+    styles.lifeMarker,
+    tone === 'HOME' ? styles.lifeMarkerHome : styles.lifeMarkerUniversity,
+  ].join(' ');
+
+  const icon = document.createElement('span');
+  icon.className = styles.lifeMarkerIcon;
+  icon.textContent = glyph;
+
+  const caption = document.createElement('span');
+  caption.className = styles.lifeMarkerCaption;
+  caption.textContent = label;
+
+  element.appendChild(icon);
+  element.appendChild(caption);
+  element.title = label;
+  return element;
+}
+
 export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
   player,
   isOpen,
   onClose,
+  onOpenHome,
+  onStudyAtUniversity,
+  onPurchaseOffer,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -82,6 +119,8 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
   const [profile, setProfile] = useState<WorldMapProfile | null>(null);
   const [establishments, setEstablishments] = useState<WorldEstablishment[]>([]);
   const [selected, setSelected] = useState<WorldEstablishment | null>(null);
+  const [selectedLifeLocation, setSelectedLifeLocation] = useState<'HOME' | 'UNIVERSITY' | null>(null);
+  const [purchaseMessage, setPurchaseMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [mapError, setMapError] = useState('');
 
@@ -91,6 +130,8 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
     setLoading(true);
     setMapError('');
     setSelected(null);
+    setSelectedLifeLocation(null);
+    setPurchaseMessage('');
 
     const hydrate = async () => {
       const resolved = readWorldMapProfile(player) || await resolveWorldMapProfile(player);
@@ -155,11 +196,46 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
             [profile.center.lng, profile.center.lat],
           );
 
+          const homePoint = getHomePoint(player, profile);
+          bounds.extend([homePoint.lng, homePoint.lat]);
+          const homeElement = buildLifeMarker('Sua casa', '⌂', 'HOME');
+          homeElement.addEventListener('click', () => {
+            setSelected(null);
+            setSelectedLifeLocation('HOME');
+            setPurchaseMessage('');
+          });
+          markersRef.current.push(
+            new maplibre.Marker({ element: homeElement, anchor: 'bottom' })
+              .setLngLat([homePoint.lng, homePoint.lat])
+              .addTo(map),
+          );
+
+          const isIntern = player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR';
+          if (isIntern) {
+            const universityPoint = getUniversityPoint(player, profile);
+            bounds.extend([universityPoint.lng, universityPoint.lat]);
+            const universityElement = buildLifeMarker(getUniversityName(profile), '🎓', 'UNIVERSITY');
+            universityElement.addEventListener('click', () => {
+              setSelected(null);
+              setSelectedLifeLocation('UNIVERSITY');
+              setPurchaseMessage('');
+            });
+            markersRef.current.push(
+              new maplibre.Marker({ element: universityElement, anchor: 'bottom' })
+                .setLngLat([universityPoint.lng, universityPoint.lat])
+                .addTo(map),
+            );
+          }
+
           establishments.forEach((establishment) => {
             const point = getWorldPointForEstablishment(profile, establishment);
             bounds.extend([point.lng, point.lat]);
             const element = buildEstablishmentMarker(establishment);
-            element.addEventListener('click', () => setSelected(establishment));
+            element.addEventListener('click', () => {
+              setSelectedLifeLocation(null);
+              setSelected(establishment);
+              setPurchaseMessage('');
+            });
             markersRef.current.push(
               new maplibre.Marker({ element, anchor: 'bottom' })
                 .setLngLat([point.lng, point.lat])
@@ -167,7 +243,7 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
             );
           });
 
-          if (establishments.length > 0) {
+          if (establishments.length > 0 || isIntern) {
             map.fitBounds(bounds, {
               padding: 90,
               maxZoom: 14.6,
@@ -190,7 +266,17 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
       if (mountedMap) mountedMap.remove();
       if (mapRef.current === mountedMap) mapRef.current = null;
     };
-  }, [isOpen, profile?.city, profile?.state, profile?.center.lng, profile?.center.lat, establishments]);
+  }, [
+    isOpen,
+    profile?.city,
+    profile?.state,
+    profile?.center.lng,
+    profile?.center.lat,
+    establishments,
+    player.careerTier,
+    player.household.residence.latitude,
+    player.household.residence.longitude,
+  ]);
 
   if (!isOpen) return null;
 
@@ -244,8 +330,50 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
           </div>
         )}
 
+        {selectedLifeLocation === 'HOME' && (
+          <div className="absolute bottom-5 left-5 right-5 z-20 ml-auto w-[min(520px,calc(100%-40px))] rounded-2xl border border-[#D8B768]/30 bg-[#0B0D10]/95 p-4 shadow-2xl backdrop-blur-xl">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#D8B768]/25 bg-[#D8B768]/10 text-[#E0C681]"><Home size={23} /></div>
+              <div className="min-w-0 flex-1">
+                <span className="text-[8px] font-black uppercase tracking-wider text-[#9D895B]">Residência privada</span>
+                <h3 className="mt-1 font-serif text-xl font-black text-[#F1EEE8]">Sua casa</h3>
+                <p className="mt-1 text-xs leading-5 text-[#9A9FA7]">
+                  {player.household.residence.street}, {player.household.residence.number} • {player.household.residence.city}/{player.household.residence.state}
+                </p>
+                <button type="button" onClick={onOpenHome} className="mt-3 rounded-xl bg-[#9A783D] px-4 py-2.5 text-xs font-black text-[#11100D]">
+                  Entrar em casa
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedLifeLocation === 'UNIVERSITY' && profile && (
+          <div className="absolute bottom-5 left-5 right-5 z-20 ml-auto w-[min(520px,calc(100%-40px))] rounded-2xl border border-[#60A5FA]/30 bg-[#0B0D10]/95 p-4 shadow-2xl backdrop-blur-xl">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#60A5FA]/25 bg-[#60A5FA]/10 text-[#8DBCF5]"><GraduationCap size={23} /></div>
+              <div className="min-w-0 flex-1">
+                <span className="text-[8px] font-black uppercase tracking-wider text-[#7397C2]">Vida acadêmica</span>
+                <h3 className="mt-1 font-serif text-xl font-black text-[#F1EEE8]">{getUniversityName(profile)}</h3>
+                <p className="mt-1 text-xs leading-5 text-[#9A9FA7]">Aulas, biblioteca e rotina acadêmica do personagem enquanto ele ainda está em estágio.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onStudyAtUniversity();
+                    setPurchaseMessage('Você estudou na faculdade. 3 horas se passaram.');
+                  }}
+                  className="mt-3 rounded-xl bg-[#315F91] px-4 py-2.5 text-xs font-black text-white"
+                >
+                  Estudar na faculdade • 3h
+                </button>
+                {purchaseMessage && <p className="mt-2 text-[10px] text-[#9FC5EC]">{purchaseMessage}</p>}
+              </div>
+            </div>
+          </div>
+        )}
+
         {selected && (
-          <div className="absolute bottom-5 left-5 right-5 z-20 ml-auto w-[min(580px,calc(100%-40px))] rounded-2xl border border-[#C5A059]/30 bg-[#090C0F]/95 p-4 shadow-2xl backdrop-blur-xl">
+          <div className="absolute bottom-5 left-5 right-5 z-20 ml-auto max-h-[55vh] w-[min(720px,calc(100%-40px))] overflow-y-auto rounded-2xl border border-[#C5A059]/30 bg-[#090C0F]/95 p-4 shadow-2xl backdrop-blur-xl">
             <div className="grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)]">
               <div className="overflow-hidden rounded-xl border border-[#C5A059]/25 bg-[#111418]">
                 {selected.bannerUrl ? (
@@ -263,12 +391,38 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
                 <h3 className="font-serif text-xl font-black text-[#F1EEE8]">{selected.name}</h3>
                 <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#9A9FA7]">{selected.description}</p>
                 {selected.offers.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {selected.offers.slice(0, 4).map((offer) => (
-                      <span key={offer.id} className="rounded-lg border border-[#60A5FA]/20 bg-[#60A5FA]/5 px-2.5 py-1.5 text-[9px] font-bold text-[#B7D3F2]">
-                        {offer.title} • {formatEstablishmentPrice(offer.price)}
-                      </span>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                    {selected.offers.slice(0, 8).map((offer) => (
+                      <article key={offer.id} className="flex gap-3 rounded-xl border border-[#2B3036] bg-[#11151A] p-2.5">
+                        <div className="h-14 w-16 shrink-0 overflow-hidden rounded-lg border border-[#30363D] bg-[#0B0E12]">
+                          {offer.imageUrl ? (
+                            <img src={offer.imageUrl} alt={offer.title} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="grid h-full place-items-center text-[#68717B]"><ShoppingCart size={18} /></div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <strong className="block truncate text-[10px] text-[#E7E8EA]">{offer.title}</strong>
+                          <span className="mt-0.5 block text-[9px] font-black text-[#CDB16C]">{formatEstablishmentPrice(offer.price)}</span>
+                          <button
+                            type="button"
+                            disabled={offer.price == null || player.money < (offer.price || 0)}
+                            onClick={() => {
+                              const result = onPurchaseOffer(selected, offer);
+                              setPurchaseMessage(result.message);
+                            }}
+                            className="mt-2 rounded-lg border border-[#C5A059]/30 bg-[#C5A059]/10 px-2.5 py-1.5 text-[8px] font-black uppercase text-[#D9BF7D] disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            Comprar
+                          </button>
+                        </div>
+                      </article>
                     ))}
+                  </div>
+                )}
+                {purchaseMessage && (
+                  <div className="mt-3 rounded-lg border border-[#60A5FA]/20 bg-[#60A5FA]/8 px-3 py-2 text-[10px] text-[#A8C8EC]">
+                    {purchaseMessage}
                   </div>
                 )}
               </div>
