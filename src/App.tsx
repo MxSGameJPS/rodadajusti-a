@@ -118,6 +118,14 @@ function gameClockFields(player: PlayerProfile, minutesToAdd: number) {
   };
 }
 
+function gameDayFields(player: PlayerProfile, daysToAdd: number) {
+  const safeDays = Math.max(0, Math.trunc(Number(daysToAdd) || 0));
+  return {
+    ...gameDateFields(addGameDays(getPlayerGameDate(player), safeDays)),
+    household: applyLifeTimePassage(player.household, safeDays * 1440),
+  };
+}
+
 const INITIAL_PLAYER_STATE: PlayerProfile = {
   name: '',
   avatarSeed: 'gabriel',
@@ -600,7 +608,7 @@ export default function App() {
       money: nextMoney,
       careerTier: nextTier,
       officePerformance: performance,
-      ...gameDateFields(addGameDays(getPlayerGameDate(prev), 1)),
+      ...gameDayFields(prev, 1),
     }));
 
     if (nextTier === 'ESTAGIARIO_SENIOR' && player.careerTier === 'ESTAGIARIO') {
@@ -729,7 +737,7 @@ export default function App() {
       history: [resultRecord, ...prev.history],
       officeDiscipline: nextDiscipline,
       officePerformance: nextOfficePerformance,
-      ...gameDateFields(addGameDays(getPlayerGameDate(prev), 3)),
+      ...gameDayFields(prev, 3),
     }));
   };
 
