@@ -93,11 +93,11 @@ const LAWYER_TIERS = new Set([
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-function storageKey(player: Pick<PlayerProfile, 'cloudCareerId' | 'name'>) {
+function storageKey(player: Pick<PlayerProfile, 'cloudCareerId' | 'name' | 'oabRegistration'>) {
   return `${STORAGE_PREFIX}${getProfessionalOwnerKey(player)}`;
 }
 
-function emptyState(player: Pick<PlayerProfile, 'cloudCareerId' | 'name'>): EthicalDilemmaState {
+function emptyState(player: Pick<PlayerProfile, 'cloudCareerId' | 'name' | 'oabRegistration'>): EthicalDilemmaState {
   return {
     version: 1,
     ownerKey: getProfessionalOwnerKey(player),
@@ -720,7 +720,7 @@ export function getEthicalDilemmaDefinition(id: string): EthicalDilemmaDefinitio
   return ETHICAL_DILEMMAS.find((item) => item.id === id) ?? null;
 }
 
-export function loadEthicalDilemmaState(player: Pick<PlayerProfile, 'cloudCareerId' | 'name'>): EthicalDilemmaState {
+export function loadEthicalDilemmaState(player: Pick<PlayerProfile, 'cloudCareerId' | 'name' | 'oabRegistration'>): EthicalDilemmaState {
   try {
     const raw = localStorage.getItem(storageKey(player));
     if (!raw) return emptyState(player);
@@ -738,7 +738,7 @@ export function loadEthicalDilemmaState(player: Pick<PlayerProfile, 'cloudCareer
 }
 
 export function saveEthicalDilemmaState(
-  player: Pick<PlayerProfile, 'cloudCareerId' | 'name'>,
+  player: Pick<PlayerProfile, 'cloudCareerId' | 'name' | 'oabRegistration'>,
   state: EthicalDilemmaState,
 ) {
   localStorage.setItem(storageKey(player), JSON.stringify(state));
