@@ -15,8 +15,8 @@ import {
 import {
   establishmentTypeLabel,
   formatEstablishmentPrice,
-  getWorldPointForEstablishment,
   loadWorldEstablishments,
+  resolveWorldPointForEstablishment,
   type WorldEstablishment,
   type WorldEstablishmentOffer,
 } from '../../lib/worldEstablishments';
@@ -241,7 +241,7 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
               establishment,
               point: await resolveStableRoadPoint(
                 stableCityPointKey(profile, 'establishment:' + establishment.id),
-                getWorldPointForEstablishment(profile, establishment),
+                await resolveWorldPointForEstablishment(profile, establishment),
               ),
             })),
           );
