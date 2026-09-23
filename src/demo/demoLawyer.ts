@@ -1,4 +1,5 @@
 import type { ActiveCaseState, LegalCase, PlayerProfile } from '../types/game';
+import { DEFAULT_HOUSEHOLD_STATE } from '../lib/lifeSimulation';
 
 export const DEMO_LAWYER_ID = 'demo-lawyer-rafael-martins';
 
@@ -43,6 +44,19 @@ export function createDemoLawyer(caseItem: LegalCase | null): PlayerProfile {
     history: [],
     personalFinances: {
       transactions: [],
+    },
+    household: {
+      ...DEFAULT_HOUSEHOLD_STATE,
+      residence: {
+        ...DEFAULT_HOUSEHOLD_STATE.residence,
+        city: 'Porto Alegre',
+        state: 'RS',
+        street: 'Rua Demo',
+        number: '100',
+      },
+      needs: { ...DEFAULT_HOUSEHOLD_STATE.needs },
+      furniture: [],
+      vehicles: [],
     },
     officeFinances: {
       isOfficeOpen: false,
