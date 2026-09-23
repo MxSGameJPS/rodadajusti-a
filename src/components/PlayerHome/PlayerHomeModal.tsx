@@ -26,6 +26,7 @@ import {
 interface PlayerHomeModalProps {
   player: PlayerProfile;
   isOpen: boolean;
+  warningMessage?: string;
   onClose: () => void;
   onSleep: () => void;
   onShower: () => void;
@@ -77,6 +78,7 @@ function NeedCard({
 export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
   player,
   isOpen,
+  warningMessage = '',
   onClose,
   onSleep,
   onShower,
@@ -120,6 +122,12 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
             <X size={18} />
           </button>
         </header>
+
+        {warningMessage && (
+          <div className="mx-5 mt-5 rounded-2xl border border-[#F87171]/30 bg-[#F87171]/10 px-4 py-3 text-xs font-semibold leading-5 text-[#FCA5A5] sm:mx-7">
+            {warningMessage}
+          </div>
+        )}
 
         <div className="grid gap-5 p-5 sm:p-7 lg:grid-cols-[1.1fr_.9fr]">
           <div className="space-y-5">
