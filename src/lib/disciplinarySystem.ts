@@ -118,11 +118,11 @@ const DEFENSE_STRATEGIES: Record<DefenseStrategyId, {
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-function storageKey(player: Pick<PlayerProfile, 'cloudCareerId' | 'name'>) {
+function storageKey(player: Pick<PlayerProfile, 'cloudCareerId' | 'name' | 'oabRegistration'>) {
   return `${STORAGE_PREFIX}${getProfessionalOwnerKey(player)}`;
 }
 
-function createEmptyState(player: Pick<PlayerProfile, 'cloudCareerId' | 'name'>): ProfessionalDisciplinaryState {
+function createEmptyState(player: Pick<PlayerProfile, 'cloudCareerId' | 'name' | 'oabRegistration'>): ProfessionalDisciplinaryState {
   return {
     version: 1,
     ownerKey: getProfessionalOwnerKey(player),
@@ -137,7 +137,7 @@ export function getDefenseStrategies() {
   return DEFENSE_STRATEGIES;
 }
 
-export function loadDisciplinaryState(player: Pick<PlayerProfile, 'cloudCareerId' | 'name'>): ProfessionalDisciplinaryState {
+export function loadDisciplinaryState(player: Pick<PlayerProfile, 'cloudCareerId' | 'name' | 'oabRegistration'>): ProfessionalDisciplinaryState {
   try {
     const raw = localStorage.getItem(storageKey(player));
     if (!raw) return createEmptyState(player);
@@ -155,7 +155,7 @@ export function loadDisciplinaryState(player: Pick<PlayerProfile, 'cloudCareerId
 }
 
 export function saveDisciplinaryState(
-  player: Pick<PlayerProfile, 'cloudCareerId' | 'name'>,
+  player: Pick<PlayerProfile, 'cloudCareerId' | 'name' | 'oabRegistration'>,
   state: ProfessionalDisciplinaryState,
 ) {
   localStorage.setItem(storageKey(player), JSON.stringify(state));
