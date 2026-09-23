@@ -42,6 +42,10 @@ import {
 import { InternshipCareerPanel } from './components/InternshipCareerPanel';
 import { CityWorldMapModal } from './components/CityWorldMap/CityWorldMapModal';
 import { PlayerHomeModal } from './components/PlayerHome/PlayerHomeModal';
+import {
+  ResidenceSetupModal,
+  type ResidenceSetupResult,
+} from './components/ResidenceSetup/ResidenceSetupModal';
 import { OfficeScene } from './components/OfficeScene/OfficeScene';
 import { InternPromotionCeremonyModal } from './components/InternPromotionCeremonyModal';
 import { evaluatePetition } from './lib/judicialDecisionEngine';
@@ -326,6 +330,42 @@ export default function App() {
   }, []);
 
   const activeCaseData = GAME_CASES.find((c) => c.id === player.activeCase?.caseId) || null;
+
+  const needsResidenceSetup = Boolean(
+    player.name
+    && (
+      !player.household?.residence?.street?.trim()
+      || !player.household?.residence?.number?.trim()
+      || !player.household?.residence?.city?.trim()
+      || !player.household?.residence?.state?.trim()
+      || player.household?.residence?.latitude == null
+      || player.household?.residence?.longitude == null
+    )
+  );
+
+  const handleResidenceSetupComplete = (setup: ResidenceSetupResult) => {
+    const origin = normalizeCareerOrigin(setup.city, setup.state);
+    saveCareerOrigin(origin);
+
+    setPlayer((prev) => ({
+      ...prev,
+      homeCity: origin.city,
+      homeState: origin.state,
+      household: {
+        ...prev.household,
+        residence: {
+          ...prev.household.residence,
+          street: setup.street,
+          number: setup.number,
+          city: origin.city,
+          state: origin.state,
+          latitude: setup.addressProfile.point.lat,
+          longitude: setup.addressProfile.point.lng,
+          geocodedDisplayName: setup.addressProfile.displayName,
+        },
+      },
+    }));
+  };
 
   const handleStartNewGame = (setup: NewGameSetup) => {
     const careerStartDate = getTodayGameDate();
@@ -1321,6 +1361,12 @@ export default function App() {
       )}
 
       <NewGameModal isOpen={isNewGameModalOpen} onStartNewGame={handleStartNewGame} />
+
+      <ResidenceSetupModal
+        player={player}
+        isOpen={!isNewGameModalOpen && needsResidenceSetup}
+        onComplete={handleResidenceSetupComplete}
+      />
 
       {selectedCaseToBrief && (
         <CaseBriefingModal
