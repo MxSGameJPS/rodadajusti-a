@@ -8,9 +8,14 @@ import {
   establishmentTypeLabel,
   formatEstablishmentPrice,
   getWorldPointForEstablishment,
-  loadWorldEstablishments,
+  loadWorldEstablishmentsWithDiagnostics,
   type WorldEstablishment,
 } from '../../lib/worldEstablishments';
+import {
+  getHomePoint,
+  getUniversityName,
+  getUniversityPoint,
+} from '../../lib/lifeSimulation';
 import {
   WORLD_MAP_UPDATED_EVENT,
   fetchRoadRoute,
@@ -35,6 +40,8 @@ interface RealCityMapPanelProps {
   currentLocationId: string;
   unlockedLocationIds: string[];
   onTravelToLocation: (location: LocationScene) => void;
+  onOpenPlayerHome?: () => void;
+  onStudyAtUniversity?: () => void;
   immersive?: boolean;
 }
 
@@ -152,6 +159,8 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   currentLocationId,
   unlockedLocationIds,
   onTravelToLocation,
+  onOpenPlayerHome,
+  onStudyAtUniversity,
   immersive = false,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -167,6 +176,8 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   const [selectedLocation, setSelectedLocation] = useState<LocationScene | null>(null);
   const [establishments, setEstablishments] = useState<WorldEstablishment[]>([]);
   const [selectedEstablishment, setSelectedEstablishment] = useState<WorldEstablishment | null>(null);
+  const [selectedLifeLocation, setSelectedLifeLocation] = useState<'HOME' | 'UNIVERSITY' | null>(null);
+  const [catalogError, setCatalogError] = useState('');
   const [route, setRoute] = useState<WorldRoute | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [mapReadyVersion, setMapReadyVersion] = useState(0);
@@ -239,11 +250,12 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
     }
 
     let active = true;
-    void loadWorldEstablishments(profile).then((items) => {
+    void loadWorldEstablishmentsWithDiagnostics(profile).then((result) => {
       if (!active) return;
-      setEstablishments(items);
+      setEstablishments(result.items);
+      setCatalogError(result.error || '');
       setSelectedEstablishment((current) => (
-        current ? items.find((item) => item.id === current.id) || null : null
+        current ? result.items.find((item) => item.id === current.id) || null : null
       ));
     });
 
@@ -341,6 +353,58 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       if (!active || mapRef.current !== map) return;
       points.push([officePoint.lng, officePoint.lat]);
 
+      if (player) {
+        const homePoint = getHomePoint(player, profile);
+        points.push([homePoint.lng, homePoint.lat]);
+
+        const homeElement = buildGameMarker(
+          'Sua casa',
+          '⌂',
+          styles.markerHome,
+          false,
+        );
+        homeElement.addEventListener('click', () => {
+          setSelectedLocation(null);
+          setSelectedEstablishment(null);
+          setRoute(null);
+          setSelectedLifeLocation('HOME');
+        });
+        markersRef.current.push(
+          new maplibre.Marker({ element: homeElement, anchor: 'bottom' })
+            .setLngLat([homePoint.lng, homePoint.lat])
+            .addTo(map),
+        );
+
+        const isIntern = player.careerTier === 'ESTAGIARIO'
+          || player.careerTier === 'ESTAGIARIO_SENIOR';
+
+        if (isIntern) {
+          const universityPoint = await snapWorldPointToRoad(
+            getUniversityPoint(player, profile),
+          );
+          if (!active || mapRef.current !== map) return;
+          points.push([universityPoint.lng, universityPoint.lat]);
+
+          const universityElement = buildGameMarker(
+            getUniversityName(profile),
+            'UNI',
+            styles.markerUniversity,
+            false,
+          );
+          universityElement.addEventListener('click', () => {
+            setSelectedLocation(null);
+            setSelectedEstablishment(null);
+            setRoute(null);
+            setSelectedLifeLocation('UNIVERSITY');
+          });
+          markersRef.current.push(
+            new maplibre.Marker({ element: universityElement, anchor: 'bottom' })
+              .setLngLat([universityPoint.lng, universityPoint.lat])
+              .addTo(map),
+          );
+        }
+      }
+
       const officeElement = buildGameMarker(
         officeDisplayName,
         markerGlyph(officeLocation || undefined, true),
@@ -350,6 +414,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
 
       if (officeLocation) {
         officeElement.addEventListener('click', () => {
+          setSelectedLifeLocation(null);
           setSelectedEstablishment(null);
           setSelectedLocation(officeLocation);
         });
@@ -398,6 +463,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
         );
 
         element.addEventListener('click', () => {
+          setSelectedLifeLocation(null);
           setSelectedEstablishment(null);
           setSelectedLocation(location);
         });
@@ -413,6 +479,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
 
         const element = buildEstablishmentMarker(establishment);
         element.addEventListener('click', () => {
+          setSelectedLifeLocation(null);
           setSelectedLocation(null);
           setRoute(null);
           setSelectedEstablishment(establishment);
@@ -454,6 +521,9 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
     officeDisplayName,
     officeLocation?.id,
     establishmentsKey,
+    player?.careerTier,
+    player?.household?.residence?.latitude,
+    player?.household?.residence?.longitude,
     immersive,
   ]);
 
@@ -578,6 +648,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       setProfile(saved);
       setSelectedLocation(null);
       setSelectedEstablishment(null);
+      setSelectedLifeLocation(null);
       setRoute(null);
     } catch (error) {
       setSetupError(error instanceof Error ? error.message : 'Não foi possível localizar essa cidade.');
@@ -628,6 +699,52 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
             </div>
             {mapError && <div className={styles.mapError}>{mapError}</div>}
 
+            <div className={`${styles.catalogStatus} ${catalogError ? styles.catalogStatusError : ''}`}>
+              {catalogError
+                ? `Comércio indisponível: ${catalogError}`
+                : establishments.length > 0
+                  ? `Comércio ativo: ${establishments.length} estabelecimento(s)`
+                  : `Comércio ativo: 0 estabelecimento(s) para ${profile.city}/${profile.state}`}
+            </div>
+
+            {selectedLifeLocation === 'HOME' && player && (
+              <div className={styles.detailCard}>
+                <div>
+                  <strong>Sua casa</strong>
+                  <span>
+                    {player.household.residence.street
+                      ? `${player.household.residence.street} • ponto aproximado • ${profile.city}/${profile.state}`
+                      : `Residência • ${profile.city}/${profile.state}`}
+                  </span>
+                  <small>Vida pessoal: dormir, tomar banho, comer, estudar e pagar contas.</small>
+                </div>
+                <button
+                  type="button"
+                  className={styles.routeButton}
+                  onClick={() => onOpenPlayerHome?.()}
+                >
+                  Entrar em casa
+                </button>
+              </div>
+            )}
+
+            {selectedLifeLocation === 'UNIVERSITY' && player && (
+              <div className={styles.detailCard}>
+                <div>
+                  <strong>{getUniversityName(profile)}</strong>
+                  <span>Vida acadêmica • {profile.city}/{profile.state}</span>
+                  <small>Disponível enquanto o personagem estiver em estágio.</small>
+                </div>
+                <button
+                  type="button"
+                  className={styles.routeButton}
+                  onClick={() => onStudyAtUniversity?.()}
+                >
+                  Estudar • 3h
+                </button>
+              </div>
+            )}
+
             {selectedEstablishment && (
               <div className={`${styles.detailCard} ${styles.establishmentDetailCard}`}>
                 <div className={styles.establishmentDetailBody}>
@@ -672,7 +789,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
               </div>
             )}
 
-            {!selectedEstablishment && selectedLocation && (
+            {!selectedLifeLocation && !selectedEstablishment && selectedLocation && (
               <div className={styles.detailCard}>
                 <div>
                   <strong>{selectedLocation.name}</strong>
