@@ -130,8 +130,33 @@ export function getHouseholdMonthlyBills(household: PlayerHouseholdState) {
   };
 }
 
+function monthDistance(fromKey: string, toKey: string) {
+  const [fromYear, fromMonth] = fromKey.split('-').map(Number);
+  const [toYear, toMonth] = toKey.split('-').map(Number);
+  if (![fromYear, fromMonth, toYear, toMonth].every(Number.isFinite)) return 0;
+  return Math.max(0, (toYear - fromYear) * 12 + (toMonth - fromMonth));
+}
+
+export function getHouseholdBillSummary(player: PlayerProfile) {
+  const monthly = getHouseholdMonthlyBills(player.household);
+  const currentKey = currentHouseholdBillKey(player);
+  const paidThrough = player.household.residence.billsPaidThroughKey;
+
+  const dueMonths = paidThrough
+    ? monthDistance(paidThrough, currentKey)
+    : 1;
+
+  return {
+    currentKey,
+    paidThrough,
+    dueMonths,
+    monthly,
+    totalDue: monthly.total * dueMonths,
+  };
+}
+
 export function isHouseholdBillPaid(player: PlayerProfile) {
-  return player.household.residence.billsPaidThroughKey === currentHouseholdBillKey(player);
+  return getHouseholdBillSummary(player).dueMonths <= 0;
 }
 
 export function getBestBedBonuses(household: PlayerHouseholdState) {
