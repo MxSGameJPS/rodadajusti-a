@@ -72,6 +72,7 @@ import {
   applyLifeTimePassage,
   currentGameDateLabel,
   currentHouseholdBillKey,
+  getHouseholdBillSummary,
   getHouseholdMonthlyBills,
   getLifeBlockingReason,
   isHouseholdBillPaid,
@@ -1127,14 +1128,15 @@ export default function App() {
   const handlePayHouseholdBills = () => {
     setPlayer((prev) => {
       if (isHouseholdBillPaid(prev)) return prev;
-      const bills = getHouseholdMonthlyBills(prev.household);
-      if (prev.money < bills.total) return prev;
+      const billSummary = getHouseholdBillSummary(prev);
+      const bills = billSummary.monthly;
+      if (prev.money < billSummary.totalDue) return prev;
 
       const clock = gameClockFields(prev, 15);
       return {
         ...prev,
         ...clock,
-        money: Math.max(0, prev.money - bills.total),
+        money: Math.max(0, prev.money - billSummary.totalDue),
         household: {
           ...clock.household,
           residence: {
@@ -1146,9 +1148,13 @@ export default function App() {
           prev.personalFinances,
           createPersonalExpense(prev, {
             category: 'MORADIA',
-            amount: bills.total,
-            title: 'Contas domésticas do mês',
-            description: 'Aluguel, água, energia elétrica, internet e gás.',
+            amount: billSummary.totalDue,
+            title: billSummary.dueMonths > 1
+              ? `Contas domésticas • ${billSummary.dueMonths} competências`
+              : 'Contas domésticas do mês',
+            description: billSummary.dueMonths > 1
+              ? `Regularização de ${billSummary.dueMonths} competências de aluguel, água, energia elétrica, internet e gás.`
+              : 'Aluguel, água, energia elétrica, internet e gás.',
             source: 'HOUSEHOLD_BILLS',
           }),
         ),
