@@ -11,6 +11,7 @@ import {
   Building,
   ChevronRight,
   Laptop,
+  MapPin,
 } from 'lucide-react';
 import {
   employmentIncludesSocialJuridico,
@@ -37,6 +38,7 @@ interface HeaderBarProps {
   onOpenAcademicModal: () => void;
   onOpenConcursoModal: () => void;
   onOpenOfficeModal: () => void;
+  onOpenCityRelocation: () => void;
   onToggleSound: () => void;
 }
 
@@ -48,6 +50,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onOpenAcademicModal,
   onOpenConcursoModal,
   onOpenOfficeModal,
+  onOpenCityRelocation,
   onToggleSound,
 }) => {
   const currentTier: CareerTier = CAREER_TIERS[player.careerTier] || CAREER_TIERS.ESTAGIARIO;
@@ -119,6 +122,20 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <span className="hidden text-[9px] uppercase tracking-wider lg:inline">
               {isMobileFrame ? 'Expandir' : 'Modo Celular'}
             </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              sound.playClick();
+              onOpenCityRelocation();
+            }}
+            title="Mudar de cidade"
+            aria-label="Mudar de cidade"
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-2 text-[#888] transition-colors hover:bg-[#1A1A1D] hover:text-[#E0E0E0]"
+          >
+            <MapPin size={13} className="text-[#FBBF24]" />
+            <span className="hidden text-[9px] uppercase tracking-wider lg:inline">Mudar cidade</span>
           </button>
 
           {canUseSocialJuridico && (
