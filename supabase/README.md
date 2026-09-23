@@ -20,6 +20,7 @@ As migrations ficam em `supabase/migrations/` e devem ser executadas em ordem pe
 14. `20260906023500_case_repercussion_and_appeals.sql`
 15. `20260906120000_create_law_firm_market_runtime.sql`
 16. `20260906130000_seed_ramos_associados.sql`
+17. `20260906131000_seed_initial_law_firm_market.sql`
 
 A migration do Mercado de Trabalho precisa rodar **antes** do seed do Ramos & Associados, porque o seed utiliza `law_firms`, `law_firm_roles` e `law_firm_members`.
 
@@ -75,6 +76,8 @@ Tipos oficiais de oferta do Recruitment V1:
 - `RETURN`
 
 Se houver propostas legadas com tipos fora desse contrato, a migration interrompe a execução e pede revisão manual em vez de converter silenciosamente.
+
+`20260906131000_seed_initial_law_firm_market.sql` publica três alternativas iniciais ao Ramos & Associados — Valente Advocacia, Nogueira, Bastos & Associados e Prado Estratégia Jurídica — com cargos, salários e critérios de recrutamento diferentes. Outros escritórios continuam podendo ser criados e publicados pelo Rota Admin.
 
 ## Compatibilidade e fallback
 
