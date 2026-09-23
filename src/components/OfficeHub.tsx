@@ -1,8 +1,8 @@
 import React from 'react';
 import type { LegalCase, PlayerProfile } from '../types/game';
 import {
+  isEmployedProfessional,
   isIndependentProfessional,
-  isRamosEmploymentActive,
 } from '../lib/professionalEmployment';
 import { CareerMomentumCard } from './CareerMomentum/CareerMomentumCard';
 import { IndependentProfessionalHub } from './IndependentProfessionalHub/IndependentProfessionalHub';
@@ -33,7 +33,7 @@ export const OfficeHub: React.FC<OfficeHubProps> = (props) => {
         onOpenConcursoModal={props.onOpenConcursoModal}
       />
     );
-  } else if (isRamosEmploymentActive(props.player)) {
+  } else if (isEmployedProfessional(props.player)) {
     hub = (
       <ProfessionalOfficeHub
         player={props.player}
