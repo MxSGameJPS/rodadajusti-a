@@ -173,6 +173,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const initialCameraAppliedRef = useRef(false);
   const [player, setPlayer] = useState<PlayerProfile | null>(null);
   const [profile, setProfile] = useState<WorldMapProfile | null>(null);
   const [cityInput, setCityInput] = useState('');
@@ -298,8 +299,17 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
 
         mountedMap = map;
         mapRef.current = map;
+        initialCameraAppliedRef.current = false;
         registerActiveWorldMap(map);
         map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
+
+        const syncZoomDensity = () => {
+          const container = mapContainerRef.current;
+          if (!container) return;
+          container.classList.toggle(styles.lowZoom, map.getZoom() < 14.1);
+        };
+        map.on('zoom', syncZoomDensity);
+        syncZoomDensity();
 
         map.on('load', () => {
           if (disposed) return;
@@ -328,6 +338,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
         unregisterActiveWorldMap(mountedMap);
         mountedMap.remove();
       }
+      initialCameraAppliedRef.current = false;
 
       if (mapRef.current === mountedMap) mapRef.current = null;
     };
@@ -392,7 +403,13 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
           setSelectedLifeLocation('HOME');
         });
         markersRef.current.push(
-          new maplibre.Marker({ element: homeElement, anchor: 'bottom' })
+          new maplibre.Marker({
+            element: homeElement,
+            anchor: 'bottom',
+            offset: [0, 14],
+            pitchAlignment: 'viewport',
+            rotationAlignment: 'viewport',
+          })
             .setLngLat([homePoint.lng, homePoint.lat])
             .addTo(map),
         );
@@ -422,7 +439,13 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
             setSelectedLifeLocation('UNIVERSITY');
           });
           markersRef.current.push(
-            new maplibre.Marker({ element: universityElement, anchor: 'bottom' })
+            new maplibre.Marker({
+              element: universityElement,
+              anchor: 'bottom',
+              offset: [0, 14],
+              pitchAlignment: 'viewport',
+              rotationAlignment: 'viewport',
+            })
               .setLngLat([universityPoint.lng, universityPoint.lat])
               .addTo(map),
           );
@@ -445,7 +468,13 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       }
 
       markersRef.current.push(
-        new maplibre.Marker({ element: officeElement, anchor: 'bottom' })
+        new maplibre.Marker({
+          element: officeElement,
+          anchor: 'bottom',
+          offset: [0, 14],
+          pitchAlignment: 'viewport',
+          rotationAlignment: 'viewport',
+        })
           .setLngLat([officePoint.lng, officePoint.lat])
           .addTo(map),
       );
@@ -502,7 +531,13 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
           setSelectedLocation(location);
         });
         markersRef.current.push(
-          new maplibre.Marker({ element, anchor: 'bottom' })
+          new maplibre.Marker({
+            element,
+            anchor: 'bottom',
+            offset: [0, 14],
+            pitchAlignment: 'viewport',
+            rotationAlignment: 'viewport',
+          })
             .setLngLat([point.lng, point.lat])
             .addTo(map),
         );
@@ -520,13 +555,36 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
         });
 
         markersRef.current.push(
-          new maplibre.Marker({ element, anchor: 'bottom' })
+          new maplibre.Marker({
+            element,
+            anchor: 'bottom',
+            offset: [0, 20],
+            pitchAlignment: 'viewport',
+            rotationAlignment: 'viewport',
+          })
             .setLngLat([point.lng, point.lat])
             .addTo(map),
         );
       });
 
-      if (immersive) {
+      if (!initialCameraAppliedRef.current) {
+        initialCameraAppliedRef.current = true;
+
+        if (immersive) {
+          map.easeTo({
+            center: [currentPoint.lng, currentPoint.lat],
+            zoom: Math.max(14.7, map.getZoom?.() || 15.15),
+            pitch: 55,
+            bearing: -16,
+            duration: 520,
+          });
+        } else if (points.length > 1) {
+          const bounds = new maplibre.LngLatBounds();
+          points.forEach((point) => bounds.extend(point));
+          map.fitBounds(bounds, { padding: 68, maxZoom: 14.4, duration: 520 });
+        }
+      }
+    };
         map.easeTo({
           center: [currentPoint.lng, currentPoint.lat],
           zoom: Math.max(14.7, map.getZoom?.() || 15.15),
