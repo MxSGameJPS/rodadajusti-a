@@ -170,6 +170,30 @@ where offers.career_id = careers.id
 alter table public.career_law_firm_offers
   alter column user_id set not null;
 
+-- Não convertemos silenciosamente propostas antigas porque INITIAL/RECRUITMENT
+-- não possuem semântica inequívoca no Recruitment V1.
+do $
+begin
+  if exists (
+    select 1
+    from public.career_law_firm_offers
+    where offer_type not in (
+      'POST_OAB',
+      'CONTINUITY',
+      'HEADHUNTING',
+      'APPLICATION_APPROVED',
+      'POST_TERMINATION',
+      'COUNTEROFFER',
+      'RETURN'
+    )
+  ) then
+    raise exception using
+      message = 'Existem propostas com offer_type legado ou desconhecido em career_law_firm_offers.',
+      hint = 'Revise essas linhas e converta conscientemente para os tipos oficiais do Recruitment V1 antes de reaplicar esta migration.';
+  end if;
+end
+$;
+
 alter table public.career_law_firm_offers
   drop constraint if exists career_law_firm_offer_type_valid;
 alter table public.career_law_firm_offers
