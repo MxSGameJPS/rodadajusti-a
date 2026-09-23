@@ -26,6 +26,7 @@ export interface WorldRoute {
 
 const PROFILE_PREFIX = 'rota_world_map_v1:';
 const GEOCODE_PREFIX = 'rota_world_geocode_v1:';
+const ADDRESS_GEOCODE_PREFIX = 'rota_world_address_geocode_v1:';
 const ROUTE_PREFIX = 'rota_world_route_v1:';
 const PLAYER_SAVE_KEY = 'rota_da_justica_save_v1';
 
@@ -203,6 +204,104 @@ export async function geocodeBrazilianCity(city: string, state: string): Promise
       }
     }
     return profile;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+export interface WorldAddressProfile {
+  street: string;
+  number: string;
+  city: string;
+  state: string;
+  displayName: string;
+  point: WorldGeoPoint;
+}
+
+export async function geocodeBrazilianAddress(
+  street: string,
+  number: string,
+  city: string,
+  state: string,
+): Promise<WorldAddressProfile> {
+  const cleanStreet = street.trim();
+  const cleanNumber = number.trim();
+  const cleanCity = city.trim();
+  const cleanState = state.trim().toUpperCase();
+
+  if (!cleanStreet || !cleanNumber || !cleanCity || cleanState.length !== 2) {
+    throw new Error('Informe rua, número, cidade e UF para localizar sua residência.');
+  }
+
+  const cacheKey = [
+    ADDRESS_GEOCODE_PREFIX,
+    normalize(cleanStreet),
+    normalize(cleanNumber),
+    normalize(cleanCity),
+    normalize(cleanState),
+  ].join(':');
+
+  if (hasWindow()) {
+    try {
+      const cached = window.localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached) as WorldAddressProfile;
+        if (parsed?.point && isPoint(parsed.point)) return parsed;
+      }
+    } catch {
+      // Cache é apenas otimização.
+    }
+  }
+
+  await waitForNominatimSlot();
+  const query = new URLSearchParams({
+    q: cleanStreet + ', ' + cleanNumber + ', ' + cleanCity + ', ' + cleanState + ', Brasil',
+    format: 'jsonv2',
+    limit: '1',
+    countrycodes: 'br',
+    addressdetails: '1',
+    'accept-language': 'pt-BR',
+  });
+
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 9000);
+
+  try {
+    const response = await fetch(NOMINATIM_BASE_URL + '/search?' + query.toString(), {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) throw new Error('Não foi possível validar o endereço agora.');
+
+    const results = await response.json() as Array<{
+      lat?: string;
+      lon?: string;
+      display_name?: string;
+    }>;
+    const first = results[0];
+    const lat = Number(first?.lat);
+    const lng = Number(first?.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      throw new Error('Não encontramos esse endereço no mapa. Confira rua, número, cidade e UF.');
+    }
+
+    const result: WorldAddressProfile = {
+      street: cleanStreet,
+      number: cleanNumber,
+      city: cleanCity,
+      state: cleanState,
+      displayName: first.display_name || cleanStreet + ', ' + cleanNumber + ' - ' + cleanCity + '/' + cleanState,
+      point: { lat, lng },
+    };
+
+    if (hasWindow()) {
+      try {
+        window.localStorage.setItem(cacheKey, JSON.stringify(result));
+      } catch {
+        // O endereço continua válido durante a sessão mesmo sem cache.
+      }
+    }
+    return result;
   } finally {
     window.clearTimeout(timeout);
   }
