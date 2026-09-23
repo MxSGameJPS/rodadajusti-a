@@ -447,7 +447,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
                   {validatedAddress && (
                     <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#3F8B68]/25 bg-[#3F8B68]/8 px-3 py-2.5 text-[10px] leading-4 text-[#376E57]">
                       <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
-                      <span>Endereço localizado no mapa. Ele será usado como a casa do personagem.</span>
+                      <span>Rua localizada. A casa será posicionada em um ponto aproximado e aleatório dessa rua, nunca no número exato informado.</span>
                     </div>
                   )}
 
@@ -460,7 +460,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
                   <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#5A6F8F]/25 bg-[#5A6F8F]/7 px-3 py-3 text-[10px] leading-4 text-[#53627A]">
                     <ShieldCheck size={15} className="mt-0.5 shrink-0" />
                     <span>
-                      <strong>Privacidade:</strong> rua e número não são publicados no mapa público, no Rota Admin ou na lista de estabelecimentos. Para localizar a casa, o endereço é consultado no serviço de geocodificação configurado para o mapa; depois, a carreira guarda a posição necessária para as mecânicas de residência e deslocamento.
+                      <strong>Privacidade:</strong> o número da residência não é enviado ao serviço de mapas. O jogo consulta apenas rua, cidade e UF e posiciona a casa em um ponto aproximado e aleatório daquela rua. Rua e número também não são publicados no Rota Admin nem exibidos para outros jogadores.
                     </span>
                   </div>
                 </section>
