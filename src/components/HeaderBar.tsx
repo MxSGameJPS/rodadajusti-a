@@ -12,7 +12,11 @@ import {
   ChevronRight,
   Laptop,
 } from 'lucide-react';
-import { isIndependentProfessional } from '../lib/professionalEmployment';
+import {
+  employmentIncludesSocialJuridico,
+  isIndependentProfessional,
+  readProfessionalEmploymentState,
+} from '../lib/professionalEmployment';
 import { sound } from '../utils/sound';
 import { usePlayerDisplayName } from '../lib/playerTreatment';
 import { SessionLogoutButton } from './SessionLogoutButton';
@@ -47,19 +51,21 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onToggleSound,
 }) => {
   const currentTier: CareerTier = CAREER_TIERS[player.careerTier] || CAREER_TIERS.ESTAGIARIO;
-  const canUseSocialJuridico = SOCIAL_JURIDICO_TIERS.has(player.careerTier);
   const displayName = usePlayerDisplayName(player, 'Estagiário');
   const independent = isIndependentProfessional(player);
+  const employment = readProfessionalEmploymentState(player);
+  const canUseSocialJuridico = SOCIAL_JURIDICO_TIERS.has(player.careerTier)
+    && (independent || employmentIncludesSocialJuridico(player));
   const workspaceLabel = independent
     ? player.officeFinances.isOfficeOpen
       ? player.officeFinances.officeName.toUpperCase()
       : 'ADVOCACIA INDEPENDENTE'
-    : 'RAMOS & ASSOCIADOS';
+    : (employment?.officeName || 'RAMOS & ASSOCIADOS').toUpperCase();
   const tierDisplayTitle = independent
     ? player.officeFinances.isOfficeOpen
       ? 'Advogado • Escritório Próprio'
       : 'Advogado Autônomo'
-    : currentTier.title;
+    : employment?.role || currentTier.title;
 
   const tierKeys = Object.keys(CAREER_TIERS) as (keyof typeof CAREER_TIERS)[];
   const currentTierIndex = tierKeys.indexOf(player.careerTier);
