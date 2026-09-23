@@ -17,11 +17,11 @@ export const DEFAULT_HOUSEHOLD_STATE: PlayerHouseholdState = {
     latitude: null,
     longitude: null,
     geocodedDisplayName: '',
-    monthlyRent: 850,
-    waterMonthly: 75,
-    electricityMonthly: 135,
-    internetMonthly: 100,
-    gasMonthly: 55,
+    monthlyRent: 550,
+    waterMonthly: 45,
+    electricityMonthly: 80,
+    internetMonthly: 65,
+    gasMonthly: 30,
     billsPaidThroughKey: null,
   },
   needs: {
@@ -45,8 +45,8 @@ export function normalizeHousehold(
   fallbackCity = '',
   fallbackState = '',
 ): PlayerHouseholdState {
-  const residence = value?.residence || {};
-  const needs = value?.needs || {};
+  const residence: Partial<PlayerHouseholdState['residence']> = value?.residence || {};
+  const needs: Partial<PlayerLifeNeedsState> = value?.needs || {};
 
   return {
     ...DEFAULT_HOUSEHOLD_STATE,
