@@ -41,6 +41,12 @@ function clamp(value: number) {
   return Math.max(0, Math.min(100, Number(value) || 0));
 }
 
+function nullableCoordinate(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export function normalizeHousehold(
   value?: Partial<PlayerHouseholdState> | null,
   fallbackCity = '',
@@ -58,16 +64,8 @@ export function normalizeHousehold(
       ...residence,
       city: String(residence.city || fallbackCity || '').trim(),
       state: String(residence.state || fallbackState || '').trim().toUpperCase(),
-      latitude: residence.latitude == null || residence.latitude === ''
-        ? null
-        : Number.isFinite(Number(residence.latitude))
-          ? Number(residence.latitude)
-          : null,
-      longitude: residence.longitude == null || residence.longitude === ''
-        ? null
-        : Number.isFinite(Number(residence.longitude))
-          ? Number(residence.longitude)
-          : null,
+      latitude: nullableCoordinate(residence.latitude),
+      longitude: nullableCoordinate(residence.longitude),
       mapPointMode: residence.mapPointMode === 'STREET_RANDOMIZED' ? 'STREET_RANDOMIZED' : null,
       monthlyRent: Math.max(0, Number(residence.monthlyRent ?? DEFAULT_HOUSEHOLD_STATE.residence.monthlyRent) || 0),
       waterMonthly: Math.max(0, Number(residence.waterMonthly ?? DEFAULT_HOUSEHOLD_STATE.residence.waterMonthly) || 0),
