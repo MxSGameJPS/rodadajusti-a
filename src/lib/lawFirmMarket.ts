@@ -212,8 +212,8 @@ function daysBetween(leftIso: string, rightIso: string) {
 }
 
 function localOfferKey(player: PlayerProfile) {
-  const identity = player.cloudCareerId
-    || player.oabRegistration?.code
+  const identity = player.oabRegistration?.code
+    || player.cloudCareerId
     || slug(player.name)
     || 'jogador';
   return `${LOCAL_OFFERS_PREFIX}${identity}`;
