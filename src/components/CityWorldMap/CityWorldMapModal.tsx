@@ -9,7 +9,7 @@ import {
 import {
   readWorldMapProfile,
   resolveWorldMapProfile,
-  snapWorldPointToRoad,
+  resolveStableRoadPoint,
   type WorldMapProfile,
 } from '../../lib/worldMap';
 import {
@@ -26,6 +26,10 @@ import {
   getUniversityPoint,
 } from '../../lib/lifeSimulation';
 import styles from '../WorldMap/RealCityMapPanel.module.css';
+
+function stableCityPointKey(profile: WorldMapProfile, logicalId: string) {
+  return [profile.city, profile.state, logicalId].join(':');
+}
 
 interface CityWorldMapModalProps {
   player: PlayerProfile;
@@ -213,7 +217,8 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
 
           const isIntern = player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR';
           if (isIntern) {
-            const universityPoint = await snapWorldPointToRoad(
+            const universityPoint = await resolveStableRoadPoint(
+              stableCityPointKey(profile, 'university'),
               getUniversityPoint(player, profile),
             );
             if (disposed) return;
@@ -234,7 +239,8 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
           const establishmentPoints = await Promise.all(
             establishments.map(async (establishment) => ({
               establishment,
-              point: await snapWorldPointToRoad(
+              point: await resolveStableRoadPoint(
+                stableCityPointKey(profile, 'establishment:' + establishment.id),
                 getWorldPointForEstablishment(profile, establishment),
               ),
             })),
