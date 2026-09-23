@@ -8,9 +8,9 @@ A linha do tempo do jogo agora afeta diretamente o personagem. Energia, fome, hi
 
 Toda carreira nova informa rua, número, cidade e UF. Carreiras antigas recebem uma etapa única de atualização.
 
-Rua e número não são publicados no catálogo do Rota Admin nem exibidos a outros jogadores. Durante a validação, o endereço é consultado pelo serviço de geocodificação configurado no mapa.
+O número da residência não é enviado ao serviço de geocodificação. O jogo consulta somente rua, cidade e UF e cria um ponto estável e pseudoaleatório ao longo da rua cadastrada. Assim, o marcador da casa não representa a localização residencial exata. Rua e número não são publicados no catálogo do Rota Admin nem exibidos a outros jogadores.
 
-A residência aparece no Mapa da Cidade e oferece:
+A residência aparece no Mapa da Cidade em posição aproximada na rua cadastrada e oferece:
 
 - dormir por 8 horas;
 - tomar banho por 30 minutos;
