@@ -460,7 +460,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
                   <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#5A6F8F]/25 bg-[#5A6F8F]/7 px-3 py-3 text-[10px] leading-4 text-[#53627A]">
                     <ShieldCheck size={15} className="mt-0.5 shrink-0" />
                     <span>
-                      <strong>Privacidade:</strong> rua e número são dados privados da carreira e não são publicados no mapa público, no Rota Admin ou na lista de estabelecimentos. Eles são usados apenas para posicionar sua residência e calcular mecânicas do jogo.
+                      <strong>Privacidade:</strong> rua e número não são publicados no mapa público, no Rota Admin ou na lista de estabelecimentos. Para localizar a casa, o endereço é consultado no serviço de geocodificação configurado para o mapa; depois, a carreira guarda a posição necessária para as mecânicas de residência e deslocamento.
                     </span>
                   </div>
                 </section>
