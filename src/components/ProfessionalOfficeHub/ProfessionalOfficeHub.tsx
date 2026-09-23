@@ -13,7 +13,12 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { GAME_CASES } from '../../data/cases';
-import { isProfessionalPreviewMode } from '../../lib/professionalEmployment';
+import {
+  employmentIncludesSocialJuridico,
+  isProfessionalPreviewMode,
+  isRamosEmploymentActive,
+  readProfessionalEmploymentState,
+} from '../../lib/professionalEmployment';
 import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import type { PlayerProfile } from '../../types/game';
 import { sound } from '../../utils/sound';
@@ -43,6 +48,11 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
   const displayName = usePlayerDisplayName(player, 'Advogado');
   const activeCase = GAME_CASES.find((caseItem) => caseItem.id === player.activeCase?.caseId) || null;
   const previewMode = isProfessionalPreviewMode();
+  const employment = readProfessionalEmploymentState(player);
+  const ramosEmployment = isRamosEmploymentActive(player);
+  const officeName = employment?.officeName || 'Escritório atual';
+  const roleTitle = employment?.role || 'Advogado';
+  const socialJuridicoIncluded = employmentIncludesSocialJuridico(player);
 
   const openDevice = (eventName: string) => {
     sound.playClick();
@@ -57,14 +67,14 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
         </div>
         <div className={styles.heroCopy}>
           <div className={styles.heroBadges}>
-            <span>Ramos & Associados</span>
-            <span className={styles.enterpriseBadge}>Social Jurídico Enterprise</span>
+            <span>{officeName}</span>
+            {socialJuridicoIncluded && <span className={styles.enterpriseBadge}>Social Jurídico {ramosEmployment ? 'Enterprise' : 'Profissional'}</span>}
             {previewMode && <span>Modo demonstração • seu progresso não foi alterado</span>}
           </div>
           <h2>Bom expediente, {displayName}.</h2>
           <p>
-            Você atua como <strong>Advogado Contratado</strong>. A rotina profissional do escritório agora é organizada pelo
-            Social Jurídico: casos, clientes, documentos, prazos e ferramentas ficam no notebook. Comunicações ficam no celular profissional.
+            Você atua como <strong>{roleTitle}</strong> em <strong>{officeName}</strong>. Casos, clientes, documentos, prazos e
+            ferramentas ficam no ambiente profissional do escritório. Comunicações continuam disponíveis no celular profissional.
           </p>
         </div>
         <div className={styles.oabCard}>
@@ -82,7 +92,9 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
           <div className={styles.deviceCopy}>
             <span>Ferramenta principal de trabalho</span>
             <h3>Notebook • Social Jurídico</h3>
-            <p>Abra o CRM, acompanhe o caso atribuído, consulte documentos e utilize as ferramentas jurídicas publicadas pelo escritório.</p>
+            <p>{socialJuridicoIncluded
+              ? 'Abra o CRM, acompanhe o caso atribuído, consulte documentos e utilize as ferramentas jurídicas publicadas pelo escritório.'
+              : 'Acompanhe o caso atribuído, documentos e ferramentas profissionais disponibilizadas pelo seu empregador.'}</p>
             <div className={styles.deviceAction}>Abrir notebook <ArrowRight size={15} /></div>
           </div>
         </button>
@@ -105,7 +117,11 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
             <h3>Atendimento profissional</h3>
           </div>
           <div className={styles.assignmentFlow}>
-            <span>Dr. Roberto</span><ArrowRight size={12} /><span>Mariana</span><ArrowRight size={12} /><span>CRM</span><ArrowRight size={12} /><span>{displayName}</span>
+            {ramosEmployment ? (
+              <><span>Dr. Roberto</span><ArrowRight size={12} /><span>Mariana</span><ArrowRight size={12} /><span>CRM</span><ArrowRight size={12} /><span>{displayName}</span></>
+            ) : (
+              <><span>{officeName}</span><ArrowRight size={12} /><span>Coordenação</span><ArrowRight size={12} /><span>CRM</span><ArrowRight size={12} /><span>{displayName}</span></>
+            )}
           </div>
         </div>
 
@@ -139,8 +155,8 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
               <span>Nenhum caso ativo</span>
               <h4>Aguarde uma nova atribuição no CRM</h4>
               <p>
-                Os casos não ficam mais expostos para escolha. O Dr. Roberto Ramos define a distribuição e a Mariana disponibiliza
-                <strong> um atendimento por vez</strong> no CRM do seu Social Jurídico.
+                Os casos não ficam mais expostos para escolha. A coordenação de {officeName} define a distribuição e disponibiliza
+                <strong> um atendimento por vez</strong> no ambiente profissional.
               </p>
             </div>
             <button type="button" onClick={() => openDevice(OPEN_SOCIAL_JURIDICO_EVENT)}>
@@ -172,8 +188,10 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
       <section className={styles.enterpriseNote}>
         <MessageCircle size={18} />
         <div>
-          <strong>O Social Jurídico faz parte da operação do Ramos & Associados.</strong>
-          <p>Dentro do universo do jogo, o escritório utiliza o plano Enterprise para centralizar a atividade da equipe. O notebook não é uma lista de atalhos: ele passa a ser o ambiente profissional da carreira do jogador.</p>
+          <strong>{officeName} é o seu empregador atual.</strong>
+          <p>{socialJuridicoIncluded
+            ? 'O escritório disponibiliza o Social Jurídico como parte da operação profissional. O notebook centraliza casos, documentos, prazos e atividade da equipe.'
+            : 'As ferramentas e benefícios disponíveis seguem as condições do cargo aceito no Mercado de Trabalho.'}</p>
         </div>
       </section>
     </div>
