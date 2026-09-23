@@ -60,6 +60,12 @@ import { sound } from './utils/sound';
 import { normalizeCareerOrigin, saveCareerOrigin } from './lib/careerOrigin';
 import { saveWorldMapProfile, type WorldMapProfile } from './lib/worldMap';
 import { supabase } from './lib/supabase';
+import { canManageOwnOffice } from './lib/independentPractice';
+import {
+  appendPersonalFinanceTransaction,
+  createPersonalExpense,
+  normalizePersonalFinances,
+} from './lib/personalFinance';
 
 const STORAGE_KEY = 'rota_da_justica_save_v1';
 const VIEW_STORAGE_KEY = 'rota_da_justica_view_v1';
@@ -117,6 +123,9 @@ const INITIAL_PLAYER_STATE: PlayerProfile = {
     employees: [],
     monthlyRevenueHistory: [],
   },
+  personalFinances: {
+    transactions: [],
+  },
   officeDiscipline: {
     warningCount: 0,
     employmentStatus: 'ACTIVE',
@@ -173,6 +182,7 @@ function normalizeSavedPlayer(saved: Partial<PlayerProfile>): PlayerProfile {
         ? saved.officeFinances!.monthlyRevenueHistory
         : [],
     },
+    personalFinances: normalizePersonalFinances(saved.personalFinances),
     officeDiscipline: {
       ...INITIAL_PLAYER_STATE.officeDiscipline,
       ...(saved.officeDiscipline || {}),
@@ -222,6 +232,14 @@ export default function App() {
   const [isOabExamOpen, setIsOabExamOpen] = useState<boolean>(false);
   const [isCityRelocationOpen, setIsCityRelocationOpen] = useState<boolean>(false);
   const [isCityWorldMapOpen, setIsCityWorldMapOpen] = useState<boolean>(false);
+
+  const openOfficeManagement = () => {
+    if (!canManageOwnOffice(player)) {
+      setIsOfficeModalOpen(false);
+      return;
+    }
+    setIsOfficeModalOpen(true);
+  };
 
   const [verdictResult, setVerdictResult] = useState<CaseHistoryRecord | null>(null);
   const [verdictCase, setVerdictCase] = useState<LegalCase | null>(null);
@@ -328,6 +346,18 @@ export default function App() {
         ...prev,
         ...gameClockFields(prev, loc.travelTimeHours * 60),
         money: Math.max(0, prev.money - loc.travelCost),
+        personalFinances: loc.travelCost > 0
+          ? appendPersonalFinanceTransaction(
+              prev.personalFinances,
+              createPersonalExpense(prev, {
+                category: 'DILIGENCIA',
+                amount: loc.travelCost,
+                title: `Diligência — ${loc.name}`,
+                description: `Deslocamento profissional para ${loc.name}.`,
+                source: 'CASE_TRAVEL',
+              }),
+            )
+          : prev.personalFinances,
         activeCase: {
           ...prev.activeCase,
           hoursSpent: newHoursSpent,
@@ -707,6 +737,16 @@ export default function App() {
     setPlayer((prev) => ({
       ...prev,
       money: prev.money - course.cost,
+      personalFinances: appendPersonalFinanceTransaction(
+        prev.personalFinances,
+        createPersonalExpense(prev, {
+          category: 'ESTUDOS',
+          amount: course.cost,
+          title: course.title,
+          description: `Matrícula em ${course.institution}.`,
+          source: 'ACADEMIC_COURSE',
+        }),
+      ),
       xp: prev.xp + course.xpReward,
       reputation: Math.min(100, prev.reputation + course.reputationReward),
       academicDegree: course.degree,
@@ -733,6 +773,7 @@ export default function App() {
   };
 
   const handleHireEmployee = (employee: OfficeEmployee) => {
+    if (!canManageOwnOffice(player)) return;
     setPlayer((prev) => ({
       ...prev,
       officeFinances: {
@@ -743,6 +784,7 @@ export default function App() {
   };
 
   const handleFireEmployee = (employeeId: string) => {
+    if (!canManageOwnOffice(player)) return;
     setPlayer((prev) => ({
       ...prev,
       officeFinances: {
@@ -753,6 +795,7 @@ export default function App() {
   };
 
   const handlePayOfficeExpenses = () => {
+    if (!canManageOwnOffice(player)) return;
     const totalSalaries = player.officeFinances.employees.reduce(
       (acc, emp) => acc + emp.salaryMonthly,
       0
@@ -815,6 +858,16 @@ export default function App() {
       homeCity: destination.city,
       homeState: destination.state,
       money: Math.max(0, prev.money - CITY_RELOCATION_COST),
+      personalFinances: appendPersonalFinanceTransaction(
+        prev.personalFinances,
+        createPersonalExpense(prev, {
+          category: 'MUDANCA',
+          amount: CITY_RELOCATION_COST,
+          title: `Mudança para ${destination.city}/${destination.state}`,
+          description: 'Custos pessoais e logísticos da mudança de cidade.',
+          source: 'CITY_RELOCATION',
+        }),
+      ),
       ...gameDateFields(addGameDays(getPlayerGameDate(prev), CITY_RELOCATION_DAYS)),
     }));
 
@@ -871,7 +924,7 @@ export default function App() {
           onOpenCareerModal={() => setIsCareerModalOpen(true)}
           onOpenAcademicModal={() => setIsAcademicModalOpen(true)}
           onOpenConcursoModal={() => setIsConcursoModalOpen(true)}
-          onOpenOfficeModal={() => setIsOfficeModalOpen(true)}
+          onOpenOfficeModal={openOfficeManagement}
           onOpenOabExam={() => setIsOabExamOpen(true)}
           onOpenCityRelocation={() => setIsCityRelocationOpen(true)}
           onOpenCityWorldMap={() => setIsCityWorldMapOpen(true)}
@@ -894,7 +947,7 @@ export default function App() {
             onOpenCareerModal={() => setIsCareerModalOpen(true)}
             onOpenAcademicModal={() => setIsAcademicModalOpen(true)}
             onOpenConcursoModal={() => setIsConcursoModalOpen(true)}
-            onOpenOfficeModal={() => setIsOfficeModalOpen(true)}
+            onOpenOfficeModal={openOfficeManagement}
             onOpenCityRelocation={() => setIsCityRelocationOpen(true)}
             onOpenCityWorldMap={() => setIsCityWorldMapOpen(true)}
             onToggleSound={handleToggleSound}
@@ -911,7 +964,7 @@ export default function App() {
                   onOpenCareerModal={() => setIsCareerModalOpen(true)}
                   onOpenAcademicModal={() => setIsAcademicModalOpen(true)}
                   onOpenConcursoModal={() => setIsConcursoModalOpen(true)}
-                  onOpenOfficeModal={() => setIsOfficeModalOpen(true)}
+                  onOpenOfficeModal={openOfficeManagement}
                   onOpenOabExam={() => setIsOabExamOpen(true)}
                 />
               </>
@@ -1035,7 +1088,7 @@ export default function App() {
       />
 
       <OfficeManagementModal
-        isOpen={isOfficeModalOpen}
+        isOpen={isOfficeModalOpen && canManageOwnOffice(player)}
         onClose={() => setIsOfficeModalOpen(false)}
         player={player}
         onHireEmployee={handleHireEmployee}
