@@ -37,6 +37,12 @@ import { getDeclaredPlayerCity, readWorldMapProfile } from '../../lib/worldMap';
 import { formatGameDate } from '../../lib/gameDate';
 import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import { isIndependentProfessional, readProfessionalEmploymentState } from '../../lib/professionalEmployment';
+import { canManageOwnOffice } from '../../lib/independentPractice';
+import {
+  PERSONAL_EXPENSE_CATEGORIES,
+  getPersonalExpenseTotal,
+  getPersonalExpenseTotalsByCategory,
+} from '../../lib/personalFinance';
 import { sound } from '../../utils/sound';
 import { InternshipCareerPanel } from '../../components/InternshipCareerPanel';
 import { OfficeHub } from '../../components/OfficeHub';
@@ -100,6 +106,10 @@ export function OfficeScene({
   const employment = readProfessionalEmploymentState(player);
   const ramosEmployment = employment?.officeSlug === 'ramos-associados' || employment?.officeName === 'Ramos & Associados';
   const externalEmployment = Boolean(!independent && employment?.contractStatus === 'SIGNED' && !ramosEmployment);
+  const canManageOffice = canManageOwnOffice(player);
+  const personalExpenseTotal = getPersonalExpenseTotal(player.personalFinances);
+  const personalExpenseTotalsByCategory = getPersonalExpenseTotalsByCategory(player.personalFinances);
+  const recentPersonalTransactions = (player.personalFinances?.transactions || []).slice(0, 8);
   const activeCase = useMemo(
     () => GAME_CASES.find((caseItem) => caseItem.id === player.activeCase?.caseId) || null,
     [player.activeCase?.caseId],
@@ -478,11 +488,75 @@ export function OfficeScene({
 
               {drawer === 'FINANCE' && (
                 <div className={styles.financeDrawer}>
-                  <div><span>Patrimônio atual</span><strong>R$ {formatMoney(player.money)}</strong></div>
-                  <div><span>Remuneração-base</span><strong>R$ {formatMoney(!independent && employment?.salaryMonthly ? employment.salaryMonthly : currentTier.salaryBaseMonthly)}/mês</strong></div>
-                  <div><span>Casos vencidos</span><strong>{player.casesSolved}</strong></div>
-                  <div><span>Reputação</span><strong>{player.reputation}/100</strong></div>
-                  <button type="button" onClick={onOpenOfficeModal}>Gestão do escritório <ArrowRight size={15} /></button>
+                  <div className={styles.financeSummaryCard}>
+                    <span>Patrimônio atual</span>
+                    <strong>R$ {formatMoney(player.money)}</strong>
+                  </div>
+                  <div className={styles.financeSummaryCard}>
+                    <span>{isIntern ? 'Bolsa-estágio' : 'Remuneração-base'}</span>
+                    <strong>R$ {formatMoney(!independent && employment?.salaryMonthly ? employment.salaryMonthly : currentTier.salaryBaseMonthly)}/mês</strong>
+                  </div>
+                  <div className={styles.financeSummaryCard}>
+                    <span>Gastos pessoais registrados</span>
+                    <strong>R$ {formatMoney(personalExpenseTotal)}</strong>
+                  </div>
+                  <div className={styles.financeSummaryCard}>
+                    <span>Lançamentos</span>
+                    <strong>{player.personalFinances?.transactions?.length || 0}</strong>
+                  </div>
+
+                  <section className={styles.personalFinanceSection}>
+                    <div className={styles.personalFinanceHeading}>
+                      <div>
+                        <span>DESPESAS DA CARREIRA E VIDA PESSOAL</span>
+                        <small>Gastos do jogador, separados da administração de qualquer escritório.</small>
+                      </div>
+                    </div>
+
+                    <div className={styles.expenseCategoryGrid}>
+                      {PERSONAL_EXPENSE_CATEGORIES.map((category) => (
+                        <div key={category.id} className={styles.expenseCategoryCard}>
+                          <span>{category.label}</span>
+                          <strong>R$ {formatMoney(personalExpenseTotalsByCategory.get(category.id) || 0)}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className={styles.personalFinanceSection}>
+                    <div className={styles.personalFinanceHeading}>
+                      <div>
+                        <span>ÚLTIMOS LANÇAMENTOS</span>
+                        <small>Diligências e outras mecânicas passam a alimentar este extrato automaticamente.</small>
+                      </div>
+                    </div>
+
+                    {recentPersonalTransactions.length === 0 ? (
+                      <div className={styles.financeEmptyState}>
+                        Nenhuma despesa registrada ainda. Deslocamentos, mudança de cidade, estudos e futuras compras aparecerão aqui.
+                      </div>
+                    ) : (
+                      <div className={styles.financeTransactionList}>
+                        {recentPersonalTransactions.map((transaction) => (
+                          <article key={transaction.id}>
+                            <div>
+                              <strong>{transaction.title}</strong>
+                              <span>{transaction.gameDate} • {transaction.category.replaceAll('_', ' ')}</span>
+                            </div>
+                            <strong className={transaction.type === 'EXPENSE' ? styles.financeExpenseValue : styles.financeIncomeValue}>
+                              {transaction.type === 'EXPENSE' ? '−' : '+'} R$ {formatMoney(transaction.amount)}
+                            </strong>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+
+                  {canManageOffice && (
+                    <button type="button" className={styles.officeManagementButton} onClick={onOpenOfficeModal}>
+                      Gestão do meu escritório <ArrowRight size={15} />
+                    </button>
+                  )}
                 </div>
               )}
 
