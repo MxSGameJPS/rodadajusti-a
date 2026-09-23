@@ -5,6 +5,13 @@ import { readCurrentPlayerSnapshot } from '../../lib/professionalRpg';
 import { applyRotaJusticeMapTheme, buildOpenStreetMapStyle, loadMapLibre } from '../../lib/maplibreClient';
 import { registerActiveWorldMap, unregisterActiveWorldMap } from '../../lib/worldMapRuntime';
 import {
+  establishmentTypeLabel,
+  formatEstablishmentPrice,
+  getWorldPointForEstablishment,
+  loadWorldEstablishments,
+  type WorldEstablishment,
+} from '../../lib/worldEstablishments';
+import {
   WORLD_MAP_UPDATED_EVENT,
   fetchRoadRoute,
   formatRouteDistance,
@@ -93,6 +100,52 @@ function buildGameMarker(
   return element;
 }
 
+function buildEstablishmentMarker(establishment: WorldEstablishment) {
+  const element = document.createElement('button');
+  element.type = 'button';
+  element.className = [
+    styles.establishmentMarker,
+    establishment.presenceScope === 'UNIVERSAL' ? styles.establishmentMarkerUniversal : '',
+    establishment.isSponsored ? styles.establishmentMarkerSponsored : '',
+  ].filter(Boolean).join(' ');
+
+  const visual = document.createElement('span');
+  visual.className = styles.establishmentMarkerVisual;
+
+  if (establishment.bannerUrl) {
+    const image = document.createElement('img');
+    image.src = establishment.bannerUrl;
+    image.alt = '';
+    image.loading = 'lazy';
+    image.className = styles.establishmentMarkerBanner;
+    visual.appendChild(image);
+  } else {
+    const fallback = document.createElement('span');
+    fallback.className = styles.establishmentMarkerFallback;
+    fallback.textContent = establishment.name.slice(0, 2).toUpperCase();
+    visual.appendChild(fallback);
+  }
+
+  const badge = document.createElement('span');
+  badge.className = styles.establishmentMarkerBadge;
+  badge.textContent = establishment.isSponsored
+    ? 'Patrocinado'
+    : establishment.presenceScope === 'UNIVERSAL'
+      ? 'Universal'
+      : establishmentTypeLabel(establishment.businessType);
+  visual.appendChild(badge);
+
+  const caption = document.createElement('span');
+  caption.className = styles.establishmentMarkerCaption;
+  caption.textContent = establishment.name;
+
+  element.appendChild(visual);
+  element.appendChild(caption);
+  element.title = establishment.name;
+
+  return element;
+}
+
 export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   currentCase,
   currentLocationId,
@@ -112,12 +165,17 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   const [mapError, setMapError] = useState('');
   const [setupError, setSetupError] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<LocationScene | null>(null);
+  const [establishments, setEstablishments] = useState<WorldEstablishment[]>([]);
+  const [selectedEstablishment, setSelectedEstablishment] = useState<WorldEstablishment | null>(null);
   const [route, setRoute] = useState<WorldRoute | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [mapReadyVersion, setMapReadyVersion] = useState(0);
 
   const unlockedKey = unlockedLocationIds.join('|');
   const unlockedSet = useMemo(() => new Set(unlockedLocationIds), [unlockedKey]);
+  const establishmentsKey = establishments
+    .map((item) => [item.id, item.bannerUrl || '', item.presenceScope, item.isSponsored ? '1' : '0'].join(':'))
+    .join('|');
   const currentLocation = useMemo(
     () => currentCase.locations.find((location) => location.id === currentLocationId) || currentCase.locations[0] || null,
     [currentCase.locations, currentLocationId],
@@ -172,6 +230,27 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       window.removeEventListener(WORLD_MAP_UPDATED_EVENT, refresh);
     };
   }, []);
+
+  useEffect(() => {
+    if (!profile) {
+      setEstablishments([]);
+      setSelectedEstablishment(null);
+      return undefined;
+    }
+
+    let active = true;
+    void loadWorldEstablishments(profile).then((items) => {
+      if (!active) return;
+      setEstablishments(items);
+      setSelectedEstablishment((current) => (
+        current ? items.find((item) => item.id === current.id) || null : null
+      ));
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [profile?.city, profile?.state, profile?.center.lat, profile?.center.lng]);
 
   useEffect(() => {
     if (!profile || isEditingCity || !mapContainerRef.current) return undefined;
@@ -268,7 +347,10 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       );
 
       if (officeLocation) {
-        officeElement.addEventListener('click', () => setSelectedLocation(officeLocation));
+        officeElement.addEventListener('click', () => {
+          setSelectedEstablishment(null);
+          setSelectedLocation(officeLocation);
+        });
       }
 
       markersRef.current.push(
@@ -291,7 +373,28 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
           location.id === currentLocationId,
         );
 
-        element.addEventListener('click', () => setSelectedLocation(location));
+        element.addEventListener('click', () => {
+          setSelectedEstablishment(null);
+          setSelectedLocation(location);
+        });
+        markersRef.current.push(
+          new maplibre.Marker({ element, anchor: 'bottom' })
+            .setLngLat([point.lng, point.lat])
+            .addTo(map),
+        );
+      });
+
+      establishments.forEach((establishment) => {
+        const point = getWorldPointForEstablishment(profile, establishment);
+        points.push([point.lng, point.lat]);
+
+        const element = buildEstablishmentMarker(establishment);
+        element.addEventListener('click', () => {
+          setSelectedLocation(null);
+          setRoute(null);
+          setSelectedEstablishment(establishment);
+        });
+
         markersRef.current.push(
           new maplibre.Marker({ element, anchor: 'bottom' })
             .setLngLat([point.lng, point.lat])
@@ -328,6 +431,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
     isEditingCity,
     officeDisplayName,
     officeLocation?.id,
+    establishmentsKey,
     immersive,
   ]);
 
@@ -442,6 +546,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       setProfile(saved);
       setIsEditingCity(false);
       setSelectedLocation(null);
+      setSelectedEstablishment(null);
       setRoute(null);
     } catch (error) {
       setSetupError(error instanceof Error ? error.message : 'Não foi possível localizar essa cidade.');
@@ -496,7 +601,51 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
             </div>
             {mapError && <div className={styles.mapError}>{mapError}</div>}
 
-            {selectedLocation && (
+            {selectedEstablishment && (
+              <div className={`${styles.detailCard} ${styles.establishmentDetailCard}`}>
+                <div className={styles.establishmentDetailBody}>
+                  {selectedEstablishment.bannerUrl && (
+                    <img
+                      className={styles.establishmentDetailBanner}
+                      src={selectedEstablishment.bannerUrl}
+                      alt={`Banner de ${selectedEstablishment.name}`}
+                    />
+                  )}
+                  <div className={styles.establishmentDetailCopy}>
+                    <div className={styles.establishmentDetailBadges}>
+                      <span>{establishmentTypeLabel(selectedEstablishment.businessType)}</span>
+                      {selectedEstablishment.presenceScope === 'UNIVERSAL' && <span>Universal</span>}
+                      {selectedEstablishment.isSponsored && <span>Patrocinado</span>}
+                    </div>
+                    <strong>{selectedEstablishment.name}</strong>
+                    <span>
+                      {selectedEstablishment.district
+                        ? `${selectedEstablishment.district} • ${profile.city}/${profile.state}`
+                        : `${profile.city}/${profile.state}`}
+                    </span>
+                    <small>{selectedEstablishment.description}</small>
+                    {selectedEstablishment.offers.length > 0 && (
+                      <div className={styles.establishmentOffers}>
+                        {selectedEstablishment.offers.slice(0, 3).map((offer) => (
+                          <span key={offer.id} className={styles.establishmentOffer}>
+                            {offer.title} • {formatEstablishmentPrice(offer.price)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={styles.detailCloseButton}
+                  onClick={() => setSelectedEstablishment(null)}
+                >
+                  Fechar
+                </button>
+              </div>
+            )}
+
+            {!selectedEstablishment && selectedLocation && (
               <div className={styles.detailCard}>
                 <div>
                   <strong>{selectedLocation.name}</strong>
@@ -524,6 +673,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
             <span><strong>Mapa:</strong> OpenStreetMap + MapLibre</span>
             <span><strong>Rotas:</strong> malha viária real quando disponível</span>
             <span><strong>NPCs:</strong> pontos fictícios e seguros dentro da cidade</span>
+            <span><strong>Comércio:</strong> {establishments.length} estabelecimento(s) publicado(s)</span>
           </div>}
         </>
       )}
