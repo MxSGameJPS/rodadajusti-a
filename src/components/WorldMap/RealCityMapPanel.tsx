@@ -357,6 +357,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       const officePoint = await resolveStableRoadPoint(
         stableMapPointKey(profile, 'office:ramos'),
         officeRawPoint,
+        profile.center,
       );
       const currentRawPoint = currentLocation
         ? getWorldPointForLocation(profile, currentCase.id, currentLocation)
@@ -369,6 +370,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
             : 'office:ramos',
         ),
         currentRawPoint,
+        profile.center,
       );
       if (!active || mapRef.current !== map) return;
       points.push([officePoint.lng, officePoint.lat]);
@@ -402,6 +404,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
           const universityPoint = await resolveStableRoadPoint(
             stableMapPointKey(profile, 'university'),
             getUniversityPoint(player, profile),
+            profile.center,
           );
           if (!active || mapRef.current !== map) return;
           points.push([universityPoint.lng, universityPoint.lat]);
@@ -462,6 +465,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
               'case:' + currentCase.id + ':location:' + location.id,
             ),
             getWorldPointForLocation(profile, currentCase.id, location),
+            profile.center,
           ),
         })),
       );
@@ -475,6 +479,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
               'establishment:' + establishment.id,
             ),
             await resolveWorldPointForEstablishment(profile, establishment),
+            profile.center,
           ),
         })),
       );
@@ -573,6 +578,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
             'case:' + currentCase.id + ':location:' + currentLocation.id,
           ),
           getWorldPointForLocation(profile, currentCase.id, currentLocation),
+          profile.center,
         ),
         resolveStableRoadPoint(
           stableMapPointKey(
@@ -580,6 +586,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
             'case:' + currentCase.id + ':location:' + selectedLocation.id,
           ),
           getWorldPointForLocation(profile, currentCase.id, selectedLocation),
+          profile.center,
         ),
       ]);
 
