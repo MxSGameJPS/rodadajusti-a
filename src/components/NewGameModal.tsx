@@ -1,14 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Award, ArrowRight, Briefcase, CheckCircle2, Scale } from 'lucide-react';
+import { Award, ArrowRight, Briefcase, CheckCircle2, Loader2, MapPin, Scale, ShieldCheck } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { supabase } from '../lib/supabase';
 import { getSuggestedPlayerName } from '../lib/authProfile';
 import { CelebrationBurst } from './CelebrationBurst/CelebrationBurst';
+import { geocodeBrazilianAddress, type WorldAddressProfile } from '../lib/worldMap';
 import { OfficeWelcomeDialog } from './OfficeWelcomeDialog';
+
+export interface NewGameSetup {
+  name: string;
+  street: string;
+  number: string;
+  city: string;
+  state: string;
+  addressProfile: WorldAddressProfile;
+}
 
 interface NewGameModalProps {
   isOpen: boolean;
-  onStartNewGame: (name: string) => void;
+  onStartNewGame: (setup: NewGameSetup) => void;
 }
 
 type InitialFocus = 'civil' | 'consumidor' | 'empresarial';
@@ -37,21 +47,36 @@ const FOCUS_OPTIONS: Array<{
   },
 ];
 
-function readPendingWelcomeName() {
+type PendingWelcome = {
+  playerName?: string;
+  street?: string;
+  number?: string;
+  city?: string;
+  state?: string;
+  addressProfile?: WorldAddressProfile;
+};
+
+function readPendingWelcome(): PendingWelcome {
   try {
     const raw = localStorage.getItem(OFFICE_WELCOME_PENDING_KEY);
-    if (!raw) return '';
-
-    const parsed = JSON.parse(raw) as { playerName?: string };
-    return typeof parsed.playerName === 'string' ? parsed.playerName.trim() : '';
+    if (!raw) return {};
+    return JSON.parse(raw) as PendingWelcome;
   } catch {
-    return '';
+    return {};
   }
 }
 
 export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGame }) => {
-  const pendingWelcomeName = readPendingWelcomeName();
+  const pendingWelcome = readPendingWelcome();
+  const pendingWelcomeName = typeof pendingWelcome.playerName === 'string' ? pendingWelcome.playerName.trim() : '';
   const [playerName, setPlayerName] = useState(pendingWelcomeName || 'Novo Personagem');
+  const [street, setStreet] = useState(pendingWelcome.street || '');
+  const [number, setNumber] = useState(pendingWelcome.number || '');
+  const [city, setCity] = useState(pendingWelcome.city || '');
+  const [state, setState] = useState((pendingWelcome.state || '').toUpperCase());
+  const [validatedAddress, setValidatedAddress] = useState<WorldAddressProfile | null>(pendingWelcome.addressProfile || null);
+  const [addressError, setAddressError] = useState('');
+  const [validatingAddress, setValidatingAddress] = useState(false);
   const [didHydrateAuthName, setDidHydrateAuthName] = useState(!supabase || Boolean(pendingWelcomeName));
   const [selectedFocus, setSelectedFocus] = useState<InitialFocus>('civil');
   const [isAcceptingOffer, setIsAcceptingOffer] = useState(false);
@@ -87,25 +112,65 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
 
   const normalizedPlayerName = playerName.trim() || 'Novo Personagem';
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const validateResidence = async () => {
+    const cleanState = state.trim().toUpperCase();
+    if (!street.trim() || !number.trim() || !city.trim() || cleanState.length !== 2) {
+      throw new Error('Preencha rua, número, cidade e UF da residência do personagem.');
+    }
+
+    if (
+      validatedAddress
+      && validatedAddress.street === street.trim()
+      && validatedAddress.number === number.trim()
+      && validatedAddress.city === city.trim()
+      && validatedAddress.state === cleanState
+    ) {
+      return validatedAddress;
+    }
+
+    setValidatingAddress(true);
+    setAddressError('');
+    try {
+      const profile = await geocodeBrazilianAddress(street, number, city, cleanState);
+      setValidatedAddress(profile);
+      return profile;
+    } finally {
+      setValidatingAddress(false);
+    }
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (isAcceptingOffer) return;
+    if (isAcceptingOffer || validatingAddress) return;
 
-    sound.playVictory();
-    setIsAcceptingOffer(true);
-    startTimerRef.current = window.setTimeout(() => {
-      try {
-        localStorage.setItem(
-          OFFICE_WELCOME_PENDING_KEY,
-          JSON.stringify({ playerName: normalizedPlayerName }),
-        );
-      } catch {
-        // O onboarding continua funcionando mesmo sem persistência local.
-      }
+    try {
+      const addressProfile = await validateResidence();
 
-      setIsAcceptingOffer(false);
-      setIsOfficeWelcomeOpen(true);
-    }, 1900);
+      sound.playVictory();
+      setIsAcceptingOffer(true);
+      startTimerRef.current = window.setTimeout(() => {
+        try {
+          localStorage.setItem(
+            OFFICE_WELCOME_PENDING_KEY,
+            JSON.stringify({
+              playerName: normalizedPlayerName,
+              street: street.trim(),
+              number: number.trim(),
+              city: city.trim(),
+              state: state.trim().toUpperCase(),
+              addressProfile,
+            }),
+          );
+        } catch {
+          // O onboarding continua funcionando mesmo sem persistência local.
+        }
+
+        setIsAcceptingOffer(false);
+        setIsOfficeWelcomeOpen(true);
+      }, 1900);
+    } catch (error) {
+      setAddressError(error instanceof Error ? error.message : 'Não foi possível validar sua residência.');
+    }
   };
 
   const handleWelcomeComplete = () => {
@@ -115,8 +180,22 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
       // ignore
     }
 
+    const addressProfile = validatedAddress || pendingWelcome.addressProfile;
+    if (!addressProfile) {
+      setIsOfficeWelcomeOpen(false);
+      setAddressError('Valide o endereço residencial antes de iniciar a carreira.');
+      return;
+    }
+
     setIsOfficeWelcomeOpen(false);
-    onStartNewGame(normalizedPlayerName);
+    onStartNewGame({
+      name: normalizedPlayerName,
+      street: street.trim() || addressProfile.street,
+      number: number.trim() || addressProfile.number,
+      city: city.trim() || addressProfile.city,
+      state: state.trim().toUpperCase() || addressProfile.state,
+      addressProfile,
+    });
   };
 
   if (isOfficeWelcomeOpen) {
@@ -280,6 +359,112 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
                   </div>
                 </section>
 
+                <section className="mt-7 rounded-xl border border-[#9D845A]/35 bg-[#F5EFE5]/70 p-4 sm:p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#8F6E39]/30 bg-[#E8D9BF] text-[#7D5D2C]">
+                      <MapPin size={18} />
+                    </div>
+                    <div>
+                      <h2 className="font-serif text-base font-semibold text-[#30291F]">Residência do personagem</h2>
+                      <p className="mt-1 text-[11px] leading-5 text-[#746754]">
+                        A casa fará parte do mapa e da rotina: dormir, tomar banho, comer, estudar e pagar despesas domésticas.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_110px]">
+                    <label className="block">
+                      <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-[#796A54]">Rua</span>
+                      <input
+                        value={street}
+                        onChange={(event) => {
+                          setStreet(event.target.value);
+                          setValidatedAddress(null);
+                          setAddressError('');
+                        }}
+                        placeholder="Ex.: Rua das Acácias"
+                        className="w-full rounded-lg border border-[#AF9C7D]/60 bg-[#FBF8F2] px-3 py-2.5 text-sm text-[#302A22] outline-none focus:border-[#8E6B35]"
+                        required
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-[#796A54]">Número</span>
+                      <input
+                        value={number}
+                        onChange={(event) => {
+                          setNumber(event.target.value);
+                          setValidatedAddress(null);
+                          setAddressError('');
+                        }}
+                        placeholder="120"
+                        className="w-full rounded-lg border border-[#AF9C7D]/60 bg-[#FBF8F2] px-3 py-2.5 text-sm text-[#302A22] outline-none focus:border-[#8E6B35]"
+                        required
+                      />
+                    </label>
+                  </div>
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_110px_auto]">
+                    <label className="block">
+                      <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-[#796A54]">Cidade</span>
+                      <input
+                        value={city}
+                        onChange={(event) => {
+                          setCity(event.target.value);
+                          setValidatedAddress(null);
+                          setAddressError('');
+                        }}
+                        placeholder="Ex.: Dois Irmãos"
+                        className="w-full rounded-lg border border-[#AF9C7D]/60 bg-[#FBF8F2] px-3 py-2.5 text-sm text-[#302A22] outline-none focus:border-[#8E6B35]"
+                        required
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-[#796A54]">UF</span>
+                      <input
+                        value={state}
+                        onChange={(event) => {
+                          setState(event.target.value.toUpperCase().slice(0, 2));
+                          setValidatedAddress(null);
+                          setAddressError('');
+                        }}
+                        maxLength={2}
+                        placeholder="RS"
+                        className="w-full rounded-lg border border-[#AF9C7D]/60 bg-[#FBF8F2] px-3 py-2.5 text-center text-sm font-bold uppercase text-[#302A22] outline-none focus:border-[#8E6B35]"
+                        required
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => void validateResidence().catch((error) => setAddressError(error instanceof Error ? error.message : 'Falha ao validar endereço.'))}
+                      disabled={validatingAddress}
+                      className="mt-auto flex h-[42px] items-center justify-center gap-2 rounded-lg border border-[#806332]/35 bg-[#E6D6B9] px-4 text-[10px] font-bold uppercase tracking-wider text-[#634A24] disabled:opacity-60"
+                    >
+                      {validatingAddress ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
+                      Validar
+                    </button>
+                  </div>
+
+                  {validatedAddress && (
+                    <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#3F8B68]/25 bg-[#3F8B68]/8 px-3 py-2.5 text-[10px] leading-4 text-[#376E57]">
+                      <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
+                      <span>Endereço localizado no mapa. Ele será usado como a casa do personagem.</span>
+                    </div>
+                  )}
+
+                  {addressError && (
+                    <div className="mt-3 rounded-lg border border-[#B75A5A]/25 bg-[#B75A5A]/8 px-3 py-2.5 text-[10px] font-semibold text-[#8E4040]">
+                      {addressError}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#5A6F8F]/25 bg-[#5A6F8F]/7 px-3 py-3 text-[10px] leading-4 text-[#53627A]">
+                    <ShieldCheck size={15} className="mt-0.5 shrink-0" />
+                    <span>
+                      <strong>Privacidade:</strong> rua e número são dados privados da carreira e não são publicados no mapa público, no Rota Admin ou na lista de estabelecimentos. Eles são usados apenas para posicionar sua residência e calcular mecânicas do jogo.
+                    </span>
+                  </div>
+                </section>
+
                 <section className="mt-6 grid grid-cols-1 overflow-hidden rounded-lg border border-[#A99779]/45 bg-[#E7DED0]/65 text-center sm:grid-cols-3">
                   <div className="px-4 py-4">
                     <span className="block text-[9px] font-bold uppercase tracking-[0.2em] text-[#8C7A5F]">Cargo</span>
@@ -306,8 +491,8 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
                     disabled={isAcceptingOffer || !didHydrateAuthName}
                     className="mx-auto mt-4 flex w-full max-w-md items-center justify-center gap-2 rounded-lg bg-[#27221B] px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[#E8CF9A] shadow-[0_16px_40px_rgba(57,43,23,.22)] transition-all hover:bg-[#1F1A14] hover:text-[#F2DCA9] disabled:cursor-wait disabled:opacity-65 active:scale-[.99]"
                   >
-                    <span>{isAcceptingOffer ? 'Oportunidade aceita' : 'Aceitar oportunidade'}</span>
-                    {isAcceptingOffer ? <Award size={17} /> : <ArrowRight size={17} />}
+                    <span>{isAcceptingOffer ? 'Oportunidade aceita' : validatingAddress ? 'Validando residência' : 'Aceitar oportunidade'}</span>
+                    {isAcceptingOffer ? <Award size={17} /> : validatingAddress ? <Loader2 size={17} className="animate-spin" /> : <ArrowRight size={17} />}
                   </button>
                 </div>
               </div>
