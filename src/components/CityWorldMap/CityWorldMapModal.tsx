@@ -335,10 +335,10 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
             <div className="flex items-start gap-3">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#D8B768]/25 bg-[#D8B768]/10 text-[#E0C681]"><Home size={23} /></div>
               <div className="min-w-0 flex-1">
-                <span className="text-[8px] font-black uppercase tracking-wider text-[#9D895B]">Residência privada</span>
+                <span className="text-[8px] font-black uppercase tracking-wider text-[#9D895B]">Residência privada • posição aproximada</span>
                 <h3 className="mt-1 font-serif text-xl font-black text-[#F1EEE8]">Sua casa</h3>
                 <p className="mt-1 text-xs leading-5 text-[#9A9FA7]">
-                  {player.household.residence.street}, {player.household.residence.number} • {player.household.residence.city}/{player.household.residence.state}
+                  {player.household.residence.street} • ponto residencial aproximado • {player.household.residence.city}/{player.household.residence.state}
                 </p>
                 <button type="button" onClick={onOpenHome} className="mt-3 rounded-xl bg-[#9A783D] px-4 py-2.5 text-xs font-black text-[#11100D]">
                   Entrar em casa
