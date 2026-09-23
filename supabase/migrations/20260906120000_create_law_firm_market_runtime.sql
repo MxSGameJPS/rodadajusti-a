@@ -172,7 +172,7 @@ alter table public.career_law_firm_offers
 
 -- Não convertemos silenciosamente propostas antigas porque INITIAL/RECRUITMENT
 -- não possuem semântica inequívoca no Recruitment V1.
-do $
+do $market_guard$
 begin
   if exists (
     select 1
@@ -192,7 +192,7 @@ begin
       hint = 'Revise essas linhas e converta conscientemente para os tipos oficiais do Recruitment V1 antes de reaplicar esta migration.';
   end if;
 end
-$;
+$market_guard$;
 
 alter table public.career_law_firm_offers
   drop constraint if exists career_law_firm_offer_type_valid;
