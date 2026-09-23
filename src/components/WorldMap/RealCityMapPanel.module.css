@@ -1024,3 +1024,19 @@
 .lifeMarker {
   transform-origin: initial;
 }
+
+
+/* Em zoom aberto os rótulos continuam ocupando o mesmo espaço geométrico,
+   mas ficam invisíveis para evitar sobreposição sem alterar a âncora do marker. */
+.lowZoom .gameMarkerLabel,
+.lowZoom .establishmentMarkerCaption {
+  visibility: hidden;
+}
+
+.lowZoom .gameMarkerPin {
+  opacity: 0.9;
+}
+
+.lowZoom .establishmentMarkerVisual {
+  opacity: 0.92;
+}
