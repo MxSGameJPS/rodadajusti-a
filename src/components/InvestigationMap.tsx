@@ -49,6 +49,8 @@ interface InvestigationMapProps {
   onOpenDossier: () => void;
   onOpenCourtroom: () => void;
   onBackToOffice: () => void;
+  onOpenPlayerHome: () => void;
+  onStudyAtUniversity: () => void;
 }
 
 export const InvestigationMap: React.FC<InvestigationMapProps> = ({
@@ -58,6 +60,8 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
   onOpenDossier,
   onOpenCourtroom,
   onBackToOffice,
+  onOpenPlayerHome,
+  onStudyAtUniversity,
 }) => {
   const [travelTarget, setTravelTarget] = useState<LocationScene | null>(null);
   const [locationsOpen, setLocationsOpen] = useState(false);
@@ -136,6 +140,8 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
           currentLocationId={activeState.currentLocationId}
           unlockedLocationIds={Array.from(unlockedLocationIds)}
           onTravelToLocation={beginTravel}
+          onOpenPlayerHome={onOpenPlayerHome}
+          onStudyAtUniversity={onStudyAtUniversity}
           immersive
         />
 
