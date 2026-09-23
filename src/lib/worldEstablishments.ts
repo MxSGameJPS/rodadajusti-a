@@ -94,6 +94,12 @@ type RawEstablishment = {
   offers?: RawOffer[] | null;
 };
 
+type RawGameFeedEstablishment = RawEstablishment & {
+  city_name?: string | null;
+  state_code?: string | null;
+  offers?: RawOffer[] | null;
+};
+
 function normalize(value: string) {
   return String(value || '')
     .normalize('NFD')
@@ -221,6 +227,65 @@ const ESTABLISHMENT_MINIMAL_SELECT = [
   'allow_map_highlight',
 ].join(',');
 
+async function readControlledGameFeed(profile: WorldMapProfile) {
+  if (!supabase) {
+    return {
+      available: false,
+      rows: [] as RawEstablishment[],
+      error: 'Supabase do jogo não está configurado.',
+    };
+  }
+
+  const { data, error } = await supabase.rpc('get_game_establishments', {
+    p_city: profile.city,
+    p_state: profile.state,
+  });
+
+  if (error) {
+    const code = String(error.code || '').toUpperCase();
+    const message = String(error.message || '').toLowerCase();
+    const functionMissing = code === 'PGRST202'
+      || code === '42883'
+      || message.includes('get_game_establishments') && (
+        message.includes('not found')
+        || message.includes('does not exist')
+        || message.includes('schema cache')
+      );
+
+    if (functionMissing) {
+      return {
+        available: false,
+        rows: [] as RawEstablishment[],
+        error: null as string | null,
+      };
+    }
+
+    return {
+      available: true,
+      rows: [] as RawEstablishment[],
+      error: supabaseDiagnostic(error),
+    };
+  }
+
+  const rows = ((data || []) as unknown as RawGameFeedEstablishment[]).map((row) => ({
+    ...row,
+    city: row.city_id && row.city_name && row.state_code
+      ? {
+          id: row.city_id,
+          name: row.city_name,
+          state_code: row.state_code,
+        }
+      : null,
+    offers: Array.isArray(row.offers) ? row.offers : [],
+  }));
+
+  return {
+    available: true,
+    rows,
+    error: null as string | null,
+  };
+}
+
 async function readPublishedEstablishmentRows() {
   if (!supabase) return { rows: [] as RawEstablishment[], error: 'Supabase do jogo não está configurado.' };
 
@@ -336,6 +401,30 @@ export async function loadWorldEstablishmentsWithDiagnostics(
     return { items: [], error };
   }
 
+  const feed = await readControlledGameFeed(profile);
+  if (feed.available) {
+    if (feed.error) {
+      console.error('[Rota da Justiça] Feed público de estabelecimentos falhou.', {
+        error: feed.error,
+        city: profile.city,
+        state: profile.state,
+      });
+      return {
+        items: [],
+        error: 'Feed público do comércio indisponível: ' + feed.error,
+      };
+    }
+
+    return {
+      items: feed.rows.map(normalizeEstablishment),
+      error: null,
+      warnings: feed.rows.length === 0
+        ? ['Feed público ativo, mas retornou 0 estabelecimentos para esta cidade.']
+        : [],
+    };
+  }
+
+  // Compatibilidade temporária antes da migration do feed ser aplicada.
   const core = await readPublishedEstablishmentRows();
   if (core.error) {
     console.error('[Rota da Justiça] Falha ao ler estabelecimentos publicados.', {
@@ -350,7 +439,7 @@ export async function loadWorldEstablishmentsWithDiagnostics(
     return {
       items: [],
       error: null,
-      warnings: ['A leitura pública funcionou, mas retornou 0 estabelecimentos publicados/ativos.'],
+      warnings: ['A leitura direta funcionou, mas retornou 0 estabelecimentos publicados/ativos.'],
     };
   }
 
@@ -361,8 +450,6 @@ export async function loadWorldEstablishmentsWithDiagnostics(
       .filter(Boolean),
   ));
 
-  // Cidade e ofertas são complementares. Uma falha nelas não derruba o
-  // estabelecimento principal do mapa.
   const [cityResult, offerResult] = await Promise.all([
     readCitiesByIds(cityIds),
     readOffersByEstablishmentIds(establishmentIds),
@@ -371,6 +458,13 @@ export async function loadWorldEstablishmentsWithDiagnostics(
   const warnings: string[] = [];
   if (cityResult.error) warnings.push('Falha ao ler cidades: ' + cityResult.error);
   if (offerResult.error) warnings.push('Falha ao ler ofertas: ' + offerResult.error);
+
+  const missingCityCount = cityIds.filter((id) => !cityResult.cities.has(id)).length;
+  if (missingCityCount > 0) {
+    warnings.push(
+      missingCityCount + ' cidade(s) vinculada(s) não ficaram visíveis para a chave pública do jogo.',
+    );
+  }
 
   const normalized = core.rows.map((row) => {
     const city = row.city_id ? cityResult.cities.get(row.city_id) || null : null;
@@ -394,15 +488,13 @@ export async function loadWorldEstablishmentsWithDiagnostics(
         && normalize(item.city.name) === targetCity;
     }
 
-    // Se a cidade vinculada não pôde ser lida, não inventamos a cidade do
-    // estabelecimento. O diagnóstico fica explícito no mapa.
     return false;
   });
 
-  if (normalized.length > 0 && items.length === 0 && cityResult.error) {
+  if (normalized.length > 0 && items.length === 0 && missingCityCount > 0) {
     return {
       items: [],
-      error: 'Estabelecimentos publicados foram encontrados, mas a cidade vinculada não pôde ser lida. ' + cityResult.error,
+      error: 'Estabelecimentos publicados foram encontrados, mas a cidade vinculada ficou invisível para a chave pública. Aplique o feed público do game.',
       warnings,
     };
   }
