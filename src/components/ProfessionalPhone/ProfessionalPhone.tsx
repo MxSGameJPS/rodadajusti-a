@@ -15,8 +15,11 @@ import {
 } from 'lucide-react';
 import { GAME_CASES } from '../../data/cases';
 import {
+  isEmployedProfessional,
   isProfessionalEmploymentActive,
   isRamosEmploymentActive,
+  PROFESSIONAL_EMPLOYMENT_UPDATED_EVENT,
+  readProfessionalEmploymentState,
 } from '../../lib/professionalEmployment';
 import { getProfessionalOwnerKey, readCurrentPlayerSnapshot } from '../../lib/professionalRpg';
 import { usePlayerDisplayName } from '../../lib/playerTreatment';
@@ -28,7 +31,7 @@ import transcriptStyles from './ProfessionalPhoneTranscript.module.css';
 const OPEN_PHONE_EVENT = 'rota:open-professional-phone';
 
 type PhoneTab = 'WHATSAPP' | 'CALLS';
-type ContactId = 'MARIANA' | 'ROBERTO' | 'CLIENT';
+type ContactId = 'MARIANA' | 'ROBERTO' | 'OFFICE_COORDINATION' | 'OFFICE_PARTNER' | 'CLIENT';
 type CallStatus = 'IDLE' | 'DIALING' | 'CONNECTED';
 type CallDirection = 'IN' | 'OUT';
 
@@ -145,7 +148,7 @@ function sameRelevantPlayer(left: PlayerProfile | null, right: PlayerProfile) {
   );
 }
 
-function autoReply(contactId: ContactId, hasActiveCase: boolean) {
+function autoReply(contactId: ContactId, hasActiveCase: boolean, officeName: string) {
   if (contactId === 'ROBERTO') {
     return hasActiveCase
       ? 'Concentre-se no caso que está no seu CRM. Se surgir uma decisão estratégica importante, venha falar comigo no escritório.'
@@ -156,10 +159,20 @@ function autoReply(contactId: ContactId, hasActiveCase: boolean) {
       ? 'Seu caso ativo continua registrado no Social Jurídico. Confira o CRM e os prazos pelo notebook.'
       : 'Assim que o Dr. Roberto fizer uma distribuição, eu cadastro o atendimento no seu CRM e aviso você.';
   }
+  if (contactId === 'OFFICE_PARTNER') {
+    return hasActiveCase
+      ? `Concentre-se no caso atribuído por ${officeName}. Se surgir uma decisão estratégica importante, registre no CRM e acione a coordenação.`
+      : `Ainda não há nova distribuição em ${officeName}. A coordenação avisará você quando um atendimento for atribuído.`;
+  }
+  if (contactId === 'OFFICE_COORDINATION') {
+    return hasActiveCase
+      ? `Seu caso ativo continua registrado no ambiente profissional de ${officeName}. Confira o CRM, os documentos e os prazos.`
+      : `Assim que houver uma nova distribuição em ${officeName}, o atendimento será disponibilizado no seu CRM e você receberá um aviso por aqui.`;
+  }
   return 'Obrigado, doutor(a). Vou separar as informações e lhe retorno assim que possível.';
 }
 
-function callOpening(contactId: ContactId, hasActiveCase: boolean, clientName?: string) {
+function callOpening(contactId: ContactId, hasActiveCase: boolean, clientName: string | undefined, officeName: string) {
   if (contactId === 'MARIANA') {
     return hasActiveCase
       ? 'Doutor, estou ligando para confirmar que o atendimento distribuído pelo Dr. Roberto já está no seu CRM. Confira o dossiê e os prazos antes de falar com o cliente.'
@@ -170,10 +183,20 @@ function callOpening(contactId: ContactId, hasActiveCase: boolean, clientName?: 
       ? 'Revise o caso que está no seu CRM com atenção. Quero que qualquer decisão estratégica importante seja tomada com base no dossiê e nos prazos registrados no Social Jurídico.'
       : 'Ainda não há caso novo para você. Assim que eu fizer uma distribuição, a Mariana vai registrar o atendimento no CRM.';
   }
+  if (contactId === 'OFFICE_COORDINATION') {
+    return hasActiveCase
+      ? `Estou ligando pela coordenação de ${officeName} para confirmar que o atendimento atribuído já está no seu CRM. Confira o dossiê e os prazos antes das próximas providências.`
+      : `Aqui é a coordenação de ${officeName}. Seu canal profissional está ativo. Quando houver uma nova distribuição, você receberá a atualização no CRM e por este telefone.`;
+  }
+  if (contactId === 'OFFICE_PARTNER') {
+    return hasActiveCase
+      ? `Revise com atenção o caso atribuído por ${officeName}. Qualquer decisão estratégica importante deve estar fundamentada no dossiê e registrada no fluxo profissional.`
+      : `Seu vínculo com ${officeName} está ativo. Ainda não há um novo caso distribuído; use este período para acompanhar agenda, CRM e rotinas do escritório.`;
+  }
   return `Doutor, aqui é ${clientName || 'o cliente'}. Estou à disposição para esclarecer as informações do meu caso e enviar o que for necessário.`;
 }
 
-function callOptions(contactId: ContactId, hasActiveCase: boolean): CallOption[] {
+function callOptions(contactId: ContactId, hasActiveCase: boolean, officeName: string): CallOption[] {
   if (contactId === 'MARIANA') {
     return hasActiveCase
       ? [
@@ -230,6 +253,52 @@ function callOptions(contactId: ContactId, hasActiveCase: boolean): CallOption[]
         ];
   }
 
+  if (contactId === 'OFFICE_COORDINATION') {
+    return hasActiveCase
+      ? [
+          {
+            id: 'crm-office',
+            label: 'Vou conferir o CRM e os prazos agora.',
+            response: `Perfeito. A coordenação de ${officeName} manterá documentos, movimentações e prioridades registrados no atendimento.`,
+          },
+          {
+            id: 'office-deadline',
+            label: 'Me avisem se surgir uma prioridade urgente.',
+            response: 'Pode deixar. Mudanças relevantes de prazo ou atribuição serão sinalizadas neste canal profissional.',
+          },
+        ]
+      : [
+          {
+            id: 'office-ready',
+            label: 'Entendido. Vou manter o canal profissional disponível.',
+            response: `Ótimo. Quando ${officeName} atribuir um novo atendimento, você verá a atualização no CRM e receberá um aviso por aqui.`,
+          },
+        ];
+  }
+
+  if (contactId === 'OFFICE_PARTNER') {
+    return hasActiveCase
+      ? [
+          {
+            id: 'office-review',
+            label: 'Vou revisar o dossiê antes de definir a estratégia.',
+            response: 'É o procedimento esperado. Primeiro confirme fatos, documentos e prazos; depois registre a estratégia no ambiente profissional.',
+          },
+          {
+            id: 'office-question',
+            label: 'Se houver uma questão estratégica, aciono a coordenação.',
+            response: `Correto. Em ${officeName}, questões relevantes devem chegar acompanhadas do problema identificado e de uma proposta de encaminhamento.`,
+          },
+        ]
+      : [
+          {
+            id: 'office-wait',
+            label: 'Certo. Vou acompanhar a agenda e aguardar a distribuição.',
+            response: 'Perfeito. Mantenha o CRM e o telefone profissional disponíveis durante o expediente.',
+          },
+        ];
+  }
+
   return [
     {
       id: 'documentos',
@@ -266,7 +335,11 @@ export const ProfessionalPhone: React.FC = () => {
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
   const welcomeTimerRef = useRef<number | null>(null);
   const displayName = usePlayerDisplayName(player, 'Advogado');
+  const employment = player ? readProfessionalEmploymentState(player) : null;
+  const employed = Boolean(player && isEmployedProfessional(player));
   const ramosEmploymentActive = Boolean(player && isRamosEmploymentActive(player));
+  const externalEmploymentActive = employed && !ramosEmploymentActive;
+  const currentOfficeName = employment?.officeName || 'Escritório atual';
 
   const activeCase = useMemo(
     () => GAME_CASES.find((caseItem) => caseItem.id === player?.activeCase?.caseId) || null,
@@ -290,13 +363,25 @@ export const ProfessionalPhone: React.FC = () => {
         available: ramosEmploymentActive,
       },
       {
+        id: 'OFFICE_COORDINATION',
+        name: 'Coordenação do Escritório',
+        role: externalEmploymentActive ? `Operações profissionais • ${currentOfficeName}` : 'Nenhum vínculo externo ativo',
+        available: externalEmploymentActive,
+      },
+      {
+        id: 'OFFICE_PARTNER',
+        name: 'Sócio Responsável',
+        role: externalEmploymentActive ? `Direção profissional • ${currentOfficeName}` : 'Nenhum vínculo externo ativo',
+        available: externalEmploymentActive,
+      },
+      {
         id: 'CLIENT',
         name: activeCase?.client.name || 'Cliente do caso',
         role: activeCase ? `${activeCase.code} • ${activeCase.area}` : 'Nenhum cliente ativo',
         available: Boolean(activeCase),
       },
     ],
-    [activeCase, ramosEmploymentActive],
+    [activeCase, currentOfficeName, externalEmploymentActive, ramosEmploymentActive],
   );
 
   useEffect(() => {
@@ -320,12 +405,18 @@ export const ProfessionalPhone: React.FC = () => {
       sound.playClick();
       setIsOpen(true);
     };
+    const onEmploymentUpdated = () => {
+      const current = readCurrentPlayerSnapshot();
+      if (active && current) setPlayer({ ...current });
+    };
     window.addEventListener(OPEN_PHONE_EVENT, openPhone);
+    window.addEventListener(PROFESSIONAL_EMPLOYMENT_UPDATED_EVENT, onEmploymentUpdated);
 
     return () => {
       active = false;
       window.clearInterval(timer);
       window.removeEventListener(OPEN_PHONE_EVENT, openPhone);
+      window.removeEventListener(PROFESSIONAL_EMPLOYMENT_UPDATED_EVENT, onEmploymentUpdated);
     };
   }, []);
 
@@ -363,8 +454,20 @@ export const ProfessionalPhone: React.FC = () => {
   }, [activeCase?.id, phoneState, player, ramosEmploymentActive]);
 
   useEffect(() => {
-    if (!ramosEmploymentActive && activeCase) setSelectedContactId('CLIENT');
-  }, [ramosEmploymentActive, activeCase?.id]);
+    if (ramosEmploymentActive) {
+      setSelectedContactId((current) => (
+        current === 'OFFICE_COORDINATION' || current === 'OFFICE_PARTNER' ? 'MARIANA' : current
+      ));
+      return;
+    }
+    if (externalEmploymentActive) {
+      setSelectedContactId((current) => (
+        current === 'MARIANA' || current === 'ROBERTO' ? 'OFFICE_COORDINATION' : current
+      ));
+      return;
+    }
+    if (activeCase) setSelectedContactId('CLIENT');
+  }, [ramosEmploymentActive, externalEmploymentActive, activeCase?.id]);
 
   useEffect(() => {
     if (callStatus !== 'CONNECTED') return undefined;
@@ -385,12 +488,12 @@ export const ProfessionalPhone: React.FC = () => {
         {
           id: `line-contact-${Date.now()}`,
           speaker: 'CONTACT',
-          text: callOpening(callContactId, Boolean(activeCase), activeCase?.client.name),
+          text: callOpening(callContactId, Boolean(activeCase), activeCase?.client.name, currentOfficeName),
         },
       ]);
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [callStatus, callContactId, callTranscript.length, activeCase]);
+  }, [callStatus, callContactId, callTranscript.length, activeCase, currentOfficeName]);
 
   if (!player || !phoneState) return null;
 
@@ -528,7 +631,7 @@ export const ProfessionalPhone: React.FC = () => {
           id: `msg-in-${Date.now()}`,
           contactId: replyContactId,
           direction: 'IN',
-          text: autoReply(replyContactId, Boolean(activeCase)),
+          text: autoReply(replyContactId, Boolean(activeCase), currentOfficeName),
           sentAt: clockNow(),
         };
         const replied = { ...current, messages: [...current.messages, incoming] };
@@ -539,9 +642,9 @@ export const ProfessionalPhone: React.FC = () => {
   };
 
   const callTime = formatDuration(callSeconds);
-  const responseOptions = callContactId ? callOptions(callContactId, Boolean(activeCase)) : [];
-  const phoneWorkspaceLabel = ramosEmploymentActive
-    ? 'Ramos & Associados'
+  const responseOptions = callContactId ? callOptions(callContactId, Boolean(activeCase), currentOfficeName) : [];
+  const phoneWorkspaceLabel = employed
+    ? currentOfficeName
     : player.officeFinances.isOfficeOpen
       ? player.officeFinances.officeName
       : 'Advocacia independente';
@@ -639,9 +742,11 @@ export const ProfessionalPhone: React.FC = () => {
                   <div className={styles.messages}>
                     {!selectedContact.available && (
                       <div className={styles.emptyChat}>
-                        {!ramosEmploymentActive && selectedContact.id !== 'CLIENT'
-                          ? 'Este contato pertence ao seu antigo vínculo com o Ramos & Associados. Novas comunicações profissionais do escritório foram encerradas.'
-                          : 'Quando houver um cliente ativo, ele ficará disponível para contato.'}
+                        {selectedContact.id === 'MARIANA' || selectedContact.id === 'ROBERTO'
+                          ? 'Este contato pertence ao seu vínculo com o Ramos & Associados. Novas comunicações ficam indisponíveis quando o contrato com esse escritório não está ativo.'
+                          : selectedContact.id === 'OFFICE_COORDINATION' || selectedContact.id === 'OFFICE_PARTNER'
+                            ? 'Este contato fica disponível quando existe vínculo ativo com outro escritório.'
+                            : 'Quando houver um cliente ativo, ele ficará disponível para contato.'}
                       </div>
                     )}
                     {selectedMessages.map((message) => (
