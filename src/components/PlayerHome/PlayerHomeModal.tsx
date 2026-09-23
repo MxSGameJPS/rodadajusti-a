@@ -36,9 +36,10 @@ interface PlayerHomeModalProps {
   onOpenCityMap: () => void;
 }
 
-function meterClass(value: number) {
-  if (value <= 20) return 'bg-[#F87171]';
-  if (value <= 45) return 'bg-[#FBBF24]';
+function meterClass(value: number, dangerWhenHigh = false) {
+  const dangerValue = dangerWhenHigh ? 100 - value : value;
+  if (dangerValue <= 20) return 'bg-[#F87171]';
+  if (dangerValue <= 45) return 'bg-[#FBBF24]';
   return 'bg-[#34D399]';
 }
 
@@ -53,10 +54,12 @@ function NeedCard({
   label,
   value,
   icon,
+  dangerWhenHigh = false,
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
+  dangerWhenHigh?: boolean;
 }) {
   return (
     <article className="rounded-2xl border border-[#2A2E34] bg-[#111419] p-4">
@@ -68,9 +71,9 @@ function NeedCard({
         <strong className="font-mono text-sm text-[#F2F0EC]">{Math.round(value)}%</strong>
       </div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#252A30]">
-        <div className={`h-full transition-all ${meterClass(value)}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
+        <div className={`h-full transition-all ${meterClass(value, dangerWhenHigh)}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
       </div>
-      <small className="mt-2 block text-[9px] font-bold uppercase tracking-wider text-[#777D86]">{lifeNeedLabel(value)}</small>
+      <small className="mt-2 block text-[9px] font-bold uppercase tracking-wider text-[#777D86]">{dangerWhenHigh ? (value >= 80 ? 'Crítico' : value >= 55 ? 'Alto' : value >= 30 ? 'Atenção' : 'Baixo') : lifeNeedLabel(value)}</small>
     </article>
   );
 }
@@ -96,6 +99,13 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
   const bed = getBestBedBonuses(household);
   const studyBonus = getBestStudyBonus(household);
   const isIntern = player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR';
+  const mealLabel = player.gameCurrentMinutes >= 11 * 60 && player.gameCurrentMinutes < 16 * 60
+    ? 'Almoçar'
+    : player.gameCurrentMinutes >= 18 * 60 && player.gameCurrentMinutes < 23 * 60
+      ? 'Jantar'
+      : player.gameCurrentMinutes >= 5 * 60 && player.gameCurrentMinutes < 11 * 60
+        ? 'Café da manhã'
+        : 'Fazer uma refeição';
 
   return (
     <div className="fixed inset-0 z-[175] overflow-y-auto bg-black/90 p-3 backdrop-blur-md sm:p-6">
@@ -138,7 +148,7 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <NeedCard label="Energia" value={household.needs.energy} icon={<BedDouble size={17} />} />
-                <NeedCard label="Fome" value={household.needs.hunger} icon={<Utensils size={17} />} />
+                <NeedCard label="Fome" value={100 - household.needs.hunger} dangerWhenHigh icon={<Utensils size={17} />} />
                 <NeedCard label="Higiene" value={household.needs.hygiene} icon={<Bath size={17} />} />
                 <NeedCard label="Estudos" value={household.needs.study} icon={<BookOpenCheck size={17} />} />
               </div>
@@ -167,7 +177,7 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
                   className="rounded-xl border border-[#5D5231] bg-[#211D12] p-4 text-left transition hover:border-[#8A7844] disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   <Utensils size={18} className="text-[#E1C36C]" />
-                  <strong className="mt-2 block text-sm text-[#F2E9D3]">Preparar refeição • 45 min</strong>
+                  <strong className="mt-2 block text-sm text-[#F2E9D3]">{mealLabel} • 45 min</strong>
                   <span className="mt-1 block text-[10px] leading-4 text-[#A99B75]">Consome 1 unidade da despensa. Restam {household.foodUnits}.</span>
                 </button>
                 <button type="button" onClick={onStudy} className="rounded-xl border border-[#4A3F69] bg-[#191525] p-4 text-left transition hover:border-[#725F9E]">
