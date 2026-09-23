@@ -85,7 +85,7 @@ create table if not exists public.law_firm_members (
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint law_firm_members_unique unique (law_firm_id, npc_id, office_title)
+  constraint law_firm_members_unique unique (law_firm_id, npc_id)
 );
 
 -- Garante compatibilidade caso as tabelas tenham sido criadas anteriormente
@@ -235,6 +235,9 @@ create index if not exists idx_law_firm_roles_firm
 
 create index if not exists idx_law_firm_members_firm
   on public.law_firm_members (law_firm_id, is_active);
+
+create unique index if not exists idx_law_firm_members_unique_npc
+  on public.law_firm_members (law_firm_id, npc_id);
 
 create index if not exists idx_law_firm_offers_career
   on public.career_law_firm_offers (career_id, status, created_at desc);
