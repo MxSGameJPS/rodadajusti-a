@@ -41,6 +41,9 @@ export function createDemoLawyer(caseItem: LegalCase | null): PlayerProfile {
     casesFailed: 0,
     activeCase: caseItem ? createDemoActiveCase(caseItem) : null,
     history: [],
+    personalFinances: {
+      transactions: [],
+    },
     officeFinances: {
       isOfficeOpen: false,
       officeName: 'Ramos & Associados',
