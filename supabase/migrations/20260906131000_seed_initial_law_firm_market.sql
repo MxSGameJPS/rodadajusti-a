@@ -113,7 +113,7 @@ values
   '{"assignmentMode":"COORDINATION","maximumSimultaneousCases":1}'::jsonb,
   '{"warningLimit":2,"ethicsWeight":0.35}'::jsonb,
   '{"salaryPolicy":"FIXED","bonusByCase":true}'::jsonb,
-  '{"canonical":true,"marketSeed":"POST_RAM0S_V1"}'::jsonb,
+  '{"canonical":true,"marketSeed":"POST_RAMOS_V1"}'::jsonb,
   now()
 ),
 (
