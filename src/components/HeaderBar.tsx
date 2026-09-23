@@ -24,6 +24,7 @@ import { sound } from '../utils/sound';
 import { canManageOwnOffice } from '../lib/independentPractice';
 import { usePlayerDisplayName } from '../lib/playerTreatment';
 import { SessionLogoutButton } from './SessionLogoutButton';
+import { PlayerNeedsStrip } from './PlayerNeedsStrip/PlayerNeedsStrip';
 
 const OPEN_SOCIAL_JURIDICO_EVENT = 'rota:open-social-juridico';
 const SOCIAL_JURIDICO_TIERS = new Set([
@@ -245,6 +246,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <span className="font-mono text-sm font-bold text-[#34D399]">
               R$ {player.money.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
+          </div>
+
+          <div className="hidden xl:block">
+            <PlayerNeedsStrip player={player} compact />
           </div>
 
           <div className="hidden border-l border-[#2A2A2E] pl-4 text-center md:block lg:pl-6">
