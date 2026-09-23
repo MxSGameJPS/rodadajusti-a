@@ -162,10 +162,18 @@ function normalizeEstablishment(row: RawEstablishment): WorldEstablishment {
   };
 }
 
-export async function loadWorldEstablishments(profile: WorldMapProfile): Promise<WorldEstablishment[]> {
+export interface WorldEstablishmentsLoadResult {
+  items: WorldEstablishment[];
+  error: string | null;
+}
+
+export async function loadWorldEstablishmentsWithDiagnostics(
+  profile: WorldMapProfile,
+): Promise<WorldEstablishmentsLoadResult> {
   if (!supabase) {
-    console.warn('[Rota da Justiça] Supabase não configurado; estabelecimentos não podem ser carregados.');
-    return [];
+    const error = 'Supabase do jogo não está configurado.';
+    console.warn('[Rota da Justiça] ' + error);
+    return { items: [], error };
   }
 
   const { data, error } = await supabase
@@ -179,6 +187,13 @@ export async function loadWorldEstablishments(profile: WorldMapProfile): Promise
     .limit(250);
 
   if (error) {
+    const diagnostic = [
+      error.code ? '[' + error.code + ']' : '',
+      error.message || '',
+      error.details || '',
+      error.hint || '',
+    ].filter(Boolean).join(' ').trim();
+
     console.error('[Rota da Justiça] Falha ao carregar estabelecimentos publicados.', {
       code: error.code,
       message: error.message,
@@ -187,13 +202,17 @@ export async function loadWorldEstablishments(profile: WorldMapProfile): Promise
       city: profile.city,
       state: profile.state,
     });
-    return [];
+
+    return {
+      items: [],
+      error: diagnostic || 'O catálogo de estabelecimentos não pôde ser lido.',
+    };
   }
 
   const normalized = ((data || []) as unknown as RawEstablishment[])
     .map(normalizeEstablishment);
 
-  return normalized.filter((item) => (
+  const items = normalized.filter((item) => (
     item.presenceScope === 'UNIVERSAL'
     || (
       item.city
@@ -201,6 +220,14 @@ export async function loadWorldEstablishments(profile: WorldMapProfile): Promise
       && normalize(item.city.name) === normalize(profile.city)
     )
   ));
+
+  return { items, error: null };
+}
+
+export async function loadWorldEstablishments(
+  profile: WorldMapProfile,
+): Promise<WorldEstablishment[]> {
+  return (await loadWorldEstablishmentsWithDiagnostics(profile)).items;
 }
 
 function hashString(value: string) {
