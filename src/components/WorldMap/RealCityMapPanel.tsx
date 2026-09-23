@@ -29,7 +29,7 @@ import {
   readWorldMapProfile,
   resolveWorldMapProfile,
   saveWorldMapProfile,
-  snapWorldPointToRoad,
+  resolveStableRoadPoint,
   type WorldMapProfile,
   type WorldRoute,
 } from '../../lib/worldMap';
@@ -49,6 +49,13 @@ const ROUTE_SOURCE_ID = 'rota-preview-route';
 const ROUTE_GLOW_LAYER_ID = 'rota-preview-route-glow';
 const ROUTE_CASING_LAYER_ID = 'rota-preview-route-casing';
 const ROUTE_LAYER_ID = 'rota-preview-route-layer';
+
+function stableMapPointKey(
+  profile: WorldMapProfile,
+  logicalId: string,
+) {
+  return [profile.city, profile.state, logicalId].join(':');
+}
 
 function markerGlyph(location?: LocationScene, isOffice = false) {
   if (isOffice) return 'RA';
@@ -345,11 +352,22 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
 
       const points: [number, number][] = [];
       const officeRawPoint = getRamosOfficePoint(profile);
-      const officePoint = await snapWorldPointToRoad(officeRawPoint);
+      const officePoint = await resolveStableRoadPoint(
+        stableMapPointKey(profile, 'office:ramos'),
+        officeRawPoint,
+      );
       const currentRawPoint = currentLocation
         ? getWorldPointForLocation(profile, currentCase.id, currentLocation)
         : officeRawPoint;
-      const currentPoint = await snapWorldPointToRoad(currentRawPoint);
+      const currentPoint = await resolveStableRoadPoint(
+        stableMapPointKey(
+          profile,
+          currentLocation
+            ? 'case:' + currentCase.id + ':location:' + currentLocation.id
+            : 'office:ramos',
+        ),
+        currentRawPoint,
+      );
       if (!active || mapRef.current !== map) return;
       points.push([officePoint.lng, officePoint.lat]);
 
@@ -379,7 +397,8 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
           || player.careerTier === 'ESTAGIARIO_SENIOR';
 
         if (isIntern) {
-          const universityPoint = await snapWorldPointToRoad(
+          const universityPoint = await resolveStableRoadPoint(
+            stableMapPointKey(profile, 'university'),
             getUniversityPoint(player, profile),
           );
           if (!active || mapRef.current !== map) return;
@@ -435,7 +454,11 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       const locationPoints = await Promise.all(
         unlockedLocations.map(async (location) => ({
           location,
-          point: await snapWorldPointToRoad(
+          point: await resolveStableRoadPoint(
+            stableMapPointKey(
+              profile,
+              'case:' + currentCase.id + ':location:' + location.id,
+            ),
             getWorldPointForLocation(profile, currentCase.id, location),
           ),
         })),
@@ -444,7 +467,11 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       const establishmentPoints = await Promise.all(
         establishments.map(async (establishment) => ({
           establishment,
-          point: await snapWorldPointToRoad(
+          point: await resolveStableRoadPoint(
+            stableMapPointKey(
+              profile,
+              'establishment:' + establishment.id,
+            ),
             getWorldPointForEstablishment(profile, establishment),
           ),
         })),
@@ -538,10 +565,18 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
     setRouteLoading(true);
     const loadRoute = async () => {
       const [origin, destination] = await Promise.all([
-        snapWorldPointToRoad(
+        resolveStableRoadPoint(
+          stableMapPointKey(
+            profile,
+            'case:' + currentCase.id + ':location:' + currentLocation.id,
+          ),
           getWorldPointForLocation(profile, currentCase.id, currentLocation),
         ),
-        snapWorldPointToRoad(
+        resolveStableRoadPoint(
+          stableMapPointKey(
+            profile,
+            'case:' + currentCase.id + ':location:' + selectedLocation.id,
+          ),
           getWorldPointForLocation(profile, currentCase.id, selectedLocation),
         ),
       ]);
