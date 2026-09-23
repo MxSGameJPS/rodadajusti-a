@@ -66,7 +66,7 @@ export function appendProfessionalPhoneMessage(player: PlayerProfile, message: E
       {
         id: message.id,
         contactId: message.contactId,
-        direction: 'IN',
+        direction: 'IN' as const,
         text: message.text,
         sentAt: message.sentAt || clockNow(),
       },
