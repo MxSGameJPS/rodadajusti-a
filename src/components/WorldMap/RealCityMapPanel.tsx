@@ -185,6 +185,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   const [selectedEstablishment, setSelectedEstablishment] = useState<WorldEstablishment | null>(null);
   const [selectedLifeLocation, setSelectedLifeLocation] = useState<'HOME' | 'UNIVERSITY' | null>(null);
   const [catalogError, setCatalogError] = useState('');
+  const [catalogWarning, setCatalogWarning] = useState('');
   const [route, setRoute] = useState<WorldRoute | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [mapReadyVersion, setMapReadyVersion] = useState(0);
@@ -261,6 +262,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       if (!active) return;
       setEstablishments(result.items);
       setCatalogError(result.error || '');
+      setCatalogWarning((result.warnings || []).join(' • '));
       setSelectedEstablishment((current) => (
         current ? result.items.find((item) => item.id === current.id) || null : null
       ));
@@ -738,8 +740,8 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
               {catalogError
                 ? `Comércio indisponível: ${catalogError}`
                 : establishments.length > 0
-                  ? `Comércio ativo: ${establishments.length} estabelecimento(s)`
-                  : `Comércio ativo: 0 estabelecimento(s) para ${profile.city}/${profile.state}`}
+                  ? `Comércio ativo: ${establishments.length} estabelecimento(s)${catalogWarning ? ' • ' + catalogWarning : ''}`
+                  : `Comércio ativo: 0 estabelecimento(s) para ${profile.city}/${profile.state}${catalogWarning ? ' • ' + catalogWarning : ''}`}
             </div>
 
             {selectedLifeLocation === 'HOME' && player && (
