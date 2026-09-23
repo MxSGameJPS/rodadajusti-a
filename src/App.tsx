@@ -60,6 +60,7 @@ import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } fr
 import { sound } from './utils/sound';
 import { normalizeCareerOrigin, saveCareerOrigin } from './lib/careerOrigin';
 import { saveWorldMapProfile, type WorldMapProfile } from './lib/worldMap';
+import type { WorldEstablishment, WorldEstablishmentOffer } from './lib/worldEstablishments';
 import { supabase } from './lib/supabase';
 import { canManageOwnOffice } from './lib/independentPractice';
 import {
@@ -69,6 +70,7 @@ import {
   currentHouseholdBillKey,
   getHouseholdMonthlyBills,
   isHouseholdBillPaid,
+  furnitureKindFromGameplay,
   normalizeHousehold,
   restoreAfterMeal,
   restoreAfterShower,
@@ -951,6 +953,143 @@ export default function App() {
     });
   };
 
+  const handleStudyAtUniversity = () => {
+    setPlayer((prev) => {
+      const clock = gameClockFields(prev, 180);
+      const nextPlayer = { ...prev, ...clock } as PlayerProfile;
+      return {
+        ...nextPlayer,
+        household: restoreAfterStudy(
+          {
+            ...clock.household,
+            needs: {
+              ...clock.household.needs,
+              study: Math.min(100, clock.household.needs.study + 12),
+            },
+          },
+          currentGameDateLabel(nextPlayer),
+        ),
+      };
+    });
+  };
+
+  const handlePurchaseWorldOffer = (
+    establishment: WorldEstablishment,
+    offer: WorldEstablishmentOffer,
+  ) => {
+    const price = Number(offer.price);
+    if (!Number.isFinite(price) || price < 0) {
+      return { ok: false, message: 'Este item ainda não possui preço de compra configurado.' };
+    }
+    if (player.money < price) {
+      return { ok: false, message: 'Patrimônio insuficiente para esta compra.' };
+    }
+
+    const effects = offer.gameplayEffects || {};
+    const kind = String(effects.kind || 'OTHER').toUpperCase();
+    const numberEffect = (key: string, fallback = 0) => {
+      const value = Number(effects[key]);
+      return Number.isFinite(value) ? Math.max(0, value) : fallback;
+    };
+
+    let message = `${offer.title} adquirido por JR$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`;
+
+    setPlayer((prev) => {
+      if (prev.money < price) return prev;
+
+      const clock = gameClockFields(prev, kind === 'MEAL' ? 45 : 20);
+      let household = clock.household;
+      let category: Parameters<typeof createPersonalExpense>[1]['category'] = 'OUTROS';
+
+      if (kind === 'FOOD') {
+        const foodUnits = Math.max(1, Math.floor(numberEffect('foodUnits', 1)));
+        household = {
+          ...household,
+          foodUnits: household.foodUnits + foodUnits,
+        };
+        category = 'SUPERMERCADO';
+        message = `${offer.title}: +${foodUnits} unidade(s) adicionadas à despensa.`;
+      } else if (kind === 'BED' || kind === 'FURNITURE' || kind === 'STUDY_FURNITURE') {
+        const furnitureKind = kind === 'BED'
+          ? 'BED'
+          : kind === 'STUDY_FURNITURE'
+            ? (String(effects.furnitureKind || '').toUpperCase() || 'DESK')
+            : String(effects.furnitureKind || '').toUpperCase();
+
+        household = {
+          ...household,
+          furniture: [
+            ...household.furniture,
+            {
+              id: `furniture-${offer.id}-${Date.now()}`,
+              offerId: offer.id,
+              establishmentId: establishment.id,
+              title: offer.title,
+              kind: furnitureKindFromGameplay(furnitureKind),
+              imageUrl: offer.imageUrl,
+              comfortBonus: numberEffect('comfortBonus'),
+              energyBonus: numberEffect('energyBonus'),
+              studyBonus: numberEffect('studyBonus'),
+              purchasedAtGameDate: currentGameDateLabel(prev),
+            },
+          ].slice(-100),
+        };
+        category = 'MOVEIS';
+        message = `${offer.title} foi entregue na sua residência e seus bônus já estão ativos.`;
+      } else if (kind === 'VEHICLE') {
+        household = {
+          ...household,
+          vehicles: [
+            ...household.vehicles,
+            {
+              id: `vehicle-${offer.id}-${Date.now()}`,
+              offerId: offer.id,
+              establishmentId: establishment.id,
+              title: offer.title,
+              imageUrl: offer.imageUrl,
+              purchasedAtGameDate: currentGameDateLabel(prev),
+            },
+          ].slice(-40),
+        };
+        category = 'VEICULO';
+        message = `${offer.title} agora faz parte do patrimônio do personagem.`;
+      } else if (kind === 'MEAL') {
+        const hungerRestore = Math.max(25, numberEffect('hungerRestore', 45));
+        household = {
+          ...household,
+          needs: {
+            ...household.needs,
+            hunger: Math.min(100, household.needs.hunger + hungerRestore),
+            energy: Math.min(100, household.needs.energy + 4),
+          },
+        };
+        category = 'ALIMENTACAO';
+        message = `Refeição concluída. Fome recuperada em +${Math.round(hungerRestore)}.`;
+      } else if (offer.offerType === 'HOSPEDAGEM') {
+        category = 'HOTEL';
+      }
+
+      return {
+        ...prev,
+        ...clock,
+        money: Math.max(0, prev.money - price),
+        household,
+        personalFinances: appendPersonalFinanceTransaction(
+          prev.personalFinances,
+          createPersonalExpense(prev, {
+            category,
+            amount: price,
+            title: offer.title,
+            description: `Compra em ${establishment.name}.`,
+            source: `ESTABLISHMENT:${establishment.id}`,
+          }),
+        ),
+      };
+    });
+
+    return { ok: true, message };
+  };
+
   const handleRelocateCity = async ({
     city,
     state,
@@ -1246,6 +1385,12 @@ export default function App() {
         player={player}
         isOpen={isCityWorldMapOpen}
         onClose={() => setIsCityWorldMapOpen(false)}
+        onOpenHome={() => {
+          setIsCityWorldMapOpen(false);
+          setIsPlayerHomeOpen(true);
+        }}
+        onStudyAtUniversity={handleStudyAtUniversity}
+        onPurchaseOffer={handlePurchaseWorldOffer}
       />
 
       <CityRelocationModal
