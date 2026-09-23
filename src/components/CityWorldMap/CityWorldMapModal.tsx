@@ -220,6 +220,7 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
             const universityPoint = await resolveStableRoadPoint(
               stableCityPointKey(profile, 'university'),
               getUniversityPoint(player, profile),
+              profile.center,
             );
             if (disposed) return;
             bounds.extend([universityPoint.lng, universityPoint.lat]);
@@ -242,6 +243,7 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
               point: await resolveStableRoadPoint(
                 stableCityPointKey(profile, 'establishment:' + establishment.id),
                 await resolveWorldPointForEstablishment(profile, establishment),
+                profile.center,
               ),
             })),
           );
