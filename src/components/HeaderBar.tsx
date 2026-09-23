@@ -20,6 +20,7 @@ import {
   readProfessionalEmploymentState,
 } from '../lib/professionalEmployment';
 import { sound } from '../utils/sound';
+import { canManageOwnOffice } from '../lib/independentPractice';
 import { usePlayerDisplayName } from '../lib/playerTreatment';
 import { SessionLogoutButton } from './SessionLogoutButton';
 
@@ -60,6 +61,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   const displayName = usePlayerDisplayName(player, 'Estagiário');
   const independent = isIndependentProfessional(player);
   const employment = readProfessionalEmploymentState(player);
+  const canManageOffice = canManageOwnOffice(player);
   const canUseSocialJuridico = SOCIAL_JURIDICO_TIERS.has(player.careerTier)
     && (independent || employmentIncludesSocialJuridico(player));
   const workspaceLabel = independent
@@ -260,7 +262,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               <span>Magistratura</span>
             </button>
 
-            {player.careerTier === 'ADVOGADO_SENIOR' || player.careerTier === 'SOCIO_ESCRITORIO' || player.careerTier === 'DONO_ESCRITORIO' ? (
+            {canManageOffice ? (
               <button
                 onClick={() => {
                   sound.playClick();
