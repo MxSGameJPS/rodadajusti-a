@@ -7,6 +7,7 @@ import {
 import {
   isEmployedProfessional,
   isIndependentProfessional,
+  isRamosEmploymentActive,
   readProfessionalEmploymentState,
 } from './professionalEmployment';
 import { getProfessionalOwnerKey } from './professionalRpg';
