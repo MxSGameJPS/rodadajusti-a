@@ -9,6 +9,7 @@ import {
 import {
   readWorldMapProfile,
   resolveWorldMapProfile,
+  snapWorldPointToRoad,
   type WorldMapProfile,
 } from '../../lib/worldMap';
 import {
@@ -184,7 +185,7 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
         mapRef.current = map;
         map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
 
-        map.on('load', () => {
+        map.on('load', async () => {
           if (disposed) return;
           applyRotaJusticeMapTheme(map);
 
@@ -212,7 +213,10 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
 
           const isIntern = player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR';
           if (isIntern) {
-            const universityPoint = getUniversityPoint(player, profile);
+            const universityPoint = await snapWorldPointToRoad(
+              getUniversityPoint(player, profile),
+            );
+            if (disposed) return;
             bounds.extend([universityPoint.lng, universityPoint.lat]);
             const universityElement = buildLifeMarker(getUniversityName(profile), '🎓', 'UNIVERSITY');
             universityElement.addEventListener('click', () => {
@@ -227,8 +231,18 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
             );
           }
 
-          establishments.forEach((establishment) => {
-            const point = getWorldPointForEstablishment(profile, establishment);
+          const establishmentPoints = await Promise.all(
+            establishments.map(async (establishment) => ({
+              establishment,
+              point: await snapWorldPointToRoad(
+                getWorldPointForEstablishment(profile, establishment),
+              ),
+            })),
+          );
+
+          if (disposed) return;
+
+          establishmentPoints.forEach(({ establishment, point }) => {
             bounds.extend([point.lng, point.lat]);
             const element = buildEstablishmentMarker(establishment);
             element.addEventListener('click', () => {
