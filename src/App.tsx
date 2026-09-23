@@ -1482,6 +1482,8 @@ export default function App() {
                 onOpenDossier={() => setIsDossierOpen(true)}
                 onOpenCourtroom={() => setIsCourtroomOpen(true)}
                 onBackToOffice={() => setCurrentView('HUB')}
+                onOpenPlayerHome={() => setIsPlayerHomeOpen(true)}
+                onStudyAtUniversity={handleStudyAtUniversity}
               />
             )}
 
