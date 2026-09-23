@@ -1040,3 +1040,38 @@
 .lowZoom .establishmentMarkerVisual {
   opacity: 0.92;
 }
+
+
+/*
+ * Âncora geográfica real do MapLibre.
+ * O MapLibre move somente este elemento de 1x1px. Todo o visual fica em
+ * filhos absolutos, portanto largura do texto, hover, zoom e pitch não
+ * conseguem alterar a posição geográfica.
+ */
+.markerAnchor {
+  position: relative;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.markerAnchor .gameMarker {
+  position: absolute;
+  left: 0;
+  bottom: 10px;
+  z-index: 9;
+  flex-direction: column-reverse;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+.markerAnchor .establishmentMarker {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 9;
+  flex-direction: column-reverse;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
