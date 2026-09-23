@@ -69,6 +69,7 @@ import {
   currentGameDateLabel,
   currentHouseholdBillKey,
   getHouseholdMonthlyBills,
+  getLifeBlockingReason,
   isHouseholdBillPaid,
   furnitureKindFromGameplay,
   normalizeHousehold,
@@ -269,6 +270,7 @@ export default function App() {
   const [isCityRelocationOpen, setIsCityRelocationOpen] = useState<boolean>(false);
   const [isCityWorldMapOpen, setIsCityWorldMapOpen] = useState<boolean>(false);
   const [isPlayerHomeOpen, setIsPlayerHomeOpen] = useState<boolean>(false);
+  const [lifeWarning, setLifeWarning] = useState('');
 
   const openOfficeManagement = () => {
     if (!canManageOwnOffice(player)) {
@@ -276,6 +278,14 @@ export default function App() {
       return;
     }
     setIsOfficeModalOpen(true);
+  };
+
+  const ensureLifeReady = () => {
+    const reason = getLifeBlockingReason(player);
+    if (!reason) return true;
+    setLifeWarning(reason);
+    setIsPlayerHomeOpen(true);
+    return false;
   };
 
   const [verdictResult, setVerdictResult] = useState<CaseHistoryRecord | null>(null);
@@ -364,6 +374,7 @@ export default function App() {
   };
 
   const handleAcceptCase = (caseItem: LegalCase) => {
+    if (!ensureLifeReady()) return;
     const initialState: ActiveCaseState = {
       caseId: caseItem.id,
       hoursSpent: 0,
@@ -392,6 +403,7 @@ export default function App() {
 
   const handleTravelToLocation = (loc: LocationScene) => {
     if (!player.activeCase || !activeCaseData) return;
+    if (!ensureLifeReady()) return;
 
     setPlayer((prev) => {
       if (!prev.activeCase) return prev;
@@ -436,6 +448,7 @@ export default function App() {
 
   const handleAskQuestion = (character: Character, option: DialogueOption) => {
     if (!player.activeCase) return;
+    if (!ensureLifeReady()) return;
 
     sound.playPaper();
     const additionalHours = Math.ceil(option.timeCostMinutes / 60);
@@ -486,6 +499,7 @@ export default function App() {
 
   const handleInspectSpot = (spot: SearchableSpot) => {
     if (!player.activeCase) return;
+    if (!ensureLifeReady()) return;
 
     sound.playPaper();
     const additionalHours = Math.ceil(spot.timeCostMinutes / 60);
@@ -528,6 +542,7 @@ export default function App() {
   };
 
   const handleUseSocialJuridicoTool = (tool: SocialJuridicoToolUse) => {
+    if (!ensureLifeReady()) return;
     setPlayer((prev) => {
       if (!prev.activeCase) return prev;
 
@@ -577,6 +592,15 @@ export default function App() {
 
   const handleCompleteOfficeTask = (taskId: string) => {
     if (player.activeCase) return;
+    if (!ensureLifeReady()) return;
+    if (
+      (player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR')
+      && player.household.needs.study <= 8
+    ) {
+      setLifeWarning('Sua rotina de estudos está crítica. Estude em casa ou na faculdade antes de assumir novas tarefas do estágio.');
+      setIsPlayerHomeOpen(true);
+      return;
+    }
 
     const completedDate = formatGameDate(getPlayerGameDate(player));
     const { performance, task } = completeOfficeTask({
@@ -1400,7 +1424,11 @@ export default function App() {
       <PlayerHomeModal
         player={player}
         isOpen={isPlayerHomeOpen}
-        onClose={() => setIsPlayerHomeOpen(false)}
+        warningMessage={lifeWarning}
+        onClose={() => {
+          setLifeWarning('');
+          setIsPlayerHomeOpen(false);
+        }}
         onSleep={handleSleepAtHome}
         onShower={handleShowerAtHome}
         onEat={handleEatAtHome}
