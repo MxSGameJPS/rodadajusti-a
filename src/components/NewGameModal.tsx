@@ -182,9 +182,10 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
     }
 
     const addressProfile = validatedAddress || pendingWelcome.addressProfile;
-    if (!addressProfile) {
+    if (!addressProfile || addressProfile.mapPointMode !== 'STREET_RANDOMIZED') {
       setIsOfficeWelcomeOpen(false);
-      setAddressError('Valide o endereço residencial antes de iniciar a carreira.');
+      setValidatedAddress(null);
+      setAddressError('Valide novamente a rua para criar o ponto residencial aproximado e proteger a localização exata.');
       return;
     }
 
