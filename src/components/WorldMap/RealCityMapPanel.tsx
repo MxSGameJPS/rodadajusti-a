@@ -92,6 +92,9 @@ function buildGameMarker(
   className: string,
   isCurrent: boolean,
 ) {
+  const anchor = document.createElement('div');
+  anchor.className = styles.markerAnchor;
+
   const element = document.createElement('button');
   element.type = 'button';
   element.className = `${styles.gameMarker} ${className} ${isCurrent ? styles.gameMarkerCurrent : ''}`;
@@ -111,11 +114,15 @@ function buildGameMarker(
   element.appendChild(pin);
   element.appendChild(caption);
   element.title = label;
+  anchor.appendChild(element);
 
-  return element;
+  return anchor;
 }
 
 function buildEstablishmentMarker(establishment: WorldEstablishment) {
+  const anchor = document.createElement('div');
+  anchor.className = styles.markerAnchor;
+
   const element = document.createElement('button');
   element.type = 'button';
   element.className = [
@@ -157,8 +164,9 @@ function buildEstablishmentMarker(establishment: WorldEstablishment) {
   element.appendChild(visual);
   element.appendChild(caption);
   element.title = establishment.name;
+  anchor.appendChild(element);
 
-  return element;
+  return anchor;
 }
 
 export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
@@ -405,8 +413,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
         markersRef.current.push(
           new maplibre.Marker({
             element: homeElement,
-            anchor: 'bottom',
-            offset: [0, 14],
+            anchor: 'center',
             pitchAlignment: 'viewport',
             rotationAlignment: 'viewport',
           })
@@ -441,8 +448,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
           markersRef.current.push(
             new maplibre.Marker({
               element: universityElement,
-              anchor: 'bottom',
-              offset: [0, 14],
+              anchor: 'center',
               pitchAlignment: 'viewport',
               rotationAlignment: 'viewport',
             })
@@ -470,8 +476,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       markersRef.current.push(
         new maplibre.Marker({
           element: officeElement,
-          anchor: 'bottom',
-          offset: [0, 14],
+          anchor: 'center',
           pitchAlignment: 'viewport',
           rotationAlignment: 'viewport',
         })
@@ -533,8 +538,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
         markersRef.current.push(
           new maplibre.Marker({
             element,
-            anchor: 'bottom',
-            offset: [0, 14],
+            anchor: 'center',
             pitchAlignment: 'viewport',
             rotationAlignment: 'viewport',
           })
@@ -557,8 +561,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
         markersRef.current.push(
           new maplibre.Marker({
             element,
-            anchor: 'bottom',
-            offset: [0, 20],
+            anchor: 'center',
             pitchAlignment: 'viewport',
             rotationAlignment: 'viewport',
           })
