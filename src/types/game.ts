@@ -243,6 +243,7 @@ export interface PlayerResidenceState {
   state: string;
   latitude: number | null;
   longitude: number | null;
+  mapPointMode: 'STREET_RANDOMIZED' | null;
   geocodedDisplayName: string;
   monthlyRent: number;
   waterMonthly: number;
