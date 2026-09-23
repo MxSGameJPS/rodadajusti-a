@@ -44,6 +44,11 @@ import {
   requestIncomingProfessionalCall,
 } from '../../lib/professionalPhoneBridge';
 import { readCurrentPlayerSnapshot } from '../../lib/professionalRpg';
+import { applyLifeTimePassage } from '../../lib/lifeSimulation';
+import {
+  appendPersonalFinanceTransaction,
+  createPersonalExpense,
+} from '../../lib/personalFinance';
 import type { PlayerProfile } from '../../types/game';
 import { sound } from '../../utils/sound';
 import styles from './ProfessionalLifeExperience.module.css';
@@ -67,17 +72,61 @@ function samePlayer(left: PlayerProfile | null, right: PlayerProfile) {
   );
 }
 
-function patchPlayerAfterSocialEvent(player: PlayerProfile, option: SocialPlanOption) {
+function patchPlayerAfterSocialEvent(
+  player: PlayerProfile,
+  event: SocialEvent,
+  option: SocialPlanOption,
+) {
   const nextDate = addGameDays(player, option.daysAdvance);
   try {
     const raw = window.localStorage.getItem(PLAYER_SAVE_KEY);
     const current = raw ? (JSON.parse(raw) as PlayerProfile) : player;
     const currentActiveCase = current.activeCase;
+    const elapsedMinutes = option.daysAdvance > 0
+      ? option.daysAdvance * 1440
+      : Math.max(0, option.caseHoursCost) * 60;
+
+    const baseHousehold = applyLifeTimePassage(
+      current.household,
+      elapsedMinutes,
+    );
+
+    const restoresMeal = event.kind === 'LUNCH' || event.kind === 'DINNER';
+    const nextHousehold = {
+      ...baseHousehold,
+      needs: {
+        ...baseHousehold.needs,
+        energy: Math.max(
+          0,
+          Math.min(100, baseHousehold.needs.energy + option.energyDelta),
+        ),
+        hunger: restoresMeal
+          ? Math.max(0, Math.min(100, baseHousehold.needs.hunger + 48))
+          : baseHousehold.needs.hunger,
+      },
+    };
+
+    const expenseCategory = restoresMeal ? 'ALIMENTACAO' : 'LAZER';
+    const nextFinances = option.cost > 0
+      ? appendPersonalFinanceTransaction(
+          current.personalFinances,
+          createPersonalExpense(current, {
+            category: expenseCategory,
+            amount: option.cost,
+            title: event.title,
+            description: option.label,
+            source: 'SOCIAL_LIFE',
+          }),
+        )
+      : current.personalFinances;
+
     window.localStorage.setItem(
       PLAYER_SAVE_KEY,
       JSON.stringify({
         ...current,
         money: Math.max(0, Number(current.money || 0) - Math.max(0, option.cost)),
+        household: nextHousehold,
+        personalFinances: nextFinances,
         activeCase: currentActiveCase
           ? {
               ...currentActiveCase,
@@ -364,7 +413,7 @@ export const ProfessionalLifeExperience: React.FC = () => {
     }
     const current = readSocialLifeState(player);
     completeSocialEvent(player, current, selectedOption);
-    patchPlayerAfterSocialEvent(player, selectedOption);
+    patchPlayerAfterSocialEvent(player, selectedEvent, selectedOption);
     window.location.reload();
   };
 
