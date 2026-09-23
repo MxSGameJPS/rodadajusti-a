@@ -87,6 +87,7 @@ export function OfficeScene({
   onOpenOfficeModal,
   onOpenOabExam,
   onOpenCityRelocation,
+  onOpenCityWorldMap,
   onCompleteOfficeTask,
   onToggleSound,
   onEnableMobileFrame,
@@ -174,7 +175,7 @@ export function OfficeScene({
 
     if (itemId === 'MAP') {
       if (player.activeCase) onResumeActiveCase();
-      else setDrawer('CASES');
+      else onOpenCityWorldMap();
       return;
     }
 
@@ -425,7 +426,7 @@ export function OfficeScene({
           <button type="button" onClick={() => setDrawer('AGENDA')}><BookOpenCheck size={21} /><span>AVALIAÇÃO</span></button>
           <button type="button" onClick={() => setDrawer('TEAM')}><Users size={21} /><span>CHAMAR EQUIPE</span></button>
           <button type="button" onClick={openNotebook}><Laptop size={21} /><span>ABRIR NOTEBOOK</span></button>
-          <button type="button" onClick={() => player.activeCase ? onResumeActiveCase() : setDrawer('CASES')}><Map size={21} /><span>IR AO MAPA</span></button>
+          <button type="button" onClick={() => player.activeCase ? onResumeActiveCase() : onOpenCityWorldMap()}><Map size={21} /><span>IR AO MAPA</span></button>
         </div>
 
         <div className={styles.dockQuote}>PLANEJAMENTO<br />HOJE.<br />IMPACTO AMANHÃ.</div>
