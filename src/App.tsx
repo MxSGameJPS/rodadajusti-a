@@ -40,6 +40,7 @@ import {
   CITY_RELOCATION_DAYS,
 } from './components/CityRelocation/CityRelocationModal';
 import { InternshipCareerPanel } from './components/InternshipCareerPanel';
+import { CityWorldMapModal } from './components/CityWorldMap/CityWorldMapModal';
 import { OfficeScene } from './components/OfficeScene/OfficeScene';
 import { InternPromotionCeremonyModal } from './components/InternPromotionCeremonyModal';
 import { evaluatePetition } from './lib/judicialDecisionEngine';
@@ -220,6 +221,7 @@ export default function App() {
   const [isOfficeModalOpen, setIsOfficeModalOpen] = useState<boolean>(false);
   const [isOabExamOpen, setIsOabExamOpen] = useState<boolean>(false);
   const [isCityRelocationOpen, setIsCityRelocationOpen] = useState<boolean>(false);
+  const [isCityWorldMapOpen, setIsCityWorldMapOpen] = useState<boolean>(false);
 
   const [verdictResult, setVerdictResult] = useState<CaseHistoryRecord | null>(null);
   const [verdictCase, setVerdictCase] = useState<LegalCase | null>(null);
@@ -872,6 +874,7 @@ export default function App() {
           onOpenOfficeModal={() => setIsOfficeModalOpen(true)}
           onOpenOabExam={() => setIsOabExamOpen(true)}
           onOpenCityRelocation={() => setIsCityRelocationOpen(true)}
+          onOpenCityWorldMap={() => setIsCityWorldMapOpen(true)}
           onCompleteOfficeTask={handleCompleteOfficeTask}
           onToggleSound={handleToggleSound}
           onEnableMobileFrame={() => setIsMobileFrame(true)}
@@ -893,6 +896,7 @@ export default function App() {
             onOpenConcursoModal={() => setIsConcursoModalOpen(true)}
             onOpenOfficeModal={() => setIsOfficeModalOpen(true)}
             onOpenCityRelocation={() => setIsCityRelocationOpen(true)}
+            onOpenCityWorldMap={() => setIsCityWorldMapOpen(true)}
             onToggleSound={handleToggleSound}
           />
 
@@ -1037,6 +1041,12 @@ export default function App() {
         onHireEmployee={handleHireEmployee}
         onFireEmployee={handleFireEmployee}
         onPayOfficeExpenses={handlePayOfficeExpenses}
+      />
+
+      <CityWorldMapModal
+        player={player}
+        isOpen={isCityWorldMapOpen}
+        onClose={() => setIsCityWorldMapOpen(false)}
       />
 
       <CityRelocationModal
