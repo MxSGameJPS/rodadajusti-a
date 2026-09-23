@@ -190,6 +190,17 @@ export function isIndependentCase(player: PlayerProfile, caseId: string) {
   return readIndependentPracticeState(player).independentCaseIds.includes(caseId);
 }
 
+export function canManageOwnOffice(player: PlayerProfile | null | undefined) {
+  if (!player?.officeFinances?.isOfficeOpen) return false;
+  if (!player.oabRegistration) return false;
+  return player.careerTier === 'DONO_ESCRITORIO' || isIndependentProfessionalOwner(player);
+}
+
+function isIndependentProfessionalOwner(player: PlayerProfile) {
+  const employmentStatus = player.officeDiscipline?.employmentStatus;
+  return employmentStatus === 'TERMINATED' || player.careerTier === 'DONO_ESCRITORIO';
+}
+
 /**
  * Os casos publicados existentes nasceram dentro da campanha do Ramos & Associados.
  * Quando um deles chega pela conta própria do Social Jurídico, preservamos toda a
