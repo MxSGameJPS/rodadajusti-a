@@ -94,6 +94,8 @@ export function OfficeScene({
   const displayName = usePlayerDisplayName(player, 'Profissional');
   const independent = isIndependentProfessional(player);
   const employment = readProfessionalEmploymentState(player);
+  const ramosEmployment = employment?.officeSlug === 'ramos-associados' || employment?.officeName === 'Ramos & Associados';
+  const externalEmployment = Boolean(!independent && employment?.contractStatus === 'SIGNED' && !ramosEmployment);
   const activeCase = useMemo(
     () => GAME_CASES.find((caseItem) => caseItem.id === player.activeCase?.caseId) || null,
     [player.activeCase?.caseId],
@@ -367,7 +369,11 @@ export function OfficeScene({
               <div>
                 <Users size={18} />
                 <span>Equipe</span>
-                <strong>{player.officeFinances?.employees?.length || 'Ramos'}</strong>
+                <strong>{independent
+                  ? player.officeFinances?.employees?.length || 0
+                  : ramosEmployment
+                    ? 'Ramos'
+                    : employment?.officeName || 'Equipe'}</strong>
               </div>
             </div>
           </article>
@@ -464,7 +470,7 @@ export function OfficeScene({
               {drawer === 'FINANCE' && (
                 <div className={styles.financeDrawer}>
                   <div><span>Patrimônio atual</span><strong>R$ {formatMoney(player.money)}</strong></div>
-                  <div><span>Remuneração-base</span><strong>R$ {formatMoney(currentTier.salaryBaseMonthly)}/mês</strong></div>
+                  <div><span>Remuneração-base</span><strong>R$ {formatMoney(!independent && employment?.salaryMonthly ? employment.salaryMonthly : currentTier.salaryBaseMonthly)}/mês</strong></div>
                   <div><span>Casos vencidos</span><strong>{player.casesSolved}</strong></div>
                   <div><span>Reputação</span><strong>{player.reputation}/100</strong></div>
                   <button type="button" onClick={onOpenOfficeModal}>Gestão do escritório <ArrowRight size={15} /></button>
@@ -473,12 +479,31 @@ export function OfficeScene({
 
               {drawer === 'TEAM' && (
                 <div className={styles.teamDrawer}>
-                  <article><div>RR</div><span><strong>Dr. Roberto Ramos</strong><small>Sócio fundador • Supervisor</small></span></article>
-                  <article><div>MD</div><span><strong>Mariana Duarte</strong><small>Secretária do escritório</small></span></article>
-                  {(player.officeFinances?.employees || []).map((employee) => (
+                  {ramosEmployment && (
+                    <>
+                      <article><div>RR</div><span><strong>Dr. Roberto Ramos</strong><small>Sócio fundador • Supervisor</small></span></article>
+                      <article><div>MD</div><span><strong>Mariana Duarte</strong><small>Secretária do escritório</small></span></article>
+                    </>
+                  )}
+                  {externalEmployment && (
+                    <article>
+                      <div>{(employment?.officeName || 'Escritório').slice(0, 2).toUpperCase()}</div>
+                      <span>
+                        <strong>{employment?.officeName}</strong>
+                        <small>{employment?.role || 'Vínculo profissional'} • equipe publicada pelo escritório</small>
+                      </span>
+                    </article>
+                  )}
+                  {independent && (player.officeFinances?.employees || []).map((employee) => (
                     <article key={employee.id}><div>{employee.name?.slice(0, 2).toUpperCase()}</div><span><strong>{employee.name}</strong><small>{employee.role}</small></span></article>
                   ))}
-                  <button type="button" onClick={onOpenOfficeModal}>Gerenciar equipe <ArrowRight size={15} /></button>
+                  {independent ? (
+                    <button type="button" onClick={onOpenOfficeModal}>Gerenciar equipe <ArrowRight size={15} /></button>
+                  ) : externalEmployment ? (
+                    <button type="button" onClick={() => setShowJobMarket(true)}>Ver mercado de trabalho <ArrowRight size={15} /></button>
+                  ) : (
+                    <button type="button" onClick={onOpenOfficeModal}>Planejar escritório próprio <ArrowRight size={15} /></button>
+                  )}
                 </div>
               )}
 
