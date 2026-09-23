@@ -41,6 +41,7 @@ import {
 } from './components/CityRelocation/CityRelocationModal';
 import { InternshipCareerPanel } from './components/InternshipCareerPanel';
 import { CityWorldMapModal } from './components/CityWorldMap/CityWorldMapModal';
+import { PlayerHomeModal } from './components/PlayerHome/PlayerHomeModal';
 import { OfficeScene } from './components/OfficeScene/OfficeScene';
 import { InternPromotionCeremonyModal } from './components/InternPromotionCeremonyModal';
 import { evaluatePetition } from './lib/judicialDecisionEngine';
@@ -64,7 +65,15 @@ import { canManageOwnOffice } from './lib/independentPractice';
 import {
   DEFAULT_HOUSEHOLD_STATE,
   applyLifeTimePassage,
+  currentGameDateLabel,
+  currentHouseholdBillKey,
+  getHouseholdMonthlyBills,
+  isHouseholdBillPaid,
   normalizeHousehold,
+  restoreAfterMeal,
+  restoreAfterShower,
+  restoreAfterSleep,
+  restoreAfterStudy,
 } from './lib/lifeSimulation';
 import {
   appendPersonalFinanceTransaction,
@@ -249,6 +258,7 @@ export default function App() {
   const [isOabExamOpen, setIsOabExamOpen] = useState<boolean>(false);
   const [isCityRelocationOpen, setIsCityRelocationOpen] = useState<boolean>(false);
   const [isCityWorldMapOpen, setIsCityWorldMapOpen] = useState<boolean>(false);
+  const [isPlayerHomeOpen, setIsPlayerHomeOpen] = useState<boolean>(false);
 
   const openOfficeManagement = () => {
     if (!canManageOwnOffice(player)) {
@@ -858,6 +868,89 @@ export default function App() {
     setPlayer((prev) => ({ ...prev, soundEnabled: nextVal }));
   };
 
+  const handleSleepAtHome = () => {
+    setPlayer((prev) => {
+      const clock = gameClockFields(prev, 8 * 60);
+      const nextPlayer = { ...prev, ...clock } as PlayerProfile;
+      return {
+        ...nextPlayer,
+        household: restoreAfterSleep(
+          clock.household,
+          currentGameDateLabel(nextPlayer),
+        ),
+      };
+    });
+  };
+
+  const handleShowerAtHome = () => {
+    setPlayer((prev) => {
+      const clock = gameClockFields(prev, 30);
+      return {
+        ...prev,
+        ...clock,
+        household: restoreAfterShower(clock.household),
+      };
+    });
+  };
+
+  const handleEatAtHome = () => {
+    setPlayer((prev) => {
+      if (prev.household.foodUnits <= 0) return prev;
+      const clock = gameClockFields(prev, 45);
+      return {
+        ...prev,
+        ...clock,
+        household: restoreAfterMeal(clock.household),
+      };
+    });
+  };
+
+  const handleStudyAtHome = () => {
+    setPlayer((prev) => {
+      const clock = gameClockFields(prev, 120);
+      const nextPlayer = { ...prev, ...clock } as PlayerProfile;
+      return {
+        ...nextPlayer,
+        household: restoreAfterStudy(
+          clock.household,
+          currentGameDateLabel(nextPlayer),
+        ),
+      };
+    });
+  };
+
+  const handlePayHouseholdBills = () => {
+    setPlayer((prev) => {
+      if (isHouseholdBillPaid(prev)) return prev;
+      const bills = getHouseholdMonthlyBills(prev.household);
+      if (prev.money < bills.total) return prev;
+
+      const clock = gameClockFields(prev, 15);
+      return {
+        ...prev,
+        ...clock,
+        money: Math.max(0, prev.money - bills.total),
+        household: {
+          ...clock.household,
+          residence: {
+            ...clock.household.residence,
+            billsPaidThroughKey: currentHouseholdBillKey(prev),
+          },
+        },
+        personalFinances: appendPersonalFinanceTransaction(
+          prev.personalFinances,
+          createPersonalExpense(prev, {
+            category: 'MORADIA',
+            amount: bills.total,
+            title: 'Contas domésticas do mês',
+            description: 'Aluguel, água, energia elétrica, internet e gás.',
+            source: 'HOUSEHOLD_BILLS',
+          }),
+        ),
+      };
+    });
+  };
+
   const handleRelocateCity = async ({
     city,
     state,
@@ -964,6 +1057,7 @@ export default function App() {
           onOpenOabExam={() => setIsOabExamOpen(true)}
           onOpenCityRelocation={() => setIsCityRelocationOpen(true)}
           onOpenCityWorldMap={() => setIsCityWorldMapOpen(true)}
+          onOpenPlayerHome={() => setIsPlayerHomeOpen(true)}
           onCompleteOfficeTask={handleCompleteOfficeTask}
           onToggleSound={handleToggleSound}
           onEnableMobileFrame={() => setIsMobileFrame(true)}
@@ -986,6 +1080,7 @@ export default function App() {
             onOpenOfficeModal={openOfficeManagement}
             onOpenCityRelocation={() => setIsCityRelocationOpen(true)}
             onOpenCityWorldMap={() => setIsCityWorldMapOpen(true)}
+            onOpenPlayerHome={() => setIsPlayerHomeOpen(true)}
             onToggleSound={handleToggleSound}
           />
 
@@ -1130,6 +1225,21 @@ export default function App() {
         onHireEmployee={handleHireEmployee}
         onFireEmployee={handleFireEmployee}
         onPayOfficeExpenses={handlePayOfficeExpenses}
+      />
+
+      <PlayerHomeModal
+        player={player}
+        isOpen={isPlayerHomeOpen}
+        onClose={() => setIsPlayerHomeOpen(false)}
+        onSleep={handleSleepAtHome}
+        onShower={handleShowerAtHome}
+        onEat={handleEatAtHome}
+        onStudy={handleStudyAtHome}
+        onPayBills={handlePayHouseholdBills}
+        onOpenCityMap={() => {
+          setIsPlayerHomeOpen(false);
+          setIsCityWorldMapOpen(true);
+        }}
       />
 
       <CityWorldMapModal
