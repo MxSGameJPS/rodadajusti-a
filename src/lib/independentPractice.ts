@@ -2,6 +2,7 @@ import type { ActiveCaseState, LegalCase, PlayerProfile } from '../types/game';
 import { getCareerRank, getAvailableCasesForCareer } from './caseRules';
 import { getAppealOfCaseId } from './caseMetadata';
 import { getProfessionalOwnerKey } from './professionalRpg';
+import { isIndependentProfessional } from './professionalEmployment';
 
 const PLAYER_SAVE_KEY = 'rota_da_justica_save_v1';
 const STORAGE_PREFIX = 'rota_independent_practice_v1:';
@@ -193,12 +194,7 @@ export function isIndependentCase(player: PlayerProfile, caseId: string) {
 export function canManageOwnOffice(player: PlayerProfile | null | undefined) {
   if (!player?.officeFinances?.isOfficeOpen) return false;
   if (!player.oabRegistration) return false;
-  return player.careerTier === 'DONO_ESCRITORIO' || isIndependentProfessionalOwner(player);
-}
-
-function isIndependentProfessionalOwner(player: PlayerProfile) {
-  const employmentStatus = player.officeDiscipline?.employmentStatus;
-  return employmentStatus === 'TERMINATED' || player.careerTier === 'DONO_ESCRITORIO';
+  return player.careerTier === 'DONO_ESCRITORIO' || isIndependentProfessional(player);
 }
 
 /**
