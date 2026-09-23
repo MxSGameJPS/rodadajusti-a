@@ -11,6 +11,7 @@ import {
   Circle,
   Files,
   GraduationCap,
+  Home,
   Landmark,
   Laptop,
   Map,
@@ -55,6 +56,7 @@ const OFFICE_SCENE_BACKGROUND = '/fundos/escritorio.png';
 
 const NAV_ITEMS = [
   { id: 'OFFICE', label: 'Escritório', icon: Building2 },
+  { id: 'HOME', label: 'Casa', icon: Home },
   { id: 'MAP', label: 'Mapa', icon: Map },
   { id: 'CASES', label: 'Casos', icon: Files },
   { id: 'AGENDA', label: 'Agenda', icon: CalendarDays },
@@ -94,6 +96,7 @@ export function OfficeScene({
   onOpenOabExam,
   onOpenCityRelocation,
   onOpenCityWorldMap,
+  onOpenPlayerHome,
   onCompleteOfficeTask,
   onToggleSound,
   onEnableMobileFrame,
@@ -180,6 +183,11 @@ export function OfficeScene({
 
     if (itemId === 'OFFICE') {
       setDrawer(null);
+      return;
+    }
+
+    if (itemId === 'HOME') {
+      onOpenPlayerHome();
       return;
     }
 
@@ -436,6 +444,7 @@ export function OfficeScene({
           <button type="button" onClick={() => setDrawer('AGENDA')}><BookOpenCheck size={21} /><span>AVALIAÇÃO</span></button>
           <button type="button" onClick={() => setDrawer('TEAM')}><Users size={21} /><span>CHAMAR EQUIPE</span></button>
           <button type="button" onClick={openNotebook}><Laptop size={21} /><span>ABRIR NOTEBOOK</span></button>
+          <button type="button" onClick={onOpenPlayerHome}><Home size={21} /><span>IR PARA CASA</span></button>
           <button type="button" onClick={() => player.activeCase ? onResumeActiveCase() : onOpenCityWorldMap()}><Map size={21} /><span>IR AO MAPA</span></button>
         </div>
 
