@@ -21,6 +21,7 @@ import {
 import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import type { PlayerProfile } from '../../types/game';
 import { sound } from '../../utils/sound';
+import { LawFirmMarketModal } from '../LawFirmMarket/LawFirmMarketModal';
 import { ProfessionalDailyBrief } from '../ProfessionalOfficeHub/ProfessionalDailyBrief';
 
 const OPEN_SOCIAL_JURIDICO_EVENT = 'rota:open-social-juridico';
@@ -46,6 +47,7 @@ export const IndependentProfessionalHub: React.FC<IndependentProfessionalHubProp
   const sjActive = isSocialJuridicoProActive(player, practice);
   const activeCase = GAME_CASES.find((item) => item.id === player.activeCase?.caseId) || null;
   const [showOfficeSetup, setShowOfficeSetup] = useState(false);
+  const [showJobMarket, setShowJobMarket] = useState(false);
   const [officeName, setOfficeName] = useState(player.officeFinances.officeName || `${player.name} Advocacia`);
   const [officeError, setOfficeError] = useState('');
 
@@ -165,10 +167,10 @@ export const IndependentProfessionalHub: React.FC<IndependentProfessionalHubProp
           <span className="mt-3 block text-[9px] font-black uppercase tracking-wider text-[#777]">Casos</span>
           <strong className="mt-1 block text-sm text-[#E6E3DC]">Buscar oportunidades no Social Jurídico</strong>
         </button>
-        <button type="button" className="rounded-2xl border border-[#2B2B30] bg-[#141416] p-4 text-left opacity-75">
+        <button type="button" onClick={() => setShowJobMarket(true)} className="rounded-2xl border border-[#2B2B30] bg-[#141416] p-4 text-left transition hover:border-[#60A5FA]/35">
           <UserRoundSearch size={19} className="text-[#60A5FA]" />
           <span className="mt-3 block text-[9px] font-black uppercase tracking-wider text-[#777]">Mercado de trabalho</span>
-          <strong className="mt-1 block text-sm text-[#E6E3DC]">Buscar outro escritório • em expansão</strong>
+          <strong className="mt-1 block text-sm text-[#E6E3DC]">Buscar outro escritório</strong>
         </button>
         <button type="button" onClick={() => setShowOfficeSetup(true)} className="rounded-2xl border border-[#2B2B30] bg-[#141416] p-4 text-left transition hover:border-[#34D399]/35">
           <Building2 size={19} className="text-[#34D399]" />
@@ -215,6 +217,13 @@ export const IndependentProfessionalHub: React.FC<IndependentProfessionalHubProp
           </div>
         </div>
       )}
+
+      <LawFirmMarketModal
+        player={player}
+        isOpen={showJobMarket}
+        onClose={() => setShowJobMarket(false)}
+        onAccepted={() => setShowJobMarket(false)}
+      />
     </div>
   );
 };
