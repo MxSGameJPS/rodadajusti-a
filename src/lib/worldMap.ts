@@ -29,6 +29,7 @@ const GEOCODE_PREFIX = 'rota_world_geocode_v1:';
 const ADDRESS_GEOCODE_PREFIX = 'rota_world_address_geocode_v2:';
 const ROUTE_PREFIX = 'rota_world_route_v1:';
 const ROAD_SNAP_PREFIX = 'rota_world_road_snap_v1:';
+const STABLE_WORLD_POINT_PREFIX = 'rota_world_stable_point_v1:';
 const PLAYER_SAVE_KEY = 'rota_da_justica_save_v1';
 
 export const WORLD_MAP_UPDATED_EVENT = 'rota:world-map-updated';
@@ -605,6 +606,38 @@ export async function snapWorldPointToRoad(point: WorldGeoPoint): Promise<WorldG
   } finally {
     if (timeout != null && hasWindow()) window.clearTimeout(timeout);
   }
+}
+
+export async function resolveStableRoadPoint(
+  logicalKey: string,
+  point: WorldGeoPoint,
+): Promise<WorldGeoPoint> {
+  const safeKey = normalize(logicalKey);
+  const cacheKey = STABLE_WORLD_POINT_PREFIX + safeKey;
+
+  if (hasWindow()) {
+    try {
+      const cached = window.localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached) as WorldGeoPoint;
+        if (isPoint(parsed)) return parsed;
+      }
+    } catch {
+      // Cache persistente é somente uma otimização.
+    }
+  }
+
+  const resolved = await snapWorldPointToRoad(point);
+
+  if (hasWindow()) {
+    try {
+      window.localStorage.setItem(cacheKey, JSON.stringify(resolved));
+    } catch {
+      // Sem storage, o ponto continua estável durante a renderização atual.
+    }
+  }
+
+  return resolved;
 }
 
 function routeCacheKey(origin: WorldGeoPoint, destination: WorldGeoPoint) {
