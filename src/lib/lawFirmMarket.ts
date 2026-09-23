@@ -9,7 +9,6 @@ import {
 import { syncProfessionalProfileWithPlayer } from './professionalRpg';
 import { isSupabaseConfigured, supabase } from './supabase';
 
-const PLAYER_SAVE_KEY = 'rota_da_justica_save_v1';
 const LOCAL_OFFERS_PREFIX = 'rota_law_firm_offers_v1:';
 
 export type LawFirmOfferType =
@@ -247,19 +246,6 @@ function upsertLocalOffer(player: PlayerProfile, offer: LawFirmOffer) {
   saveLocalOffers(player, next);
 }
 
-function patchPlayerCloudCareerId(careerId: string) {
-  try {
-    const raw = localStorage.getItem(PLAYER_SAVE_KEY);
-    if (!raw) return;
-    const current = JSON.parse(raw) as PlayerProfile;
-    if (current.cloudCareerId === careerId) return;
-    localStorage.setItem(PLAYER_SAVE_KEY, JSON.stringify({ ...current, cloudCareerId: careerId }));
-    emitPlayerSaveExternalUpdated();
-  } catch {
-    // O vínculo segue utilizável apenas nesta sessão se o storage falhar.
-  }
-}
-
 async function ensureCloudCareer(player: PlayerProfile): Promise<{ careerId: string | null; userId: string | null }> {
   if (!isSupabaseConfigured || !supabase) return { careerId: null, userId: null };
 
@@ -319,7 +305,9 @@ async function ensureCloudCareer(player: PlayerProfile): Promise<{ careerId: str
       .eq('user_id', userId);
   }
 
-  patchPlayerCloudCareerId(careerId);
+  // O id da carreira é usado nesta operação sem alterar a chave dos saves locais.
+  // Isso evita que estados profissionais existentes migrem de "oab:*" para
+  // "career:*" no meio da sessão.
   return { careerId, userId };
 }
 
