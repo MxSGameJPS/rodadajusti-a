@@ -189,40 +189,60 @@ values (
     {"slug":"administrativo","name":"Administrativo","specialty":null}
   ]'::jsonb,
   '{
-    "acceptsApplications":true,
-    "initialGameOffer":{
+    "recruitmentSchemaVersion":1,
+    "internshipRecruitment":{
       "enabled":true,
       "roleCode":"ESTAGIARIO",
-      "priority":100,
-      "requirements":{
-        "requiresOab":false,
-        "minimumReputation":0,
-        "minimumXp":0,
-        "minimumCasesSolved":0
-      }
+      "minimumReputation":0,
+      "minimumXp":0,
+      "minimumCasesSolved":0,
+      "minimumEthics":0
     },
     "postOabOffer":{
       "enabled":true,
       "roleCode":"ADVOGADO_CONTRATADO",
-      "requirements":{
-        "requiresOab":true,
-        "minimumReputation":20
-      }
+      "minimumReputation":20,
+      "minimumXp":0,
+      "minimumCasesSolved":0,
+      "minimumEthics":0,
+      "requiredSpecialties":[]
+    },
+    "continuity":{
+      "enabled":true,
+      "internshipPerformanceWeight":70,
+      "minimumPerformance":50,
+      "guaranteedPerformance":80
     },
     "headhunting":{
       "enabled":true,
-      "eligibleCareerTiers":["ADVOGADO_CONTRATADO","ADVOGADO_SENIOR"],
-      "minimumReputation":40,
-      "minimumCasesSolved":3,
-      "cooldownGameDays":90,
-      "evaluationChance":0.12
+      "eligibleRoleCodes":["ADVOGADO_CONTRATADO","ADVOGADO_SENIOR"],
+      "minimumReputation":65,
+      "minimumXp":0,
+      "minimumCasesSolved":10,
+      "minimumEthics":0,
+      "requiredSpecialties":[],
+      "evaluationChance":0.15,
+      "cooldownGameDays":90
     },
-    "postTerminationApplication":{
+    "applications":{
       "enabled":true,
+      "eligibleRoleCodes":["ADVOGADO_CONTRATADO","ADVOGADO_SENIOR"],
+      "minimumReputation":35,
+      "minimumXp":0,
+      "minimumCasesSolved":0,
+      "minimumEthics":0,
+      "requiredSpecialties":[],
       "cooldownGameDays":30
     },
-    "rehire":{
-      "enabled":false
+    "postTermination":{
+      "enabled":true,
+      "eligibleRoleCodes":["ADVOGADO_CONTRATADO"],
+      "minimumReputation":20,
+      "minimumXp":0,
+      "minimumCasesSolved":0,
+      "minimumEthics":0,
+      "requiredSpecialties":[],
+      "cooldownGameDays":15
     }
   }'::jsonb,
   '{
