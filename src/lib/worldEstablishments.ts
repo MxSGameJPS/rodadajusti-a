@@ -54,6 +54,7 @@ type RawCity = {
 
 type RawOffer = {
   id: string;
+  establishment_id?: string;
   title: string;
   offer_type: string;
   description: string;
@@ -67,6 +68,7 @@ type RawOffer = {
 
 type RawEstablishment = {
   id: string;
+  city_id?: string | null;
   slug: string;
   name: string;
   business_type: string;
@@ -165,6 +167,164 @@ function normalizeEstablishment(row: RawEstablishment): WorldEstablishment {
 export interface WorldEstablishmentsLoadResult {
   items: WorldEstablishment[];
   error: string | null;
+  warnings?: string[];
+}
+
+function supabaseDiagnostic(error: any) {
+  return [
+    error?.code ? '[' + error.code + ']' : '',
+    error?.message || '',
+    error?.details || '',
+    error?.hint || '',
+  ].filter(Boolean).join(' ').trim();
+}
+
+const ESTABLISHMENT_CORE_SELECT = [
+  'id',
+  'city_id',
+  'slug',
+  'name',
+  'business_type',
+  'subcategory',
+  'description',
+  'slogan',
+  'district',
+  'street_name',
+  'number_reference',
+  'latitude',
+  'longitude',
+  'price_range',
+  'game_use_type',
+  'presence_scope',
+  'is_sponsored',
+  'sponsor_name',
+  'is_visitable',
+  'allow_map_highlight',
+  'logo_url',
+  'banner_url',
+  'cover_image_url',
+].join(',');
+
+const ESTABLISHMENT_MINIMAL_SELECT = [
+  'id',
+  'city_id',
+  'slug',
+  'name',
+  'business_type',
+  'description',
+  'latitude',
+  'longitude',
+  'game_use_type',
+  'presence_scope',
+  'is_sponsored',
+  'is_visitable',
+  'allow_map_highlight',
+].join(',');
+
+async function readPublishedEstablishmentRows() {
+  if (!supabase) return { rows: [] as RawEstablishment[], error: 'Supabase do jogo não está configurado.' };
+
+  const primary = await supabase
+    .from('establishments')
+    .select(ESTABLISHMENT_CORE_SELECT)
+    .eq('status', 'published')
+    .eq('is_active', true)
+    .order('name', { ascending: true })
+    .limit(250);
+
+  if (!primary.error) {
+    return {
+      rows: (primary.data || []) as unknown as RawEstablishment[],
+      error: null,
+    };
+  }
+
+  // Compatibilidade com bancos que ainda não possuem algum campo visual novo:
+  // o estabelecimento continua aparecendo no mapa com os dados essenciais.
+  console.warn('[Rota da Justiça] Consulta completa de estabelecimentos falhou; tentando leitura mínima.', {
+    code: primary.error.code,
+    message: primary.error.message,
+  });
+
+  const fallback = await supabase
+    .from('establishments')
+    .select(ESTABLISHMENT_MINIMAL_SELECT)
+    .eq('status', 'published')
+    .eq('is_active', true)
+    .order('name', { ascending: true })
+    .limit(250);
+
+  if (fallback.error) {
+    return {
+      rows: [] as RawEstablishment[],
+      error: supabaseDiagnostic(fallback.error) || supabaseDiagnostic(primary.error),
+    };
+  }
+
+  return {
+    rows: (fallback.data || []) as unknown as RawEstablishment[],
+    error: null,
+  };
+}
+
+async function readCitiesByIds(cityIds: string[]) {
+  if (!supabase || cityIds.length === 0) {
+    return { cities: new Map<string, RawCity>(), error: null as string | null };
+  }
+
+  const { data, error } = await supabase
+    .from('cities')
+    .select('id,name,state_code')
+    .in('id', cityIds);
+
+  if (error) {
+    return {
+      cities: new Map<string, RawCity>(),
+      error: supabaseDiagnostic(error),
+    };
+  }
+
+  return {
+    cities: new Map(
+      ((data || []) as RawCity[]).map((city) => [city.id, city] as const),
+    ),
+    error: null,
+  };
+}
+
+async function readOffersByEstablishmentIds(establishmentIds: string[]) {
+  if (!supabase || establishmentIds.length === 0) {
+    return { offers: new Map<string, RawOffer[]>(), error: null as string | null };
+  }
+
+  const { data, error } = await supabase
+    .from('establishment_offers')
+    .select('id,establishment_id,title,offer_type,description,price,period_type,image_url,is_available,sort_order,gameplay_effects')
+    .in('establishment_id', establishmentIds)
+    .eq('is_available', true)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.warn('[Rota da Justiça] Ofertas indisponíveis; estabelecimentos continuarão visíveis.', {
+      code: error.code,
+      message: error.message,
+    });
+    return {
+      offers: new Map<string, RawOffer[]>(),
+      error: supabaseDiagnostic(error),
+    };
+  }
+
+  const grouped = new Map<string, RawOffer[]>();
+  ((data || []) as unknown as RawOffer[]).forEach((offer) => {
+    const establishmentId = String(offer.establishment_id || '');
+    if (!establishmentId) return;
+    const current = grouped.get(establishmentId) || [];
+    current.push(offer);
+    grouped.set(establishmentId, current);
+  });
+
+  return { offers: grouped, error: null };
 }
 
 export async function loadWorldEstablishmentsWithDiagnostics(
@@ -176,52 +336,82 @@ export async function loadWorldEstablishmentsWithDiagnostics(
     return { items: [], error };
   }
 
-  const { data, error } = await supabase
-    .from('establishments')
-    .select(
-      'id,slug,name,business_type,subcategory,description,slogan,district,street_name,number_reference,latitude,longitude,price_range,game_use_type,presence_scope,is_sponsored,sponsor_name,is_visitable,allow_map_highlight,logo_url,banner_url,cover_image_url,city:cities(id,name,state_code),offers:establishment_offers(id,title,offer_type,description,price,period_type,image_url,is_available,sort_order,gameplay_effects)'
-    )
-    .eq('status', 'published')
-    .eq('is_active', true)
-    .order('name', { ascending: true })
-    .limit(250);
-
-  if (error) {
-    const diagnostic = [
-      error.code ? '[' + error.code + ']' : '',
-      error.message || '',
-      error.details || '',
-      error.hint || '',
-    ].filter(Boolean).join(' ').trim();
-
-    console.error('[Rota da Justiça] Falha ao carregar estabelecimentos publicados.', {
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
+  const core = await readPublishedEstablishmentRows();
+  if (core.error) {
+    console.error('[Rota da Justiça] Falha ao ler estabelecimentos publicados.', {
+      error: core.error,
       city: profile.city,
       state: profile.state,
     });
+    return { items: [], error: core.error };
+  }
 
+  if (core.rows.length === 0) {
     return {
       items: [],
-      error: diagnostic || 'O catálogo de estabelecimentos não pôde ser lido.',
+      error: null,
+      warnings: ['A leitura pública funcionou, mas retornou 0 estabelecimentos publicados/ativos.'],
     };
   }
 
-  const normalized = ((data || []) as unknown as RawEstablishment[])
-    .map(normalizeEstablishment);
-
-  const items = normalized.filter((item) => (
-    item.presenceScope === 'UNIVERSAL'
-    || (
-      item.city
-      && item.city.stateCode.toUpperCase() === profile.state.toUpperCase()
-      && normalize(item.city.name) === normalize(profile.city)
-    )
+  const establishmentIds = core.rows.map((row) => row.id);
+  const cityIds = Array.from(new Set(
+    core.rows
+      .map((row) => String(row.city_id || ''))
+      .filter(Boolean),
   ));
 
-  return { items, error: null };
+  // Cidade e ofertas são complementares. Uma falha nelas não derruba o
+  // estabelecimento principal do mapa.
+  const [cityResult, offerResult] = await Promise.all([
+    readCitiesByIds(cityIds),
+    readOffersByEstablishmentIds(establishmentIds),
+  ]);
+
+  const warnings: string[] = [];
+  if (cityResult.error) warnings.push('Falha ao ler cidades: ' + cityResult.error);
+  if (offerResult.error) warnings.push('Falha ao ler ofertas: ' + offerResult.error);
+
+  const normalized = core.rows.map((row) => {
+    const city = row.city_id ? cityResult.cities.get(row.city_id) || null : null;
+    const offers = offerResult.offers.get(row.id) || [];
+
+    return normalizeEstablishment({
+      ...row,
+      city,
+      offers,
+    });
+  });
+
+  const targetState = profile.state.toUpperCase();
+  const targetCity = normalize(profile.city);
+
+  const items = normalized.filter((item) => {
+    if (item.presenceScope === 'UNIVERSAL') return true;
+
+    if (item.city) {
+      return item.city.stateCode.toUpperCase() === targetState
+        && normalize(item.city.name) === targetCity;
+    }
+
+    // Se a cidade vinculada não pôde ser lida, não inventamos a cidade do
+    // estabelecimento. O diagnóstico fica explícito no mapa.
+    return false;
+  });
+
+  if (normalized.length > 0 && items.length === 0 && cityResult.error) {
+    return {
+      items: [],
+      error: 'Estabelecimentos publicados foram encontrados, mas a cidade vinculada não pôde ser lida. ' + cityResult.error,
+      warnings,
+    };
+  }
+
+  return {
+    items,
+    error: null,
+    warnings,
+  };
 }
 
 export async function loadWorldEstablishments(
