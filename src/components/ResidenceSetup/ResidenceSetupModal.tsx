@@ -89,7 +89,7 @@ export const ResidenceSetupModal: React.FC<ResidenceSetupModalProps> = ({
               <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#9C865A]">Atualização da carreira</span>
               <h2 className="mt-1 font-serif text-2xl font-black text-[#F1EEE8]">Onde seu personagem mora?</h2>
               <p className="mt-2 text-xs leading-5 text-[#9299A3]">
-                A vida pessoal agora faz parte da simulação. Precisamos localizar a casa da sua carreira atual antes de continuar.
+                A vida pessoal agora faz parte da simulação. Precisamos identificar sua rua para posicionar a casa em um ponto aproximado antes de continuar.
               </p>
             </div>
           </div>
@@ -101,7 +101,7 @@ export const ResidenceSetupModal: React.FC<ResidenceSetupModalProps> = ({
             <div>
               <strong className="text-xs text-[#CADCF2]">Seu endereço não será público</strong>
               <p className="mt-1 text-[10px] leading-5 text-[#8FA5BF]">
-                Rua e número não são publicados no catálogo do Rota Admin nem exibidos para outros jogadores. Durante a validação, o endereço é consultado no serviço de geocodificação configurado para o mapa; a carreira usa o resultado para posicionar a casa e calcular deslocamentos.
+                O número da residência não é enviado ao serviço de mapas. Apenas rua, cidade e UF são consultados. A casa aparece em um ponto aproximado e aleatório da rua cadastrada, sem representar a localização real. Rua e número não são publicados no Rota Admin nem exibidos para outros jogadores.
               </p>
             </div>
           </div>
@@ -178,7 +178,7 @@ export const ResidenceSetupModal: React.FC<ResidenceSetupModalProps> = ({
             <div className="flex items-start gap-3 rounded-xl border border-[#34D399]/25 bg-[#34D399]/8 p-3">
               <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-[#73E1B9]" />
               <div>
-                <strong className="text-xs text-[#B6F1D9]">Residência localizada</strong>
+                <strong className="text-xs text-[#B6F1D9]">Rua localizada • posição aproximada criada</strong>
                 <span className="mt-1 block text-[10px] leading-4 text-[#89BAA7]">{validated.displayName}</span>
               </div>
             </div>
