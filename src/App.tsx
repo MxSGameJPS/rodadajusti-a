@@ -471,6 +471,7 @@ export default function App() {
       || !player.household?.residence?.state?.trim()
       || player.household?.residence?.latitude == null
       || player.household?.residence?.longitude == null
+      || player.household?.residence?.mapPointMode !== 'STREET_RANDOMIZED'
     )
   );
 
@@ -492,6 +493,7 @@ export default function App() {
           state: origin.state,
           latitude: setup.addressProfile.point.lat,
           longitude: setup.addressProfile.point.lng,
+          mapPointMode: setup.addressProfile.mapPointMode,
           geocodedDisplayName: setup.addressProfile.displayName,
         },
       },
@@ -523,6 +525,7 @@ export default function App() {
           state: setup.state,
           latitude: setup.addressProfile.point.lat,
           longitude: setup.addressProfile.point.lng,
+          mapPointMode: setup.addressProfile.mapPointMode,
           geocodedDisplayName: setup.addressProfile.displayName,
         },
         needs: { ...DEFAULT_HOUSEHOLD_STATE.needs },
@@ -1352,6 +1355,7 @@ export default function App() {
             state: destination.state,
             latitude: addressProfile.point.lat,
             longitude: addressProfile.point.lng,
+            mapPointMode: addressProfile.mapPointMode,
             geocodedDisplayName: addressProfile.displayName,
             billsPaidThroughKey: null,
           },
