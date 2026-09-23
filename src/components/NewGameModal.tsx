@@ -124,6 +124,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
       && validatedAddress.number === number.trim()
       && validatedAddress.city === city.trim()
       && validatedAddress.state === cleanState
+      && validatedAddress.mapPointMode === 'STREET_RANDOMIZED'
     ) {
       return validatedAddress;
     }
