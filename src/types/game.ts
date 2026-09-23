@@ -208,6 +208,63 @@ export interface PersonalFinanceState {
   transactions: PersonalFinanceTransaction[];
 }
 
+export type HomeFurnitureKind = 'BED' | 'SOFA' | 'DESK' | 'CHAIR' | 'APPLIANCE' | 'OTHER';
+
+export interface OwnedFurnitureItem {
+  id: string;
+  offerId: string;
+  establishmentId: string;
+  title: string;
+  kind: HomeFurnitureKind;
+  imageUrl?: string | null;
+  comfortBonus: number;
+  energyBonus: number;
+  studyBonus: number;
+  purchasedAtGameDate: string;
+}
+
+export interface OwnedVehicleItem {
+  id: string;
+  offerId: string;
+  establishmentId: string;
+  title: string;
+  imageUrl?: string | null;
+  purchasedAtGameDate: string;
+}
+
+export interface PlayerResidenceState {
+  street: string;
+  number: string;
+  city: string;
+  state: string;
+  latitude: number | null;
+  longitude: number | null;
+  geocodedDisplayName: string;
+  monthlyRent: number;
+  waterMonthly: number;
+  electricityMonthly: number;
+  internetMonthly: number;
+  gasMonthly: number;
+  billsPaidThroughKey: string | null;
+}
+
+export interface PlayerLifeNeedsState {
+  energy: number;
+  hunger: number;
+  hygiene: number;
+  study: number;
+}
+
+export interface PlayerHouseholdState {
+  foodUnits: number;
+  residence: PlayerResidenceState;
+  needs: PlayerLifeNeedsState;
+  furniture: OwnedFurnitureItem[];
+  vehicles: OwnedVehicleItem[];
+  lastSleptGameDate: string | null;
+  lastStudiedGameDate: string | null;
+}
+
 export interface CaseLogEntry {
   id: string;
   timestampGameHours: number;
@@ -430,6 +487,7 @@ export interface PlayerProfile {
   history: CaseHistoryRecord[];
   officeFinances: OfficeFinances;
   personalFinances: PersonalFinanceState;
+  household: PlayerHouseholdState;
   officeDiscipline: OfficeDisciplineState;
   officePerformance: OfficePerformanceState;
   concursoCompletedPhases: string[];
