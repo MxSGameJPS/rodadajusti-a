@@ -19,6 +19,7 @@ import {
   Smartphone,
   Star,
   Trophy,
+  Truck,
   Users,
   Volume2,
   VolumeX,
@@ -54,6 +55,7 @@ const NAV_ITEMS = [
   { id: 'FINANCE', label: 'Finanças', icon: WalletCards },
   { id: 'TEAM', label: 'Equipe', icon: Users },
   { id: 'MARKET', label: 'Mercado', icon: BriefcaseBusiness },
+  { id: 'RELOCATION', label: 'Mudar cidade', icon: Truck },
   { id: 'ACHIEVEMENTS', label: 'Conquistas', icon: Trophy },
 ];
 
@@ -84,6 +86,7 @@ export function OfficeScene({
   onOpenConcursoModal,
   onOpenOfficeModal,
   onOpenOabExam,
+  onOpenCityRelocation,
   onCompleteOfficeTask,
   onToggleSound,
   onEnableMobileFrame,
@@ -177,6 +180,11 @@ export function OfficeScene({
 
     if (itemId === 'MARKET') {
       setShowJobMarket(true);
+      return;
+    }
+
+    if (itemId === 'RELOCATION') {
+      onOpenCityRelocation();
       return;
     }
 
