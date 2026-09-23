@@ -12,6 +12,7 @@ export interface WorldEstablishmentOffer {
   price: number | null;
   periodType: string;
   imageUrl: string | null;
+  gameplayEffects: Record<string, unknown>;
 }
 
 export interface WorldEstablishment {
@@ -61,6 +62,7 @@ type RawOffer = {
   image_url?: string | null;
   is_available?: boolean | null;
   sort_order?: number | null;
+  gameplay_effects?: Record<string, unknown> | null;
 };
 
 type RawEstablishment = {
@@ -124,6 +126,9 @@ function normalizeEstablishment(row: RawEstablishment): WorldEstablishment {
           price: offer.price == null ? null : finiteNumber(offer.price),
           periodType: offer.period_type,
           imageUrl: offer.image_url || null,
+          gameplayEffects: offer.gameplay_effects && typeof offer.gameplay_effects === 'object'
+            ? offer.gameplay_effects
+            : {},
         }))
     : [];
 
@@ -175,7 +180,7 @@ export async function loadWorldEstablishments(profile: WorldMapProfile): Promise
   let query = supabase
     .from('establishments')
     .select(
-      'id,slug,name,business_type,subcategory,description,slogan,district,street_name,number_reference,latitude,longitude,price_range,game_use_type,presence_scope,is_sponsored,sponsor_name,is_visitable,allow_map_highlight,logo_url,banner_url,cover_image_url,city:cities(id,name,state_code),offers:establishment_offers(id,title,offer_type,description,price,period_type,image_url,is_available,sort_order)'
+      'id,slug,name,business_type,subcategory,description,slogan,district,street_name,number_reference,latitude,longitude,price_range,game_use_type,presence_scope,is_sponsored,sponsor_name,is_visitable,allow_map_highlight,logo_url,banner_url,cover_image_url,city:cities(id,name,state_code),offers:establishment_offers(id,title,offer_type,description,price,period_type,image_url,is_available,sort_order,gameplay_effects)'
     )
     .eq('status', 'published')
     .eq('is_active', true)
@@ -251,6 +256,7 @@ export function establishmentTypeLabel(type: string) {
     LOCADORA: 'Locadora',
     CONCESSIONARIA: 'Concessionária',
     LOJA_VEICULOS: 'Loja de veículos',
+    LOJA_MOVEIS: 'Loja de móveis',
     ESCRITORIO: 'Escritório',
     RESTAURANTE: 'Restaurante',
     FARMACIA: 'Farmácia',
