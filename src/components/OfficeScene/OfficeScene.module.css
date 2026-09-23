@@ -881,7 +881,7 @@
   gap: 14px;
 }
 
-.financeDrawer > div {
+.financeSummaryCard {
   min-height: 120px;
   display: grid;
   align-content: center;
@@ -892,13 +892,13 @@
   background: #111214;
 }
 
-.financeDrawer span {
+.financeSummaryCard span {
   color: #89857e;
   font-size: 10px;
   text-transform: uppercase;
 }
 
-.financeDrawer strong {
+.financeSummaryCard > strong {
   color: #eee7d9;
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 24px;
@@ -1465,5 +1465,159 @@
   .scene {
     min-height: 0;
     height: 100dvh;
+  }
+}
+
+
+.personalFinanceSection {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #292a2d;
+  border-radius: 14px;
+  background: #0e0f11;
+}
+
+.personalFinanceHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.personalFinanceHeading span {
+  display: block;
+  color: #d1b56d;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.personalFinanceHeading small {
+  display: block;
+  margin-top: 4px;
+  color: #777a80;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.expenseCategoryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.expenseCategoryCard {
+  min-height: 72px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid #27292d;
+  border-radius: 10px;
+  background: #121316;
+}
+
+.expenseCategoryCard span {
+  color: #85888f;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.expenseCategoryCard strong {
+  color: #ded7ca;
+  font: 800 13px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.financeTransactionList {
+  display: grid;
+  gap: 7px;
+}
+
+.financeTransactionList article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border: 1px solid #26282c;
+  border-radius: 10px;
+  background: #121316;
+}
+
+.financeTransactionList article > div {
+  min-width: 0;
+}
+
+.financeTransactionList article > div strong {
+  display: block;
+  overflow: hidden;
+  color: #e2ddd4;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.financeTransactionList article > div span {
+  display: block;
+  margin-top: 3px;
+  color: #74777d;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.financeTransactionList article > strong {
+  font: 850 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+}
+
+.financeExpenseValue {
+  color: #f08a8a;
+}
+
+.financeIncomeValue {
+  color: #55d6a1;
+}
+
+.financeEmptyState {
+  padding: 18px;
+  border: 1px dashed #303238;
+  border-radius: 10px;
+  color: #74777d;
+  font-size: 10px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.officeManagementButton {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 980px) {
+  .expenseCategoryGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .financeDrawer {
+    grid-template-columns: 1fr;
+  }
+
+  .financeSummaryCard,
+  .personalFinanceSection,
+  .officeManagementButton {
+    grid-column: 1;
+  }
+
+  .expenseCategoryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .financeTransactionList article {
+    grid-template-columns: 1fr;
   }
 }
