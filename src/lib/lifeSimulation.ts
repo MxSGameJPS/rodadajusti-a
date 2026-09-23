@@ -58,8 +58,16 @@ export function normalizeHousehold(
       ...residence,
       city: String(residence.city || fallbackCity || '').trim(),
       state: String(residence.state || fallbackState || '').trim().toUpperCase(),
-      latitude: Number.isFinite(Number(residence.latitude)) ? Number(residence.latitude) : null,
-      longitude: Number.isFinite(Number(residence.longitude)) ? Number(residence.longitude) : null,
+      latitude: residence.latitude == null || residence.latitude === ''
+        ? null
+        : Number.isFinite(Number(residence.latitude))
+          ? Number(residence.latitude)
+          : null,
+      longitude: residence.longitude == null || residence.longitude === ''
+        ? null
+        : Number.isFinite(Number(residence.longitude))
+          ? Number(residence.longitude)
+          : null,
       mapPointMode: residence.mapPointMode === 'STREET_RANDOMIZED' ? 'STREET_RANDOMIZED' : null,
       monthlyRent: Math.max(0, Number(residence.monthlyRent ?? DEFAULT_HOUSEHOLD_STATE.residence.monthlyRent) || 0),
       waterMonthly: Math.max(0, Number(residence.waterMonthly ?? DEFAULT_HOUSEHOLD_STATE.residence.waterMonthly) || 0),
