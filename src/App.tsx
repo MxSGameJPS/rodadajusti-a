@@ -47,6 +47,7 @@ import {
   normalizeOfficePerformance,
 } from './lib/internCareerEngine';
 import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
+import { readProfessionalEmploymentState } from './lib/professionalEmployment';
 import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
 import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } from './lib/gameTime';
 import { sound } from './utils/sound';
@@ -547,6 +548,7 @@ export default function App() {
       caseTitle: activeCaseData.title,
       completedDate,
       currentDiscipline: player.officeDiscipline,
+      officeName: readProfessionalEmploymentState(player)?.officeName || 'Ramos & Associados',
     });
 
     let earnedXp = 0;
