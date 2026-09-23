@@ -24,6 +24,7 @@ import {
   readWorldMapProfile,
   resolveWorldMapProfile,
   saveWorldMapProfile,
+  snapWorldPointToRoad,
   type WorldMapProfile,
   type WorldRoute,
 } from '../../lib/worldMap';
@@ -331,10 +332,13 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       markersRef.current = [];
 
       const points: [number, number][] = [];
-      const officePoint = getRamosOfficePoint(profile);
-      const currentPoint = currentLocation
+      const officeRawPoint = getRamosOfficePoint(profile);
+      const officePoint = await snapWorldPointToRoad(officeRawPoint);
+      const currentRawPoint = currentLocation
         ? getWorldPointForLocation(profile, currentCase.id, currentLocation)
-        : officePoint;
+        : officeRawPoint;
+      const currentPoint = await snapWorldPointToRoad(currentRawPoint);
+      if (!active || mapRef.current !== map) return;
       points.push([officePoint.lng, officePoint.lat]);
 
       const officeElement = buildGameMarker(
@@ -357,11 +361,33 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
           .addTo(map),
       );
 
-      currentCase.locations.forEach((location) => {
-        if (!unlockedSet.has(location.id)) return;
-        if (location.category === 'escritorio' || /ESCRITORIO_RAMOS/i.test(location.id)) return;
+      const unlockedLocations = currentCase.locations.filter((location) => (
+        unlockedSet.has(location.id)
+        && location.category !== 'escritorio'
+        && !/ESCRITORIO_RAMOS/i.test(location.id)
+      ));
 
-        const point = getWorldPointForLocation(profile, currentCase.id, location);
+      const locationPoints = await Promise.all(
+        unlockedLocations.map(async (location) => ({
+          location,
+          point: await snapWorldPointToRoad(
+            getWorldPointForLocation(profile, currentCase.id, location),
+          ),
+        })),
+      );
+
+      const establishmentPoints = await Promise.all(
+        establishments.map(async (establishment) => ({
+          establishment,
+          point: await snapWorldPointToRoad(
+            getWorldPointForEstablishment(profile, establishment),
+          ),
+        })),
+      );
+
+      if (!active || mapRef.current !== map) return;
+
+      locationPoints.forEach(({ location, point }) => {
         points.push([point.lng, point.lat]);
 
         const element = buildGameMarker(
@@ -382,8 +408,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
         );
       });
 
-      establishments.forEach((establishment) => {
-        const point = getWorldPointForEstablishment(profile, establishment);
+      establishmentPoints.forEach(({ establishment, point }) => {
         points.push([point.lng, point.lat]);
 
         const element = buildEstablishmentMarker(establishment);
@@ -441,13 +466,23 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
 
     let active = true;
     setRouteLoading(true);
-    const origin = getWorldPointForLocation(profile, currentCase.id, currentLocation);
-    const destination = getWorldPointForLocation(profile, currentCase.id, selectedLocation);
-    fetchRoadRoute(origin, destination).then((result) => {
+    const loadRoute = async () => {
+      const [origin, destination] = await Promise.all([
+        snapWorldPointToRoad(
+          getWorldPointForLocation(profile, currentCase.id, currentLocation),
+        ),
+        snapWorldPointToRoad(
+          getWorldPointForLocation(profile, currentCase.id, selectedLocation),
+        ),
+      ]);
+
+      const result = await fetchRoadRoute(origin, destination);
       if (!active) return;
       setRoute(result);
       setRouteLoading(false);
-    });
+    };
+
+    void loadRoute();
     return () => {
       active = false;
     };
