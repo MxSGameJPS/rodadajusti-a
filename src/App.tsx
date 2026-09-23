@@ -59,7 +59,7 @@ import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalize
 import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } from './lib/gameTime';
 import { sound } from './utils/sound';
 import { normalizeCareerOrigin, saveCareerOrigin } from './lib/careerOrigin';
-import { saveWorldMapProfile, type WorldMapProfile } from './lib/worldMap';
+import { saveWorldMapProfile, type WorldAddressProfile, type WorldMapProfile } from './lib/worldMap';
 import type { WorldEstablishment, WorldEstablishmentOffer } from './lib/worldEstablishments';
 import { supabase } from './lib/supabase';
 import { canManageOwnOffice } from './lib/independentPractice';
@@ -1101,11 +1101,17 @@ export default function App() {
   const handleRelocateCity = async ({
     city,
     state,
+    street,
+    number,
     profile,
+    addressProfile,
   }: {
     city: string;
     state: string;
+    street: string;
+    number: string;
     profile: WorldMapProfile;
+    addressProfile: WorldAddressProfile;
   }) => {
     if (player.activeCase) {
       throw new Error('Finalize o caso ativo antes da mudança.');
@@ -1129,23 +1135,40 @@ export default function App() {
       updatedAt: new Date().toISOString(),
     });
 
-    setPlayer((prev) => ({
-      ...prev,
-      homeCity: destination.city,
-      homeState: destination.state,
-      money: Math.max(0, prev.money - CITY_RELOCATION_COST),
-      personalFinances: appendPersonalFinanceTransaction(
-        prev.personalFinances,
-        createPersonalExpense(prev, {
-          category: 'MUDANCA',
-          amount: CITY_RELOCATION_COST,
-          title: `Mudança para ${destination.city}/${destination.state}`,
-          description: 'Custos pessoais e logísticos da mudança de cidade.',
-          source: 'CITY_RELOCATION',
-        }),
-      ),
-      ...gameDateFields(addGameDays(getPlayerGameDate(prev), CITY_RELOCATION_DAYS)),
-    }));
+    setPlayer((prev) => {
+      const advanced = gameDayFields(prev, CITY_RELOCATION_DAYS);
+      return {
+        ...prev,
+        ...advanced,
+        homeCity: destination.city,
+        homeState: destination.state,
+        money: Math.max(0, prev.money - CITY_RELOCATION_COST),
+        household: {
+          ...advanced.household,
+          residence: {
+            ...advanced.household.residence,
+            street,
+            number,
+            city: destination.city,
+            state: destination.state,
+            latitude: addressProfile.point.lat,
+            longitude: addressProfile.point.lng,
+            geocodedDisplayName: addressProfile.displayName,
+            billsPaidThroughKey: null,
+          },
+        },
+        personalFinances: appendPersonalFinanceTransaction(
+          prev.personalFinances,
+          createPersonalExpense(prev, {
+            category: 'MUDANCA',
+            amount: CITY_RELOCATION_COST,
+            title: `Mudança para ${destination.city}/${destination.state}`,
+            description: 'Custos pessoais e logísticos da mudança de cidade.',
+            source: 'CITY_RELOCATION',
+          }),
+        ),
+      };
+    });
 
     if (supabase && player.cloudCareerId) {
       const { data: userData } = await supabase.auth.getUser();
