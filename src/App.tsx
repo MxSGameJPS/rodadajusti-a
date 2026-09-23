@@ -22,7 +22,7 @@ import { HeaderBar } from './components/HeaderBar';
 import { OfficeHub } from './components/OfficeHub';
 import { InvestigationMap } from './components/InvestigationMap';
 import { LocationScene as LocationSceneComponent } from './components/LocationScene';
-import { NewGameModal } from './components/NewGameModal';
+import { NewGameModal, type NewGameSetup } from './components/NewGameModal';
 import { CaseBriefingModal } from './components/CaseBriefingModal';
 import { CaseDossierModal } from './components/CaseDossierModal';
 import { LegalCourtroomModal } from './components/LegalCourtroomModal';
@@ -62,6 +62,11 @@ import { saveWorldMapProfile, type WorldMapProfile } from './lib/worldMap';
 import { supabase } from './lib/supabase';
 import { canManageOwnOffice } from './lib/independentPractice';
 import {
+  DEFAULT_HOUSEHOLD_STATE,
+  applyLifeTimePassage,
+  normalizeHousehold,
+} from './lib/lifeSimulation';
+import {
   appendPersonalFinanceTransaction,
   createPersonalExpense,
   normalizePersonalFinances,
@@ -98,6 +103,7 @@ function gameClockFields(player: PlayerProfile, minutesToAdd: number) {
   return {
     ...gameDateFields(next.date),
     gameCurrentMinutes: next.minutes,
+    household: applyLifeTimePassage(player.household, minutesToAdd),
   };
 }
 
@@ -126,6 +132,13 @@ const INITIAL_PLAYER_STATE: PlayerProfile = {
   },
   personalFinances: {
     transactions: [],
+  },
+  household: {
+    ...DEFAULT_HOUSEHOLD_STATE,
+    residence: { ...DEFAULT_HOUSEHOLD_STATE.residence },
+    needs: { ...DEFAULT_HOUSEHOLD_STATE.needs },
+    furniture: [],
+    vehicles: [],
   },
   officeDiscipline: {
     warningCount: 0,
@@ -186,6 +199,7 @@ function normalizeSavedPlayer(saved: Partial<PlayerProfile>): PlayerProfile {
     personalFinances: saved.personalFinances
       ? normalizePersonalFinances(saved.personalFinances)
       : recoverLegacyPersonalFinances(saved),
+    household: normalizeHousehold(saved.household, saved.homeCity || '', saved.homeState || ''),
     officeDiscipline: {
       ...INITIAL_PLAYER_STATE.officeDiscipline,
       ...(saved.officeDiscipline || {}),
@@ -283,18 +297,36 @@ export default function App() {
 
   const activeCaseData = GAME_CASES.find((c) => c.id === player.activeCase?.caseId) || null;
 
-  const handleStartNewGame = (name: string) => {
+  const handleStartNewGame = (setup: NewGameSetup) => {
     const careerStartDate = getTodayGameDate();
     const freshProfile: PlayerProfile = {
       ...INITIAL_PLAYER_STATE,
-      name,
+      name: setup.name,
+      homeCity: setup.city,
+      homeState: setup.state,
       money: 1200,
       xp: 0,
       reputation: 15,
       careerTier: 'ESTAGIARIO',
       officeFinances: {
         ...INITIAL_PLAYER_STATE.officeFinances,
-        officeName: `${name} Advocacia & Consultoria`,
+        officeName: `${setup.name} Advocacia & Consultoria`,
+      },
+      household: {
+        ...DEFAULT_HOUSEHOLD_STATE,
+        residence: {
+          ...DEFAULT_HOUSEHOLD_STATE.residence,
+          street: setup.street,
+          number: setup.number,
+          city: setup.city,
+          state: setup.state,
+          latitude: setup.addressProfile.point.lat,
+          longitude: setup.addressProfile.point.lng,
+          geocodedDisplayName: setup.addressProfile.displayName,
+        },
+        needs: { ...DEFAULT_HOUSEHOLD_STATE.needs },
+        furniture: [],
+        vehicles: [],
       },
       officeDiscipline: {
         warningCount: 0,
@@ -306,6 +338,7 @@ export default function App() {
       gameCurrentMinutes: DEFAULT_GAME_START_MINUTES,
     };
     setPlayer(freshProfile);
+    saveCareerOrigin({ city: setup.city, state: setup.state });
     setIsNewGameModalOpen(false);
     setSelectedCaseToBrief(GAME_CASES[0]);
   };
