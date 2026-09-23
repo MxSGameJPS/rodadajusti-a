@@ -24,6 +24,39 @@ export const PERSONAL_EXPENSE_CATEGORIES: Array<{
   { id: 'OUTROS', label: 'Outros' },
 ];
 
+export function recoverLegacyPersonalFinances(
+  player: Partial<PlayerProfile>,
+): PersonalFinanceState {
+  const recovered: PersonalFinanceTransaction[] = [];
+  const logs = Array.isArray(player.activeCase?.logs) ? player.activeCase!.logs : [];
+
+  logs.forEach((log, index) => {
+    if (log.type !== 'viagem') return;
+    const match = String(log.message || '').match(/Deslocamento para (.+?) \([^)]*-R\$\s*([\d.,]+)/i);
+    if (!match) return;
+
+    const amount = Number(match[2].replace(/\./g, '').replace(',', '.'));
+    if (!Number.isFinite(amount) || amount <= 0) return;
+
+    recovered.push({
+      id: `legacy-travel-${player.activeCase?.caseId || 'case'}-${index}`,
+      type: 'EXPENSE',
+      category: 'DILIGENCIA',
+      amount,
+      title: `Diligência — ${match[1].trim()}`,
+      description: 'Despesa recuperada do histórico de deslocamentos do save anterior.',
+      gameDate: formatGameDate({
+        day: Number(player.gameCurrentDay) || 1,
+        month: Number(player.gameCurrentMonth) || 1,
+        year: Number(player.gameCurrentYear) || 2026,
+      }),
+      source: 'LEGACY_CASE_TRAVEL',
+    });
+  });
+
+  return { transactions: recovered.slice(0, 250) };
+}
+
 export function normalizePersonalFinances(
   value?: Partial<PersonalFinanceState> | null,
 ): PersonalFinanceState {
