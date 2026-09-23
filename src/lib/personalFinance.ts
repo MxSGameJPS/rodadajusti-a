@@ -57,7 +57,13 @@ export function recoverLegacyPersonalFinances(
     });
   });
 
-  return { transactions: recovered.slice(0, 250) };
+  return {
+    transactions: recovered.slice(0, 250),
+    lastCompensationMonthKey: [
+      String(Number(player.gameCurrentYear) || 2026),
+      String(Number(player.gameCurrentMonth) || 1).padStart(2, '0'),
+    ].join('-'),
+  };
 }
 
 export function normalizePersonalFinances(
@@ -78,6 +84,9 @@ export function normalizePersonalFinances(
           }))
           .slice(0, 250)
       : [],
+    lastCompensationMonthKey: typeof value?.lastCompensationMonthKey === 'string'
+      ? value.lastCompensationMonthKey
+      : null,
   };
 }
 
@@ -94,6 +103,32 @@ export function createPersonalExpense(
   return {
     id: `expense-${input.category.toLowerCase()}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     type: 'EXPENSE',
+    category: input.category,
+    amount: Math.max(0, Number(input.amount) || 0),
+    title: input.title,
+    description: input.description,
+    gameDate: formatGameDate({
+      day: player.gameCurrentDay,
+      month: player.gameCurrentMonth,
+      year: player.gameCurrentYear,
+    }),
+    source: input.source,
+  };
+}
+
+export function createPersonalIncome(
+  player: PlayerProfile,
+  input: {
+    category: 'REMUNERACAO' | 'HONORARIOS' | 'OUTRA_RECEITA';
+    amount: number;
+    title: string;
+    description?: string;
+    source?: string;
+  },
+): PersonalFinanceTransaction {
+  return {
+    id: `income-${input.category.toLowerCase()}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    type: 'INCOME',
     category: input.category,
     amount: Math.max(0, Number(input.amount) || 0),
     title: input.title,
