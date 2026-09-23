@@ -163,21 +163,12 @@ function normalizeEstablishment(row: RawEstablishment): WorldEstablishment {
 }
 
 export async function loadWorldEstablishments(profile: WorldMapProfile): Promise<WorldEstablishment[]> {
-  if (!supabase) return [];
-
-  let cityId: string | null = null;
-  const { data: cityRows, error: cityError } = await supabase
-    .from('cities')
-    .select('id,name,state_code')
-    .eq('is_active', true)
-    .eq('state_code', profile.state.toUpperCase());
-
-  if (!cityError) {
-    const targetCity = (cityRows || []).find((row) => normalize(row.name) === normalize(profile.city));
-    cityId = targetCity?.id || null;
+  if (!supabase) {
+    console.warn('[Rota da Justiça] Supabase não configurado; estabelecimentos não podem ser carregados.');
+    return [];
   }
 
-  let query = supabase
+  const { data, error } = await supabase
     .from('establishments')
     .select(
       'id,slug,name,business_type,subcategory,description,slogan,district,street_name,number_reference,latitude,longitude,price_range,game_use_type,presence_scope,is_sponsored,sponsor_name,is_visitable,allow_map_highlight,logo_url,banner_url,cover_image_url,city:cities(id,name,state_code),offers:establishment_offers(id,title,offer_type,description,price,period_type,image_url,is_available,sort_order,gameplay_effects)'
@@ -185,28 +176,31 @@ export async function loadWorldEstablishments(profile: WorldMapProfile): Promise
     .eq('status', 'published')
     .eq('is_active', true)
     .order('name', { ascending: true })
-    .limit(80);
+    .limit(250);
 
-  query = cityId
-    ? query.or('presence_scope.eq.UNIVERSAL,city_id.eq.' + cityId)
-    : query.eq('presence_scope', 'UNIVERSAL');
-
-  const { data, error } = await query;
   if (error) {
-    console.warn('[Rota da Justiça] Estabelecimentos do mundo indisponíveis.', error);
+    console.error('[Rota da Justiça] Falha ao carregar estabelecimentos publicados.', {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      city: profile.city,
+      state: profile.state,
+    });
     return [];
   }
 
-  return ((data || []) as unknown as RawEstablishment[])
-    .map(normalizeEstablishment)
-    .filter((item) => (
-      item.presenceScope === 'UNIVERSAL'
-      || (
-        item.city
-        && item.city.stateCode.toUpperCase() === profile.state.toUpperCase()
-        && normalize(item.city.name) === normalize(profile.city)
-      )
-    ));
+  const normalized = ((data || []) as unknown as RawEstablishment[])
+    .map(normalizeEstablishment);
+
+  return normalized.filter((item) => (
+    item.presenceScope === 'UNIVERSAL'
+    || (
+      item.city
+      && item.city.stateCode.toUpperCase() === profile.state.toUpperCase()
+      && normalize(item.city.name) === normalize(profile.city)
+    )
+  ));
 }
 
 function hashString(value: string) {
