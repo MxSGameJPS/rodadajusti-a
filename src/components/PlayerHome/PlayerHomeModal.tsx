@@ -18,6 +18,7 @@ import {
   currentHouseholdBillKey,
   getBestBedBonuses,
   getBestStudyBonus,
+  getHouseholdBillSummary,
   getHouseholdMonthlyBills,
   isHouseholdBillPaid,
   lifeNeedLabel,
@@ -95,6 +96,7 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
   const household = player.household;
   const residence = household.residence;
   const bills = getHouseholdMonthlyBills(household);
+  const billSummary = getHouseholdBillSummary(player);
   const billsPaid = isHouseholdBillPaid(player);
   const bed = getBestBedBonuses(household);
   const studyBonus = getBestStudyBonus(household);
@@ -223,6 +225,11 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
                 <div>
                   <span className="text-[9px] font-black uppercase tracking-wider text-[#777E87]">Contas da casa</span>
                   <strong className="mt-1 block text-sm text-[#ECEAE6]">Competência {currentHouseholdBillKey(player)}</strong>
+                  {!billsPaid && billSummary.dueMonths > 1 && (
+                    <small className="mt-1 block text-[9px] font-bold uppercase tracking-wider text-[#FBBF24]">
+                      {billSummary.dueMonths} competências pendentes
+                    </small>
+                  )}
                 </div>
                 {billsPaid ? <CheckCircle2 size={20} className="text-[#34D399]" /> : <WalletCards size={20} className="text-[#FBBF24]" />}
               </div>
@@ -232,15 +239,27 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
                 <div className="flex justify-between"><span className="text-[#8A9098]">Energia</span><strong>JR$ {formatMoney(bills.electricity)}</strong></div>
                 <div className="flex justify-between"><span className="text-[#8A9098]">Internet</span><strong>JR$ {formatMoney(bills.internet)}</strong></div>
                 <div className="flex justify-between"><span className="text-[#8A9098]">Gás</span><strong>JR$ {formatMoney(bills.gas)}</strong></div>
-                <div className="mt-2 flex justify-between border-t border-[#2A2E33] pt-2"><span className="font-black text-[#B8BDC4]">Total</span><strong className="text-[#F1EEE9]">JR$ {formatMoney(bills.total)}</strong></div>
+                <div className="mt-2 flex justify-between border-t border-[#2A2E33] pt-2"><span className="font-black text-[#B8BDC4]">Mensal</span><strong className="text-[#F1EEE9]">JR$ {formatMoney(bills.total)}</strong></div>
+                {!billsPaid && (
+                  <div className="mt-2 flex justify-between rounded-lg border border-[#FBBF24]/20 bg-[#FBBF24]/8 px-2.5 py-2">
+                    <span className="font-black text-[#D7B86E]">Total pendente</span>
+                    <strong className="text-[#F4D887]">JR$ {formatMoney(billSummary.totalDue)}</strong>
+                  </div>
+                )}
               </div>
               <button
                 type="button"
                 onClick={onPayBills}
-                disabled={billsPaid || player.money < bills.total}
+                disabled={billsPaid || player.money < billSummary.totalDue}
                 className="mt-4 w-full rounded-xl bg-[#9A783D] px-4 py-3 text-xs font-black text-[#11100D] disabled:cursor-not-allowed disabled:opacity-45"
               >
-                {billsPaid ? 'Contas pagas neste mês' : player.money < bills.total ? 'Saldo insuficiente' : 'Pagar contas da casa'}
+                {billsPaid
+                  ? 'Contas pagas neste mês'
+                  : player.money < billSummary.totalDue
+                    ? 'Saldo insuficiente'
+                    : billSummary.dueMonths > 1
+                      ? `Pagar ${billSummary.dueMonths} competências`
+                      : 'Pagar contas da casa'}
               </button>
             </section>
 
