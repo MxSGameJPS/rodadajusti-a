@@ -68,7 +68,12 @@ function samePlayer(left: PlayerProfile | null, right: PlayerProfile) {
     left.history.length === right.history.length &&
     left.gameCurrentDay === right.gameCurrentDay &&
     left.gameCurrentMonth === right.gameCurrentMonth &&
-    left.gameCurrentYear === right.gameCurrentYear
+    left.gameCurrentYear === right.gameCurrentYear &&
+    left.gameCurrentMinutes === right.gameCurrentMinutes &&
+    left.household?.needs?.energy === right.household?.needs?.energy &&
+    left.household?.needs?.hunger === right.household?.needs?.hunger &&
+    left.household?.needs?.hygiene === right.household?.needs?.hygiene &&
+    left.household?.needs?.study === right.household?.needs?.study
   );
 }
 
@@ -494,7 +499,7 @@ export const ProfessionalLifeExperience: React.FC = () => {
               <div><span>Estado civil</span><strong>{relationshipLabel}</strong>{hasPartner && <small>{social.profile.partnerName}</small>}</div>
               <div><span>Atributo social</span><strong>{social.socialBalance}/100</strong><small>Convívio e equilíbrio pessoal</small></div>
               <div><span>Capital social</span><strong>{social.socialCapital}/100</strong><small>Networking e circulação</small></div>
-              <div><span>Energia</span><strong>{social.energy}/100</strong><small>{social.activeCondition?.label || 'Equilibrado'}</small></div>
+              <div><span>Energia física</span><strong>{Math.round(player.household.needs.energy)}/100</strong><small>{social.activeCondition?.label || (player.household.needs.energy <= 20 ? 'Exausto' : player.household.needs.energy <= 45 ? 'Cansado' : 'Equilibrado')}</small></div>
               <div><span>Gastos sociais</span><strong>R$ {social.totalSpent.toLocaleString('pt-BR')}</strong><small>Acumulado do personagem</small></div>
             </div>
 
