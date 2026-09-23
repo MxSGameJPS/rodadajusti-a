@@ -90,6 +90,7 @@ export function createDemoLawyer(caseItem: LegalCase | null): PlayerProfile {
     gameCurrentDay: 5,
     gameCurrentMonth: 9,
     gameCurrentYear: 2026,
+    gameCurrentMinutes: 9 * 60,
     unlockedAchievements: ['OAB_APROVADO', 'ADVOGADO_CONTRATADO'],
     soundEnabled: true,
   };
