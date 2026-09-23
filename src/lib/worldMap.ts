@@ -26,7 +26,7 @@ export interface WorldRoute {
 
 const PROFILE_PREFIX = 'rota_world_map_v1:';
 const GEOCODE_PREFIX = 'rota_world_geocode_v1:';
-const ADDRESS_GEOCODE_PREFIX = 'rota_world_address_geocode_v1:';
+const ADDRESS_GEOCODE_PREFIX = 'rota_world_address_geocode_v2:';
 const ROUTE_PREFIX = 'rota_world_route_v1:';
 const PLAYER_SAVE_KEY = 'rota_da_justica_save_v1';
 
@@ -216,6 +216,121 @@ export interface WorldAddressProfile {
   state: string;
   displayName: string;
   point: WorldGeoPoint;
+  mapPointMode: 'STREET_RANDOMIZED';
+}
+
+type NominatimStreetGeometry = {
+  type?: string;
+  coordinates?: unknown;
+};
+
+type NominatimStreetResult = {
+  lat?: string;
+  lon?: string;
+  display_name?: string;
+  boundingbox?: string[];
+  geojson?: NominatimStreetGeometry;
+};
+
+function streetSegmentsFromGeometry(geometry?: NominatimStreetGeometry) {
+  if (!geometry?.type || !geometry.coordinates) return [] as Array<[WorldGeoPoint, WorldGeoPoint]>;
+
+  const lines: unknown[] = geometry.type === 'LineString'
+    ? [geometry.coordinates]
+    : geometry.type === 'MultiLineString'
+      ? (Array.isArray(geometry.coordinates) ? geometry.coordinates : [])
+      : [];
+
+  const segments: Array<[WorldGeoPoint, WorldGeoPoint]> = [];
+
+  lines.forEach((line) => {
+    if (!Array.isArray(line)) return;
+    for (let index = 1; index < line.length; index += 1) {
+      const previous = line[index - 1];
+      const current = line[index];
+      if (!Array.isArray(previous) || !Array.isArray(current)) continue;
+
+      const fromLng = Number(previous[0]);
+      const fromLat = Number(previous[1]);
+      const toLng = Number(current[0]);
+      const toLat = Number(current[1]);
+      if (![fromLng, fromLat, toLng, toLat].every(Number.isFinite)) continue;
+
+      segments.push([
+        { lng: fromLng, lat: fromLat },
+        { lng: toLng, lat: toLat },
+      ]);
+    }
+  });
+
+  return segments;
+}
+
+function approximateSegmentLength([from, to]: [WorldGeoPoint, WorldGeoPoint]) {
+  const latScale = 111.32;
+  const lngScale = Math.max(20, 111.32 * Math.cos((((from.lat + to.lat) / 2) * Math.PI) / 180));
+  const x = (to.lng - from.lng) * lngScale;
+  const y = (to.lat - from.lat) * latScale;
+  return Math.sqrt(x * x + y * y);
+}
+
+function pointAlongStreetGeometry(
+  result: NominatimStreetResult,
+  seed: number,
+): WorldGeoPoint | null {
+  const segments = streetSegmentsFromGeometry(result.geojson);
+  if (segments.length > 0) {
+    const weighted = segments
+      .map((segment) => ({ segment, length: approximateSegmentLength(segment) }))
+      .filter((item) => item.length > 0);
+
+    const totalLength = weighted.reduce((sum, item) => sum + item.length, 0);
+    if (totalLength > 0) {
+      const fraction = 0.12 + ((seed % 7600) / 10000);
+      let target = totalLength * fraction;
+
+      for (const item of weighted) {
+        if (target <= item.length) {
+          const local = Math.max(0, Math.min(1, target / item.length));
+          const [from, to] = item.segment;
+          return {
+            lng: from.lng + (to.lng - from.lng) * local,
+            lat: from.lat + (to.lat - from.lat) * local,
+          };
+        }
+        target -= item.length;
+      }
+    }
+  }
+
+  if (Array.isArray(result.boundingbox) && result.boundingbox.length >= 4) {
+    const south = Number(result.boundingbox[0]);
+    const north = Number(result.boundingbox[1]);
+    const west = Number(result.boundingbox[2]);
+    const east = Number(result.boundingbox[3]);
+
+    if ([south, north, west, east].every(Number.isFinite)) {
+      const fraction = 0.18 + (((seed >>> 5) % 6400) / 10000);
+      const latSpan = Math.abs(north - south);
+      const lngSpan = Math.abs(east - west);
+
+      if (lngSpan >= latSpan) {
+        return {
+          lng: west + (east - west) * fraction,
+          lat: (south + north) / 2,
+        };
+      }
+
+      return {
+        lng: (west + east) / 2,
+        lat: south + (north - south) * fraction,
+      };
+    }
+  }
+
+  const lat = Number(result.lat);
+  const lng = Number(result.lon);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
 }
 
 export async function geocodeBrazilianAddress(
@@ -230,9 +345,13 @@ export async function geocodeBrazilianAddress(
   const cleanState = state.trim().toUpperCase();
 
   if (!cleanStreet || !cleanNumber || !cleanCity || cleanState.length !== 2) {
-    throw new Error('Informe rua, número, cidade e UF para localizar sua residência.');
+    throw new Error('Informe rua, número, cidade e UF para cadastrar sua residência.');
   }
 
+  // O número é mantido apenas como dado da carreira. Ele nunca participa da
+  // consulta de geocodificação nem determina uma coordenada residencial exata.
+  // É usado somente como parte da semente local para escolher um ponto estável
+  // e aproximado ao longo da rua.
   const cacheKey = [
     ADDRESS_GEOCODE_PREFIX,
     normalize(cleanStreet),
@@ -246,7 +365,13 @@ export async function geocodeBrazilianAddress(
       const cached = window.localStorage.getItem(cacheKey);
       if (cached) {
         const parsed = JSON.parse(cached) as WorldAddressProfile;
-        if (parsed?.point && isPoint(parsed.point)) return parsed;
+        if (
+          parsed?.point
+          && isPoint(parsed.point)
+          && parsed.mapPointMode === 'STREET_RANDOMIZED'
+        ) {
+          return parsed;
+        }
       }
     } catch {
       // Cache é apenas otimização.
@@ -255,11 +380,13 @@ export async function geocodeBrazilianAddress(
 
   await waitForNominatimSlot();
   const query = new URLSearchParams({
-    q: cleanStreet + ', ' + cleanNumber + ', ' + cleanCity + ', ' + cleanState + ', Brasil',
+    // Deliberadamente sem número residencial.
+    q: cleanStreet + ', ' + cleanCity + ', ' + cleanState + ', Brasil',
     format: 'jsonv2',
-    limit: '1',
+    limit: '3',
     countrycodes: 'br',
     addressdetails: '1',
+    polygon_geojson: '1',
     'accept-language': 'pt-BR',
   });
 
@@ -271,18 +398,26 @@ export async function geocodeBrazilianAddress(
       signal: controller.signal,
       headers: { Accept: 'application/json' },
     });
-    if (!response.ok) throw new Error('Não foi possível validar o endereço agora.');
+    if (!response.ok) throw new Error('Não foi possível localizar a rua agora.');
 
-    const results = await response.json() as Array<{
-      lat?: string;
-      lon?: string;
-      display_name?: string;
-    }>;
-    const first = results[0];
-    const lat = Number(first?.lat);
-    const lng = Number(first?.lon);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      throw new Error('Não encontramos esse endereço no mapa. Confira rua, número, cidade e UF.');
+    const results = await response.json() as NominatimStreetResult[];
+    const first = results.find((item) => Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lon)));
+
+    if (!first) {
+      throw new Error('Não encontramos essa rua no mapa. Confira rua, cidade e UF.');
+    }
+
+    const seed = hashString([
+      normalize(cleanStreet),
+      normalize(cleanNumber),
+      normalize(cleanCity),
+      normalize(cleanState),
+      'home-street-randomized-v1',
+    ].join(':'));
+
+    const point = pointAlongStreetGeometry(first, seed);
+    if (!point) {
+      throw new Error('Localizamos a rua, mas não foi possível criar o ponto aproximado da residência.');
     }
 
     const result: WorldAddressProfile = {
@@ -290,15 +425,16 @@ export async function geocodeBrazilianAddress(
       number: cleanNumber,
       city: cleanCity,
       state: cleanState,
-      displayName: first.display_name || cleanStreet + ', ' + cleanNumber + ' - ' + cleanCity + '/' + cleanState,
-      point: { lat, lng },
+      displayName: cleanStreet + ' • posição aproximada • ' + cleanCity + '/' + cleanState,
+      point,
+      mapPointMode: 'STREET_RANDOMIZED',
     };
 
     if (hasWindow()) {
       try {
         window.localStorage.setItem(cacheKey, JSON.stringify(result));
       } catch {
-        // O endereço continua válido durante a sessão mesmo sem cache.
+        // O ponto aproximado continua válido durante a sessão mesmo sem cache.
       }
     }
     return result;
