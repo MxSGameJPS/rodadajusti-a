@@ -73,7 +73,6 @@ import {
   currentGameDateLabel,
   currentHouseholdBillKey,
   getHouseholdBillSummary,
-  getHouseholdMonthlyBills,
   getLifeBlockingReason,
   isHouseholdBillPaid,
   furnitureKindFromGameplay,
@@ -1129,7 +1128,6 @@ export default function App() {
     setPlayer((prev) => {
       if (isHouseholdBillPaid(prev)) return prev;
       const billSummary = getHouseholdBillSummary(prev);
-      const bills = billSummary.monthly;
       if (prev.money < billSummary.totalDue) return prev;
 
       const clock = gameClockFields(prev, 15);
