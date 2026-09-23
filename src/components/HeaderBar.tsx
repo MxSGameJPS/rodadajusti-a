@@ -11,6 +11,7 @@ import {
   Building,
   ChevronRight,
   Laptop,
+  Map,
   MapPin,
 } from 'lucide-react';
 import {
@@ -39,6 +40,7 @@ interface HeaderBarProps {
   onOpenConcursoModal: () => void;
   onOpenOfficeModal: () => void;
   onOpenCityRelocation: () => void;
+  onOpenCityWorldMap: () => void;
   onToggleSound: () => void;
 }
 
@@ -51,6 +53,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onOpenConcursoModal,
   onOpenOfficeModal,
   onOpenCityRelocation,
+  onOpenCityWorldMap,
   onToggleSound,
 }) => {
   const currentTier: CareerTier = CAREER_TIERS[player.careerTier] || CAREER_TIERS.ESTAGIARIO;
@@ -122,6 +125,20 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <span className="hidden text-[9px] uppercase tracking-wider lg:inline">
               {isMobileFrame ? 'Expandir' : 'Modo Celular'}
             </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              sound.playClick();
+              onOpenCityWorldMap();
+            }}
+            title="Mapa da cidade"
+            aria-label="Mapa da cidade"
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-2 text-[#888] transition-colors hover:bg-[#1A1A1D] hover:text-[#E0E0E0]"
+          >
+            <Map size={13} className="text-[#60A5FA]" />
+            <span className="hidden text-[9px] uppercase tracking-wider lg:inline">Mapa</span>
           </button>
 
           <button
