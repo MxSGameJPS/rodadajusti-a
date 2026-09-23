@@ -30,7 +30,7 @@ const ADDRESS_GEOCODE_PREFIX = 'rota_world_address_geocode_v2:';
 const PUBLIC_PLACE_GEOCODE_PREFIX = 'rota_world_public_place_geocode_v1:';
 const ROUTE_PREFIX = 'rota_world_route_v1:';
 const ROAD_SNAP_PREFIX = 'rota_world_road_snap_v1:';
-const STABLE_WORLD_POINT_PREFIX = 'rota_world_stable_point_v3:';
+const STABLE_WORLD_POINT_PREFIX = 'rota_world_stable_point_v4:';
 const PLAYER_SAVE_KEY = 'rota_da_justica_save_v1';
 
 export const WORLD_MAP_UPDATED_EVENT = 'rota:world-map-updated';
@@ -41,6 +41,8 @@ const OSRM_BASE_URL = ((import.meta as any).env?.VITE_OSRM_BASE_URL as string | 
   || 'https://router.project-osrm.org';
 
 let lastNominatimRequestAt = 0;
+let lastOsrmNearestRequestAt = 0;
+let osrmNearestQueue: Promise<void> = Promise.resolve();
 
 function hasWindow() {
   return typeof window !== 'undefined';
@@ -592,16 +594,16 @@ function locationRadiusKm(location: LocationScene, seed: number) {
     case 'tribunal':
     case 'cartorio':
     case 'banco':
-      return 0.7 + jitter * 1.5;
+      return 0.45 + jitter * 0.75;
     case 'delegacia':
     case 'empresa':
-      return 1.1 + jitter * 2.2;
+      return 0.65 + jitter * 1.05;
     case 'residencia':
-      return 2 + jitter * 3.4;
+      return 0.8 + jitter * 1.25;
     case 'escritorio':
       return 0.25;
     default:
-      return 1.2 + jitter * 2.8;
+      return 0.6 + jitter * 1.15;
   }
 }
 
@@ -652,8 +654,32 @@ function roadSnapCacheKey(point: WorldGeoPoint) {
   return `${ROAD_SNAP_PREFIX}${point.lng.toFixed(5)},${point.lat.toFixed(5)}`;
 }
 
-export async function snapWorldPointToRoad(point: WorldGeoPoint): Promise<WorldGeoPoint> {
-  if (!Number.isFinite(point.lng) || !Number.isFinite(point.lat)) return point;
+async function withOsrmNearestSlot<T>(task: () => Promise<T>): Promise<T> {
+  let release!: () => void;
+  const previous = osrmNearestQueue;
+  osrmNearestQueue = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  await previous;
+
+  try {
+    const now = Date.now();
+    const wait = Math.max(0, 180 - (now - lastOsrmNearestRequestAt));
+    if (wait > 0 && hasWindow()) {
+      await new Promise((resolve) => window.setTimeout(resolve, wait));
+    }
+    lastOsrmNearestRequestAt = Date.now();
+    return await task();
+  } finally {
+    release();
+  }
+}
+
+async function trySnapWorldPointToRoad(
+  point: WorldGeoPoint,
+): Promise<WorldGeoPoint | null> {
+  if (!Number.isFinite(point.lng) || !Number.isFinite(point.lat)) return null;
 
   const cacheKey = roadSnapCacheKey(point);
   if (hasWindow()) {
@@ -668,53 +694,85 @@ export async function snapWorldPointToRoad(point: WorldGeoPoint): Promise<WorldG
     }
   }
 
-  const controller = new AbortController();
-  const timeout = hasWindow()
-    ? window.setTimeout(() => controller.abort(), 6000)
-    : undefined;
+  return withOsrmNearestSlot(async () => {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const controller = new AbortController();
+      const timeout = hasWindow()
+        ? window.setTimeout(() => controller.abort(), 4500)
+        : undefined;
 
-  try {
-    const response = await fetch(
-      `${OSRM_BASE_URL}/nearest/v1/driving/${point.lng},${point.lat}?number=1`,
-      {
-        signal: controller.signal,
-        headers: { Accept: 'application/json' },
-      },
-    );
-
-    if (!response.ok) return point;
-
-    const payload = await response.json() as {
-      waypoints?: Array<{
-        location?: [number, number];
-        distance?: number;
-      }>;
-    };
-    const waypoint = payload.waypoints?.[0];
-    const lng = Number(waypoint?.location?.[0]);
-    const lat = Number(waypoint?.location?.[1]);
-
-    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return point;
-
-    const snapped = { lng, lat };
-    if (hasWindow()) {
       try {
-        window.localStorage.setItem(cacheKey, JSON.stringify(snapped));
+        const response = await fetch(
+          `${OSRM_BASE_URL}/nearest/v1/driving/${point.lng},${point.lat}?number=1`,
+          {
+            signal: controller.signal,
+            headers: { Accept: 'application/json' },
+          },
+        );
+
+        if (!response.ok) {
+          if (attempt === 0 && hasWindow()) {
+            await new Promise((resolve) => window.setTimeout(resolve, 260));
+            continue;
+          }
+          return null;
+        }
+
+        const payload = await response.json() as {
+          code?: string;
+          waypoints?: Array<{
+            location?: [number, number];
+            distance?: number;
+          }>;
+        };
+        const waypoint = payload.waypoints?.[0];
+        const lng = Number(waypoint?.location?.[0]);
+        const lat = Number(waypoint?.location?.[1]);
+
+        if (
+          payload.code !== 'Ok'
+          || !Number.isFinite(lng)
+          || !Number.isFinite(lat)
+        ) {
+          if (attempt === 0 && hasWindow()) {
+            await new Promise((resolve) => window.setTimeout(resolve, 260));
+            continue;
+          }
+          return null;
+        }
+
+        const snapped = { lng, lat };
+        if (hasWindow()) {
+          try {
+            window.localStorage.setItem(cacheKey, JSON.stringify(snapped));
+          } catch {
+            // Continua válido na sessão.
+          }
+        }
+        return snapped;
       } catch {
-        // Continua válido na sessão.
+        if (attempt === 0 && hasWindow()) {
+          await new Promise((resolve) => window.setTimeout(resolve, 260));
+          continue;
+        }
+        return null;
+      } finally {
+        if (timeout != null && hasWindow()) window.clearTimeout(timeout);
       }
     }
-    return snapped;
-  } catch {
-    return point;
-  } finally {
-    if (timeout != null && hasWindow()) window.clearTimeout(timeout);
-  }
+
+    return null;
+  });
+}
+
+export async function snapWorldPointToRoad(point: WorldGeoPoint): Promise<WorldGeoPoint> {
+  return (await trySnapWorldPointToRoad(point)) || point;
 }
 
 export async function resolveStableRoadPoint(
   logicalKey: string,
   point: WorldGeoPoint,
+  fallbackCenter?: WorldGeoPoint,
 ): Promise<WorldGeoPoint> {
   const safeKey = normalize(logicalKey);
   const cacheKey = STABLE_WORLD_POINT_PREFIX + safeKey;
@@ -731,13 +789,29 @@ export async function resolveStableRoadPoint(
     }
   }
 
-  const resolved = await snapWorldPointToRoad(point);
+  let resolved = await trySnapWorldPointToRoad(point);
+
+  if (!resolved && fallbackCenter && isPoint(fallbackCenter)) {
+    const seed = hashString(safeKey + ':urban-fallback');
+    const angle = (((seed % 3600) / 10) * Math.PI) / 180;
+    const radiusKm = 0.14 + ((seed >>> 7) % 22) / 100;
+    const urbanFallback = pointAtDistance(fallbackCenter, radiusKm, angle);
+
+    resolved = await trySnapWorldPointToRoad(urbanFallback);
+
+    // Se o serviço externo estiver indisponível, ainda evitamos os antigos
+    // raios de vários quilômetros que podiam cair no mar. O fallback fica
+    // dentro do miolo urbano e é persistido para não "andar" entre renders.
+    if (!resolved) resolved = urbanFallback;
+  }
+
+  if (!resolved) resolved = point;
 
   if (hasWindow()) {
     try {
       window.localStorage.setItem(cacheKey, JSON.stringify(resolved));
     } catch {
-      // Sem storage, o ponto continua estável durante a renderização atual.
+      // Sem storage, o ponto continua estável durante a sessão atual.
     }
   }
 
