@@ -179,7 +179,7 @@ export function buildProfessionalAgenda(player: PlayerProfile): ProfessionalAgen
     items.push({
       id: `energy-${social.activeCondition.sourceEventId}`,
       title: social.activeCondition.label === 'EXAUSTO' ? 'Você está exausto' : 'Você está cansado',
-      description: `Energia atual: ${social.energy}/100. ${social.activeCondition.sourceTitle} ainda está afetando sua disposição.`,
+      description: `Energia física atual: ${Math.round(player.household.needs.energy)}/100. ${social.activeCondition.sourceTitle} ainda está afetando sua disposição.`,
       meta: 'Vida pessoal • pode influenciar audiência',
       tone: social.activeCondition.label === 'EXAUSTO' ? 'danger' : 'warning',
       action: 'SOCIAL',
