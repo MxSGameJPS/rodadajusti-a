@@ -65,6 +65,7 @@ import {
   appendPersonalFinanceTransaction,
   createPersonalExpense,
   normalizePersonalFinances,
+  recoverLegacyPersonalFinances,
 } from './lib/personalFinance';
 
 const STORAGE_KEY = 'rota_da_justica_save_v1';
@@ -182,7 +183,9 @@ function normalizeSavedPlayer(saved: Partial<PlayerProfile>): PlayerProfile {
         ? saved.officeFinances!.monthlyRevenueHistory
         : [],
     },
-    personalFinances: normalizePersonalFinances(saved.personalFinances),
+    personalFinances: saved.personalFinances
+      ? normalizePersonalFinances(saved.personalFinances)
+      : recoverLegacyPersonalFinances(saved),
     officeDiscipline: {
       ...INITIAL_PLAYER_STATE.officeDiscipline,
       ...(saved.officeDiscipline || {}),
