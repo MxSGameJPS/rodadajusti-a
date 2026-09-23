@@ -308,7 +308,7 @@ from (
 ) as data(firm_slug,npc_slug,office_title)
 join public.law_firms firm on firm.slug = data.firm_slug
 join public.npcs npc on npc.slug = data.npc_slug
-on conflict (law_firm_id, npc_id, office_title) do update
+on conflict (law_firm_id, npc_id) do update
 set is_active = true,
     metadata = public.law_firm_members.metadata || excluded.metadata,
     updated_at = now();
