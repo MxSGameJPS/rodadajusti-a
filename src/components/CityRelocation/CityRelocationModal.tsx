@@ -12,8 +12,10 @@ import {
 } from 'lucide-react';
 import type { PlayerProfile } from '../../types/game';
 import {
+  geocodeBrazilianAddress,
   geocodeBrazilianCity,
   getDeclaredPlayerCity,
+  type WorldAddressProfile,
   type WorldMapProfile,
 } from '../../lib/worldMap';
 import { formatGameDate, addGameDays, normalizeGameDate } from '../../lib/gameDate';
@@ -29,7 +31,10 @@ interface CityRelocationModalProps {
   onConfirm: (destination: {
     city: string;
     state: string;
+    street: string;
+    number: string;
     profile: WorldMapProfile;
+    addressProfile: WorldAddressProfile;
   }) => void | Promise<void>;
 }
 
@@ -47,18 +52,24 @@ export const CityRelocationModal: React.FC<CityRelocationModalProps> = ({
   onConfirm,
 }) => {
   const declared = useMemo(() => getDeclaredPlayerCity(player), [player.homeCity, player.homeState]);
+  const [street, setStreet] = useState('');
+  const [number, setNumber] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [validatedProfile, setValidatedProfile] = useState<WorldMapProfile | null>(null);
+  const [validatedAddress, setValidatedAddress] = useState<WorldAddressProfile | null>(null);
   const [validating, setValidating] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
+    setStreet('');
+    setNumber('');
     setCity('');
     setState('');
     setValidatedProfile(null);
+    setValidatedAddress(null);
     setValidating(false);
     setConfirming(false);
     setError('');
@@ -88,9 +99,10 @@ export const CityRelocationModal: React.FC<CityRelocationModalProps> = ({
 
     setError('');
     setValidatedProfile(null);
+    setValidatedAddress(null);
 
-    if (!cleanCity || !cleanState) {
-      setError('Informe a cidade e a UF de destino.');
+    if (!street.trim() || !number.trim() || !cleanCity || !cleanState) {
+      setError('Informe rua, número, cidade e UF de destino.');
       return;
     }
 
@@ -102,7 +114,14 @@ export const CityRelocationModal: React.FC<CityRelocationModalProps> = ({
     setValidating(true);
     try {
       const profile = await geocodeBrazilianCity(cleanCity, cleanState);
+      const addressProfile = await geocodeBrazilianAddress(
+        street.trim(),
+        number.trim(),
+        cleanCity,
+        cleanState,
+      );
       setValidatedProfile(profile);
+      setValidatedAddress(addressProfile);
       sound.playClick();
     } catch (cause) {
       console.error('[Rota da Justiça] Falha ao validar cidade de mudança.', cause);
@@ -113,7 +132,7 @@ export const CityRelocationModal: React.FC<CityRelocationModalProps> = ({
   };
 
   const confirmRelocation = async () => {
-    if (!validatedProfile || confirming || !hasMoney || hasActiveCase || destinationIsCurrent) return;
+    if (!validatedProfile || !validatedAddress || confirming || !hasMoney || hasActiveCase || destinationIsCurrent) return;
 
     setConfirming(true);
     setError('');
@@ -122,7 +141,10 @@ export const CityRelocationModal: React.FC<CityRelocationModalProps> = ({
       await onConfirm({
         city: validatedProfile.city,
         state: validatedProfile.state,
+        street: validatedAddress.street,
+        number: validatedAddress.number,
         profile: validatedProfile,
+        addressProfile: validatedAddress,
       });
       onClose();
     } catch (cause) {
@@ -203,6 +225,37 @@ export const CityRelocationModal: React.FC<CityRelocationModalProps> = ({
               <h3 className="mt-1 text-base font-black text-[#E8EAED]">Para onde você quer se mudar?</h3>
             </div>
 
+            <div className="mb-3 grid gap-3 sm:grid-cols-[1fr_120px]">
+              <label className="block">
+                <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#858C95]">Rua</span>
+                <input
+                  value={street}
+                  onChange={(event) => {
+                    setStreet(event.target.value);
+                    setValidatedProfile(null);
+                    setValidatedAddress(null);
+                    setError('');
+                  }}
+                  placeholder="Ex.: Rua das Acácias"
+                  className="h-12 w-full rounded-xl border border-[#343942] bg-[#0D1014] px-4 text-sm text-[#ECEEF1] outline-none transition focus:border-[#C5A059]/60"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#858C95]">Número</span>
+                <input
+                  value={number}
+                  onChange={(event) => {
+                    setNumber(event.target.value);
+                    setValidatedProfile(null);
+                    setValidatedAddress(null);
+                    setError('');
+                  }}
+                  placeholder="120"
+                  className="h-12 w-full rounded-xl border border-[#343942] bg-[#0D1014] px-4 text-sm text-[#ECEEF1] outline-none transition focus:border-[#C5A059]/60"
+                />
+              </label>
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-[1fr_120px_auto]">
               <label className="block">
                 <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#858C95]">Cidade</span>
@@ -211,6 +264,7 @@ export const CityRelocationModal: React.FC<CityRelocationModalProps> = ({
                   onChange={(event) => {
                     setCity(event.target.value);
                     setValidatedProfile(null);
+                    setValidatedAddress(null);
                     setError('');
                   }}
                   placeholder="Ex.: Vassouras"
@@ -225,6 +279,7 @@ export const CityRelocationModal: React.FC<CityRelocationModalProps> = ({
                   onChange={(event) => {
                     setState(event.target.value.toUpperCase().slice(0, 2));
                     setValidatedProfile(null);
+                    setValidatedAddress(null);
                     setError('');
                   }}
                   placeholder="RJ"
@@ -236,7 +291,7 @@ export const CityRelocationModal: React.FC<CityRelocationModalProps> = ({
               <button
                 type="button"
                 onClick={() => void validateDestination()}
-                disabled={validating || !city.trim() || state.trim().length !== 2}
+                disabled={validating || !street.trim() || !number.trim() || !city.trim() || state.trim().length !== 2}
                 className="mt-auto flex h-12 items-center justify-center gap-2 rounded-xl border border-[#60A5FA]/35 bg-[#60A5FA]/10 px-4 text-xs font-black text-[#A9CCFF] transition hover:bg-[#60A5FA]/15 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {validating ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
@@ -244,12 +299,13 @@ export const CityRelocationModal: React.FC<CityRelocationModalProps> = ({
               </button>
             </div>
 
-            {validatedProfile && (
+            {validatedProfile && validatedAddress && (
               <div className="mt-4 flex items-start gap-3 rounded-xl border border-[#34D399]/25 bg-[#34D399]/10 p-3 text-xs text-[#A7F3D0]">
                 <CheckCircle2 size={17} className="mt-0.5 shrink-0" />
                 <div>
-                  <strong className="block">Destino localizado</strong>
-                  <span className="mt-0.5 block text-[#91BFAA]">{validatedProfile.displayName}</span>
+                  <strong className="block">Nova residência localizada</strong>
+                  <span className="mt-0.5 block text-[#91BFAA]">{validatedAddress.displayName}</span>
+                  <small className="mt-1 block text-[#6E9E88]">Rua e número continuam privados e são usados apenas pelas mecânicas da carreira.</small>
                 </div>
               </div>
             )}
@@ -295,7 +351,7 @@ export const CityRelocationModal: React.FC<CityRelocationModalProps> = ({
             <button
               type="button"
               onClick={() => void confirmRelocation()}
-              disabled={!validatedProfile || !hasMoney || hasActiveCase || destinationIsCurrent || confirming}
+              disabled={!validatedProfile || !validatedAddress || !hasMoney || hasActiveCase || destinationIsCurrent || confirming}
               className="flex items-center justify-center gap-2 rounded-xl bg-[#A8833F] px-6 py-3 text-xs font-black text-[#11100D] transition hover:bg-[#BC9950] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {confirming ? <Loader2 size={16} className="animate-spin" /> : <Truck size={16} />}
