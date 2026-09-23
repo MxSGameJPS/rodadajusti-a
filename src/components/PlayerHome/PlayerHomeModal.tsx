@@ -287,6 +287,49 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
                   <strong className="mt-1 block text-[#E6EDF7]">{household.vehicles.length}</strong>
                 </div>
               </div>
+
+              {(household.furniture.length > 0 || household.vehicles.length > 0) && (
+                <div className="mt-4 border-t border-[#292D32] pt-4">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-[#777E87]">Bens adquiridos</span>
+                  <div className="mt-3 grid gap-2">
+                    {household.furniture.slice(-6).reverse().map((item) => (
+                      <article key={item.id} className="flex items-center gap-3 rounded-xl border border-[#292D32] bg-[#0D1014] p-2.5">
+                        <div className="h-12 w-14 shrink-0 overflow-hidden rounded-lg border border-[#30353B] bg-[#15191E]">
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="grid h-full place-items-center text-[#777E87]"><BedDouble size={17} /></div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <strong className="block truncate text-[10px] text-[#E8E6E1]">{item.title}</strong>
+                          <span className="mt-1 block text-[8px] uppercase tracking-wider text-[#747B84]">
+                            {item.kind}
+                            {item.energyBonus > 0 ? ` • +${item.energyBonus} energia` : ''}
+                            {item.comfortBonus > 0 ? ` • +${item.comfortBonus} conforto` : ''}
+                            {item.studyBonus > 0 ? ` • +${item.studyBonus} estudo` : ''}
+                          </span>
+                        </div>
+                      </article>
+                    ))}
+                    {household.vehicles.slice(-4).reverse().map((item) => (
+                      <article key={item.id} className="flex items-center gap-3 rounded-xl border border-[#292D32] bg-[#0D1014] p-2.5">
+                        <div className="h-12 w-14 shrink-0 overflow-hidden rounded-lg border border-[#30353B] bg-[#15191E]">
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="grid h-full place-items-center text-[#777E87]"><WalletCards size={17} /></div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <strong className="block truncate text-[10px] text-[#E8E6E1]">{item.title}</strong>
+                          <span className="mt-1 block text-[8px] uppercase tracking-wider text-[#747B84]">Veículo próprio</span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
           </div>
         </div>
