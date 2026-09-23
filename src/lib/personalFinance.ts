@@ -147,6 +147,7 @@ export function appendPersonalFinanceTransaction(
   transaction: PersonalFinanceTransaction,
 ): PersonalFinanceState {
   return {
+    ...state,
     transactions: [transaction, ...(state.transactions || [])].slice(0, 250),
   };
 }
