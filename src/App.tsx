@@ -34,6 +34,11 @@ import { ConcursoModal } from './components/ConcursoModal';
 import { OfficeManagementModal } from './components/OfficeManagementModal';
 import { OabExamModal } from './components/OabExamModal';
 import { SocialJuridicoExperience } from './components/SocialJuridicoExperience';
+import {
+  CityRelocationModal,
+  CITY_RELOCATION_COST,
+  CITY_RELOCATION_DAYS,
+} from './components/CityRelocation/CityRelocationModal';
 import { InternshipCareerPanel } from './components/InternshipCareerPanel';
 import { OfficeScene } from './components/OfficeScene/OfficeScene';
 import { InternPromotionCeremonyModal } from './components/InternPromotionCeremonyModal';
@@ -51,6 +56,9 @@ import { readProfessionalEmploymentState } from './lib/professionalEmployment';
 import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
 import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } from './lib/gameTime';
 import { sound } from './utils/sound';
+import { normalizeCareerOrigin, saveCareerOrigin } from './lib/careerOrigin';
+import { saveWorldMapProfile, type WorldMapProfile } from './lib/worldMap';
+import { supabase } from './lib/supabase';
 
 const STORAGE_KEY = 'rota_da_justica_save_v1';
 const VIEW_STORAGE_KEY = 'rota_da_justica_view_v1';
@@ -211,6 +219,7 @@ export default function App() {
   const [isConcursoModalOpen, setIsConcursoModalOpen] = useState<boolean>(false);
   const [isOfficeModalOpen, setIsOfficeModalOpen] = useState<boolean>(false);
   const [isOabExamOpen, setIsOabExamOpen] = useState<boolean>(false);
+  const [isCityRelocationOpen, setIsCityRelocationOpen] = useState<boolean>(false);
 
   const [verdictResult, setVerdictResult] = useState<CaseHistoryRecord | null>(null);
   const [verdictCase, setVerdictCase] = useState<LegalCase | null>(null);
@@ -768,6 +777,88 @@ export default function App() {
     setPlayer((prev) => ({ ...prev, soundEnabled: nextVal }));
   };
 
+  const handleRelocateCity = async ({
+    city,
+    state,
+    profile,
+  }: {
+    city: string;
+    state: string;
+    profile: WorldMapProfile;
+  }) => {
+    if (player.activeCase) {
+      throw new Error('Finalize o caso ativo antes da mudança.');
+    }
+    if (player.money < CITY_RELOCATION_COST) {
+      throw new Error('Patrimônio insuficiente para a mudança.');
+    }
+
+    const previousCity = player.homeCity || '';
+    const previousState = player.homeState || '';
+    const destination = normalizeCareerOrigin(city, state);
+    const nextDate = addGameDays(getPlayerGameDate(player), CITY_RELOCATION_DAYS);
+    const nextMoney = Math.max(0, player.money - CITY_RELOCATION_COST);
+
+    saveCareerOrigin(destination);
+    saveWorldMapProfile(player, {
+      ...profile,
+      city: destination.city,
+      state: destination.state,
+      source: 'USER_SETUP',
+      updatedAt: new Date().toISOString(),
+    });
+
+    setPlayer((prev) => ({
+      ...prev,
+      homeCity: destination.city,
+      homeState: destination.state,
+      money: Math.max(0, prev.money - CITY_RELOCATION_COST),
+      ...gameDateFields(addGameDays(getPlayerGameDate(prev), CITY_RELOCATION_DAYS)),
+    }));
+
+    if (supabase && player.cloudCareerId) {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id || null;
+
+      const { error: careerError } = await supabase
+        .from('careers')
+        .update({
+          current_city: `${destination.city}/${destination.state}`,
+          money: nextMoney,
+          last_played_at: new Date().toISOString(),
+        })
+        .eq('id', player.cloudCareerId);
+
+      if (careerError) {
+        console.warn('[Rota da Justiça] Mudança concluída localmente, mas a carreira em nuvem não foi sincronizada.', careerError);
+      }
+
+      if (userId) {
+        const { error: eventError } = await supabase.from('career_events').insert({
+          career_id: player.cloudCareerId,
+          user_id: userId,
+          event_type: 'CITY_RELOCATION',
+          title: `Mudança para ${destination.city}/${destination.state}`,
+          description: `Mudança residencial e profissional concluída com custo de JR$ ${CITY_RELOCATION_COST.toLocaleString('pt-BR')} e duração de ${CITY_RELOCATION_DAYS} dias.`,
+          metadata: {
+            previousCity,
+            previousState,
+            destinationCity: destination.city,
+            destinationState: destination.state,
+            costJR: CITY_RELOCATION_COST,
+            elapsedGameDays: CITY_RELOCATION_DAYS,
+            arrivalGameDate: formatGameDate(nextDate),
+          },
+        });
+        if (eventError) {
+          console.warn('[Rota da Justiça] Mudança concluída, mas o evento de carreira não pôde ser registrado.', eventError);
+        }
+      }
+    }
+
+    setCurrentView('HUB');
+  };
+
   return (
     <div className="min-h-screen bg-[#0A0A0B] text-[#E0E0E0] flex flex-col items-center justify-start antialiased selection:bg-[#C5A059]/30 selection:text-[#C5A059]">
       {currentView === 'HUB' && !isMobileFrame ? (
@@ -780,6 +871,7 @@ export default function App() {
           onOpenConcursoModal={() => setIsConcursoModalOpen(true)}
           onOpenOfficeModal={() => setIsOfficeModalOpen(true)}
           onOpenOabExam={() => setIsOabExamOpen(true)}
+          onOpenCityRelocation={() => setIsCityRelocationOpen(true)}
           onCompleteOfficeTask={handleCompleteOfficeTask}
           onToggleSound={handleToggleSound}
           onEnableMobileFrame={() => setIsMobileFrame(true)}
@@ -800,6 +892,7 @@ export default function App() {
             onOpenAcademicModal={() => setIsAcademicModalOpen(true)}
             onOpenConcursoModal={() => setIsConcursoModalOpen(true)}
             onOpenOfficeModal={() => setIsOfficeModalOpen(true)}
+            onOpenCityRelocation={() => setIsCityRelocationOpen(true)}
             onToggleSound={handleToggleSound}
           />
 
@@ -944,6 +1037,13 @@ export default function App() {
         onHireEmployee={handleHireEmployee}
         onFireEmployee={handleFireEmployee}
         onPayOfficeExpenses={handlePayOfficeExpenses}
+      />
+
+      <CityRelocationModal
+        player={player}
+        isOpen={isCityRelocationOpen}
+        onClose={() => setIsCityRelocationOpen(false)}
+        onConfirm={handleRelocateCity}
       />
 
       <OabExamModal
