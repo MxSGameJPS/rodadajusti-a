@@ -28,6 +28,7 @@ const PROFILE_PREFIX = 'rota_world_map_v1:';
 const GEOCODE_PREFIX = 'rota_world_geocode_v1:';
 const ADDRESS_GEOCODE_PREFIX = 'rota_world_address_geocode_v2:';
 const ROUTE_PREFIX = 'rota_world_route_v1:';
+const ROAD_SNAP_PREFIX = 'rota_world_road_snap_v1:';
 const PLAYER_SAVE_KEY = 'rota_da_justica_save_v1';
 
 export const WORLD_MAP_UPDATED_EVENT = 'rota:world-map-updated';
@@ -540,6 +541,70 @@ function haversineMeters(origin: WorldGeoPoint, destination: WorldGeoPoint) {
   const a = Math.sin(deltaLat / 2) ** 2
     + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
   return 2 * radius * Math.asin(Math.sqrt(a));
+}
+
+function roadSnapCacheKey(point: WorldGeoPoint) {
+  return `${ROAD_SNAP_PREFIX}${point.lng.toFixed(5)},${point.lat.toFixed(5)}`;
+}
+
+export async function snapWorldPointToRoad(point: WorldGeoPoint): Promise<WorldGeoPoint> {
+  if (!Number.isFinite(point.lng) || !Number.isFinite(point.lat)) return point;
+
+  const cacheKey = roadSnapCacheKey(point);
+  if (hasWindow()) {
+    try {
+      const cached = window.localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached) as WorldGeoPoint;
+        if (isPoint(parsed)) return parsed;
+      }
+    } catch {
+      // Cache é somente otimização.
+    }
+  }
+
+  const controller = new AbortController();
+  const timeout = hasWindow()
+    ? window.setTimeout(() => controller.abort(), 6000)
+    : undefined;
+
+  try {
+    const response = await fetch(
+      `${OSRM_BASE_URL}/nearest/v1/driving/${point.lng},${point.lat}?number=1`,
+      {
+        signal: controller.signal,
+        headers: { Accept: 'application/json' },
+      },
+    );
+
+    if (!response.ok) return point;
+
+    const payload = await response.json() as {
+      waypoints?: Array<{
+        location?: [number, number];
+        distance?: number;
+      }>;
+    };
+    const waypoint = payload.waypoints?.[0];
+    const lng = Number(waypoint?.location?.[0]);
+    const lat = Number(waypoint?.location?.[1]);
+
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return point;
+
+    const snapped = { lng, lat };
+    if (hasWindow()) {
+      try {
+        window.localStorage.setItem(cacheKey, JSON.stringify(snapped));
+      } catch {
+        // Continua válido na sessão.
+      }
+    }
+    return snapped;
+  } catch {
+    return point;
+  } finally {
+    if (timeout != null && hasWindow()) window.clearTimeout(timeout);
+  }
 }
 
 function routeCacheKey(origin: WorldGeoPoint, destination: WorldGeoPoint) {
