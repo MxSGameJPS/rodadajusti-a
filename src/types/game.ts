@@ -179,6 +179,35 @@ export interface OfficeFinances {
   monthlyRevenueHistory: { month: string; revenue: number; expenses: number; profit: number }[];
 }
 
+export type PersonalExpenseCategory =
+  | 'DILIGENCIA'
+  | 'COMBUSTIVEL'
+  | 'ONIBUS'
+  | 'UBER_TAXI'
+  | 'HOTEL'
+  | 'ALIMENTACAO'
+  | 'VEICULO'
+  | 'VESTUARIO'
+  | 'LAZER'
+  | 'ESTUDOS'
+  | 'MUDANCA'
+  | 'OUTROS';
+
+export interface PersonalFinanceTransaction {
+  id: string;
+  type: 'EXPENSE' | 'INCOME';
+  category: PersonalExpenseCategory | 'REMUNERACAO' | 'HONORARIOS' | 'OUTRA_RECEITA';
+  amount: number;
+  title: string;
+  description?: string;
+  gameDate: string;
+  source?: string;
+}
+
+export interface PersonalFinanceState {
+  transactions: PersonalFinanceTransaction[];
+}
+
 export interface CaseLogEntry {
   id: string;
   timestampGameHours: number;
@@ -400,6 +429,7 @@ export interface PlayerProfile {
   activeCase: ActiveCaseState | null;
   history: CaseHistoryRecord[];
   officeFinances: OfficeFinances;
+  personalFinances: PersonalFinanceState;
   officeDiscipline: OfficeDisciplineState;
   officePerformance: OfficePerformanceState;
   concursoCompletedPhases: string[];
