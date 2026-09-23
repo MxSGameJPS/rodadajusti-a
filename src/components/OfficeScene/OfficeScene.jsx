@@ -49,6 +49,7 @@ import { InternshipCareerPanel } from '../../components/InternshipCareerPanel';
 import { OfficeHub } from '../../components/OfficeHub';
 import { LawFirmMarketModal } from '../../components/LawFirmMarket/LawFirmMarketModal';
 import { GameClock } from '../GameClock/GameClock';
+import { PlayerNeedsStrip } from '../PlayerNeedsStrip/PlayerNeedsStrip';
 import styles from './OfficeScene.module.css';
 
 const OPEN_SOCIAL_JURIDICO_EVENT = 'rota:open-social-juridico';
@@ -251,6 +252,7 @@ export function OfficeScene({
             worldProfile={worldProfile}
             declaredCity={declaredCity}
           />
+          <PlayerNeedsStrip player={player} compact />
           <div>
             <MapPin size={16} />
             <span>Local Atual:</span>
