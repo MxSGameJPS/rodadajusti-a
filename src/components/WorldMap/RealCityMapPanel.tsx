@@ -7,8 +7,8 @@ import { registerActiveWorldMap, unregisterActiveWorldMap } from '../../lib/worl
 import {
   establishmentTypeLabel,
   formatEstablishmentPrice,
-  getWorldPointForEstablishment,
   loadWorldEstablishmentsWithDiagnostics,
+  resolveWorldPointForEstablishment,
   type WorldEstablishment,
 } from '../../lib/worldEstablishments';
 import {
@@ -474,7 +474,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
               profile,
               'establishment:' + establishment.id,
             ),
-            getWorldPointForEstablishment(profile, establishment),
+            await resolveWorldPointForEstablishment(profile, establishment),
           ),
         })),
       );
