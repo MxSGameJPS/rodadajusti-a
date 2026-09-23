@@ -358,7 +358,7 @@ export default function App() {
       gameCurrentMinutes: DEFAULT_GAME_START_MINUTES,
     };
     setPlayer(freshProfile);
-    saveCareerOrigin({ city: setup.city, state: setup.state });
+    saveCareerOrigin(normalizeCareerOrigin(setup.city, setup.state));
     setIsNewGameModalOpen(false);
     setSelectedCaseToBrief(GAME_CASES[0]);
   };
