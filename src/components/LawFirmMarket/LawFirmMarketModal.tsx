@@ -125,7 +125,6 @@ export const LawFirmMarketModal: React.FC<LawFirmMarketModalProps> = ({
       await acceptLawFirmOffer(player, offer);
       sound.playStamp();
       setNotice(`Contrato aceito. Você agora integra ${offer.terms.officeName} como ${offer.terms.roleTitle}.`);
-      await refresh();
       onAccepted?.();
     } catch (cause) {
       console.error(cause);
