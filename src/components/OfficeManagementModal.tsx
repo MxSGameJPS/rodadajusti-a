@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { usePlayerDisplayName } from '../lib/playerTreatment';
+import { canManageOwnOffice } from '../lib/independentPractice';
 
 interface OfficeManagementModalProps {
   isOpen: boolean;
@@ -38,7 +39,7 @@ export const OfficeManagementModal: React.FC<OfficeManagementModalProps> = ({
   const [activeTab, setActiveTab] = useState<'financeiro' | 'equipe'>('financeiro');
   const displayName = usePlayerDisplayName(player);
 
-  if (!isOpen) return null;
+  if (!isOpen || !canManageOwnOffice(player)) return null;
 
   const finances = player.officeFinances;
   const totalSalaries = finances.employees.reduce((acc, emp) => acc + emp.salaryMonthly, 0);
