@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Building2, Loader2, MapPin, Navigation, Route, Settings2 } from 'lucide-react';
+import { Building2, Loader2, MapPin, Navigation, Route } from 'lucide-react';
 import type { LegalCase, LocationScene, PlayerProfile } from '../../types/game';
 import { readCurrentPlayerSnapshot } from '../../lib/professionalRpg';
 import { applyRotaJusticeMapTheme, buildOpenStreetMapStyle, loadMapLibre } from '../../lib/maplibreClient';
@@ -158,7 +158,6 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   const markersRef = useRef<any[]>([]);
   const [player, setPlayer] = useState<PlayerProfile | null>(null);
   const [profile, setProfile] = useState<WorldMapProfile | null>(null);
-  const [isEditingCity, setIsEditingCity] = useState(false);
   const [cityInput, setCityInput] = useState('');
   const [stateInput, setStateInput] = useState('');
   const [isGeocoding, setIsGeocoding] = useState(false);
@@ -253,7 +252,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   }, [profile?.city, profile?.state, profile?.center.lat, profile?.center.lng]);
 
   useEffect(() => {
-    if (!profile || isEditingCity || !mapContainerRef.current) return undefined;
+    if (!profile || !mapContainerRef.current) return undefined;
     let disposed = false;
     let mountedMap: any = null;
 
@@ -315,13 +314,12 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
     profile?.state,
     profile?.center.lng,
     profile?.center.lat,
-    isEditingCity,
     immersive,
   ]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !profile || isEditingCity || mapReadyVersion === 0) return undefined;
+    if (!map || !profile || mapReadyVersion === 0) return undefined;
 
     let active = true;
 
@@ -428,7 +426,6 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
     currentCase.id,
     currentLocationId,
     unlockedKey,
-    isEditingCity,
     officeDisplayName,
     officeLocation?.id,
     establishmentsKey,
@@ -458,7 +455,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || isEditingCity) return;
+    if (!map) return;
 
     const draw = async () => {
       if (!mapRef.current) return;
@@ -533,7 +530,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
 
     if (map.isStyleLoaded()) void draw();
     else map.once('load', () => void draw());
-  }, [route, isEditingCity]);
+  }, [route]);
 
   const configureCity = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -544,7 +541,6 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
       const result = await geocodeBrazilianCity(cityInput, stateInput);
       const saved = saveWorldMapProfile(player, { ...result, source: 'USER_SETUP' });
       setProfile(saved);
-      setIsEditingCity(false);
       setSelectedLocation(null);
       setSelectedEstablishment(null);
       setRoute(null);
@@ -555,7 +551,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
     }
   };
 
-  const setupVisible = !profile || isEditingCity;
+  const setupVisible = !profile;
 
   return (
     <section className={`${styles.shell} ${immersive ? styles.immersive : ''}`}>
@@ -567,11 +563,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
             <h3>{profile ? `${profile.city} • ${profile.state}` : 'Sua cidade vira o tabuleiro'}</h3>
           </div>
         </div>
-        {profile && (
-          <button type="button" className={styles.changeButton} onClick={() => setIsEditingCity((current) => !current)}>
-            <Settings2 size={13} /> {isEditingCity ? 'Cancelar' : 'Trocar cidade'}
-          </button>
-        )}
+        {profile && <span className={styles.cityLockedNote}>Mudanças de cidade são feitas pelo escritório</span>}
       </header>}
 
       {setupVisible ? (
