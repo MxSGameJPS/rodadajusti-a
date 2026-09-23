@@ -303,9 +303,9 @@ export const CityRelocationModal: React.FC<CityRelocationModalProps> = ({
               <div className="mt-4 flex items-start gap-3 rounded-xl border border-[#34D399]/25 bg-[#34D399]/10 p-3 text-xs text-[#A7F3D0]">
                 <CheckCircle2 size={17} className="mt-0.5 shrink-0" />
                 <div>
-                  <strong className="block">Nova residência localizada</strong>
+                  <strong className="block">Nova rua localizada</strong>
                   <span className="mt-0.5 block text-[#91BFAA]">{validatedAddress.displayName}</span>
-                  <small className="mt-1 block text-[#6E9E88]">Rua e número continuam privados e são usados apenas pelas mecânicas da carreira.</small>
+                  <small className="mt-1 block text-[#6E9E88]">O número não é enviado ao serviço de mapas. A casa será exibida em um ponto aproximado e aleatório da rua cadastrada.</small>
                 </div>
               </div>
             )}
