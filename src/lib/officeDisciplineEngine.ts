@@ -12,6 +12,7 @@ type BuildSupervisorReviewInput = {
   caseTitle: string;
   completedDate: string;
   currentDiscipline: OfficeDisciplineState;
+  officeName?: string;
 };
 
 function messageForIssues(
@@ -19,6 +20,7 @@ function messageForIssues(
   severity: SupervisorReviewSeverity,
   warningNumber: number,
   contractTerminated: boolean,
+  officeName: string,
 ) {
   const issueSet = new Set(issues);
   let core = '';
@@ -40,7 +42,7 @@ function messageForIssues(
   }
 
   if (contractTerminated) {
-    return `${core} Esta é sua segunda advertência formal por falha profissional. Nós já conversamos sobre o padrão de responsabilidade esperado aqui. Por isso, seu contrato com Ramos & Associados está encerrado.`;
+    return `${core} Esta é sua segunda advertência formal por falha profissional. Nós já conversamos sobre o padrão de responsabilidade esperado aqui. Por isso, seu contrato com ${officeName} está encerrado.`;
   }
 
   if (severity === 'GRAVE') {
@@ -60,6 +62,7 @@ export function buildSupervisorReview({
   caseTitle,
   completedDate,
   currentDiscipline,
+  officeName = 'Ramos & Associados',
 }: BuildSupervisorReviewInput): { review: SupervisorReview | null; discipline: OfficeDisciplineState } {
   if (decision.success || !decision.supervisorSeverity) {
     return { review: null, discipline: currentDiscipline };
@@ -85,6 +88,7 @@ export function buildSupervisorReview({
       decision.supervisorSeverity,
       warningNumber,
       contractTerminated,
+      officeName,
     ),
     warningIssued: decision.shouldIssueWarning,
     warningNumber,
