@@ -29,7 +29,7 @@ const GEOCODE_PREFIX = 'rota_world_geocode_v1:';
 const ADDRESS_GEOCODE_PREFIX = 'rota_world_address_geocode_v2:';
 const ROUTE_PREFIX = 'rota_world_route_v1:';
 const ROAD_SNAP_PREFIX = 'rota_world_road_snap_v1:';
-const STABLE_WORLD_POINT_PREFIX = 'rota_world_stable_point_v1:';
+const STABLE_WORLD_POINT_PREFIX = 'rota_world_stable_point_v2:';
 const PLAYER_SAVE_KEY = 'rota_da_justica_save_v1';
 
 export const WORLD_MAP_UPDATED_EVENT = 'rota:world-map-updated';
