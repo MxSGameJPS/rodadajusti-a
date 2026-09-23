@@ -85,6 +85,7 @@ import {
 import {
   appendPersonalFinanceTransaction,
   createPersonalExpense,
+  createPersonalIncome,
   normalizePersonalFinances,
   recoverLegacyPersonalFinances,
 } from './lib/personalFinance';
@@ -107,6 +108,67 @@ function gameDateFields(date: { day: number; month: number; year: number }) {
     gameCurrentMonth: date.month,
     gameCurrentYear: date.year,
   };
+}
+
+function gameMonthKey(value: { month: number; year: number }) {
+  return String(value.year) + '-' + String(value.month).padStart(2, '0');
+}
+
+function elapsedGameMonths(fromKey: string | null | undefined, toKey: string) {
+  if (!fromKey) return 0;
+  const [fromYear, fromMonth] = fromKey.split('-').map(Number);
+  const [toYear, toMonth] = toKey.split('-').map(Number);
+  if (![fromYear, fromMonth, toYear, toMonth].every(Number.isFinite)) return 0;
+  return Math.max(0, Math.min(60, (toYear - fromYear) * 12 + (toMonth - fromMonth)));
+}
+
+function monthlyCompensationForPlayer(player: PlayerProfile) {
+  const tier = CAREER_TIERS[player.careerTier];
+  const base = Math.max(0, Number(tier?.salaryBaseMonthly) || 0);
+
+  if (player.careerTier === 'DONO_ESCRITORIO') return 0;
+
+  if (player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR') {
+    return player.officeDiscipline.employmentStatus === 'TERMINATED' ? 0 : base;
+  }
+
+  if (
+    player.careerTier === 'MAGISTRADO_SUBSTITUTO'
+    || player.careerTier === 'JUIZ_TITULAR'
+    || player.careerTier === 'DESEMBARGADOR'
+    || player.careerTier === 'MINISTRO_STF'
+  ) {
+    return base;
+  }
+
+  if (player.oabRegistration) {
+    const employment = readProfessionalEmploymentState(player);
+    if (
+      employment?.contractStatus === 'SIGNED'
+      && player.officeDiscipline.employmentStatus !== 'TERMINATED'
+    ) {
+      return Math.max(0, Number(employment.salaryMonthly) || base);
+    }
+  }
+
+  return 0;
+}
+
+function compensationTitle(player: PlayerProfile, months: number) {
+  const suffix = months > 1 ? ` • ${months} competências` : '';
+  if (player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR') {
+    return 'Bolsa-estágio' + suffix;
+  }
+  if (
+    player.careerTier === 'MAGISTRADO_SUBSTITUTO'
+    || player.careerTier === 'JUIZ_TITULAR'
+    || player.careerTier === 'DESEMBARGADOR'
+    || player.careerTier === 'MINISTRO_STF'
+  ) {
+    return 'Subsídio da carreira' + suffix;
+  }
+  if (player.careerTier === 'SOCIO_ESCRITORIO') return 'Pró-labore' + suffix;
+  return 'Remuneração mensal' + suffix;
 }
 
 function gameClockFields(player: PlayerProfile, minutesToAdd: number) {
@@ -156,6 +218,7 @@ const INITIAL_PLAYER_STATE: PlayerProfile = {
   },
   personalFinances: {
     transactions: [],
+    lastCompensationMonthKey: gameMonthKey(INITIAL_GAME_DATE),
   },
   household: {
     ...DEFAULT_HOUSEHOLD_STATE,
@@ -189,6 +252,14 @@ function normalizeSavedPlayer(saved: Partial<PlayerProfile>): PlayerProfile {
     year: saved.gameCurrentYear ?? INITIAL_GAME_DATE.year,
   });
 
+  const normalizedPersonalFinances = saved.personalFinances
+    ? normalizePersonalFinances(saved.personalFinances)
+    : recoverLegacyPersonalFinances(saved);
+
+  if (!normalizedPersonalFinances.lastCompensationMonthKey) {
+    normalizedPersonalFinances.lastCompensationMonthKey = gameMonthKey(normalizedSavedDate);
+  }
+
   return {
     ...INITIAL_PLAYER_STATE,
     ...saved,
@@ -220,9 +291,7 @@ function normalizeSavedPlayer(saved: Partial<PlayerProfile>): PlayerProfile {
         ? saved.officeFinances!.monthlyRevenueHistory
         : [],
     },
-    personalFinances: saved.personalFinances
-      ? normalizePersonalFinances(saved.personalFinances)
-      : recoverLegacyPersonalFinances(saved),
+    personalFinances: normalizedPersonalFinances,
     household: normalizeHousehold(saved.household, saved.homeCity || '', saved.homeState || ''),
     officeDiscipline: {
       ...INITIAL_PLAYER_STATE.officeDiscipline,
@@ -305,6 +374,68 @@ export default function App() {
       // ignore
     }
   }, [player]);
+
+  useEffect(() => {
+    if (!player.name) return;
+
+    const currentKey = gameMonthKey({
+      month: player.gameCurrentMonth,
+      year: player.gameCurrentYear,
+    });
+    const previousKey = player.personalFinances.lastCompensationMonthKey;
+    if (previousKey === currentKey) return;
+
+    const monthCount = elapsedGameMonths(previousKey, currentKey);
+
+    setPlayer((prev) => {
+      const targetKey = gameMonthKey({
+        month: prev.gameCurrentMonth,
+        year: prev.gameCurrentYear,
+      });
+      if (prev.personalFinances.lastCompensationMonthKey === targetKey) return prev;
+
+      const elapsed = elapsedGameMonths(
+        prev.personalFinances.lastCompensationMonthKey,
+        targetKey,
+      );
+      const monthlyAmount = monthlyCompensationForPlayer(prev);
+      const totalAmount = monthlyAmount * elapsed;
+
+      const baseFinances = {
+        ...prev.personalFinances,
+        lastCompensationMonthKey: targetKey,
+      };
+
+      if (elapsed <= 0 || totalAmount <= 0) {
+        return {
+          ...prev,
+          personalFinances: baseFinances,
+        };
+      }
+
+      return {
+        ...prev,
+        money: prev.money + totalAmount,
+        personalFinances: appendPersonalFinanceTransaction(
+          baseFinances,
+          createPersonalIncome(prev, {
+            category: 'REMUNERACAO',
+            amount: totalAmount,
+            title: compensationTitle(prev, elapsed),
+            description: elapsed > 1
+              ? `Crédito acumulado de ${elapsed} competências mensais.`
+              : `Crédito referente à competência ${targetKey}.`,
+            source: 'MONTHLY_COMPENSATION',
+          }),
+        ),
+      };
+    });
+  }, [
+    player.name,
+    player.gameCurrentMonth,
+    player.gameCurrentYear,
+    player.personalFinances.lastCompensationMonthKey,
+  ]);
 
   useEffect(() => {
     try {
