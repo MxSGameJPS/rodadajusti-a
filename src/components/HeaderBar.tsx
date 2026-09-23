@@ -10,6 +10,7 @@ import {
   Landmark,
   Building,
   ChevronRight,
+  Home,
   Laptop,
   Map,
   MapPin,
@@ -42,6 +43,7 @@ interface HeaderBarProps {
   onOpenOfficeModal: () => void;
   onOpenCityRelocation: () => void;
   onOpenCityWorldMap: () => void;
+  onOpenPlayerHome: () => void;
   onToggleSound: () => void;
 }
 
@@ -55,6 +57,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onOpenOfficeModal,
   onOpenCityRelocation,
   onOpenCityWorldMap,
+  onOpenPlayerHome,
   onToggleSound,
 }) => {
   const currentTier: CareerTier = CAREER_TIERS[player.careerTier] || CAREER_TIERS.ESTAGIARIO;
@@ -127,6 +130,20 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <span className="hidden text-[9px] uppercase tracking-wider lg:inline">
               {isMobileFrame ? 'Expandir' : 'Modo Celular'}
             </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              sound.playClick();
+              onOpenPlayerHome();
+            }}
+            title="Casa e vida pessoal"
+            aria-label="Casa e vida pessoal"
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-2 text-[#888] transition-colors hover:bg-[#1A1A1D] hover:text-[#E0E0E0]"
+          >
+            <Home size={13} className="text-[#D8B768]" />
+            <span className="hidden text-[9px] uppercase tracking-wider lg:inline">Casa</span>
           </button>
 
           <button
