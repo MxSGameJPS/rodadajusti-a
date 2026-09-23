@@ -5,8 +5,9 @@ import {
   isIndependentCase,
 } from './independentPractice';
 import {
+  isEmployedProfessional,
   isIndependentProfessional,
-  isRamosEmploymentActive,
+  readProfessionalEmploymentState,
 } from './professionalEmployment';
 import { getProfessionalOwnerKey } from './professionalRpg';
 import {
@@ -74,8 +75,9 @@ function dateLabel(player: PlayerProfile) {
 
 export function buildProfessionalAgenda(player: PlayerProfile): ProfessionalAgendaItem[] {
   const items: ProfessionalAgendaItem[] = [];
-  const ramosActive = isRamosEmploymentActive(player);
+  const employed = isEmployedProfessional(player);
   const independent = isIndependentProfessional(player);
+  const employment = readProfessionalEmploymentState(player);
   const activeCase = GAME_CASES.find((caseItem) => caseItem.id === player.activeCase?.caseId) || null;
 
   if (activeCase && player.activeCase) {
@@ -91,20 +93,22 @@ export function buildProfessionalAgenda(player: PlayerProfile): ProfessionalAgen
     });
   }
 
-  const assigned = ramosActive
+  const assigned = employed
     ? getProfessionalAssignedCase(player, GAME_CASES)
     : independent
       ? getIndependentMarketplaceCase(player, GAME_CASES)
       : null;
 
   if (!player.activeCase && assigned) {
-    if (ramosActive) {
+    if (employed) {
       const context = getAssignmentContext(assigned, player);
       items.push({
         id: `assigned-${assigned.id}`,
         title: context.title,
         description: `${assigned.code} • ${assigned.title}`,
-        meta: context.isAppeal ? context.description : 'Aguardando aceite no CRM',
+        meta: context.isAppeal
+          ? context.description
+          : `Aguardando aceite no CRM • ${employment?.officeName || 'escritório atual'}`,
         tone: context.isAppeal ? 'warning' : 'info',
         action: 'CRM',
         urgent: context.isAppeal,
@@ -124,7 +128,7 @@ export function buildProfessionalAgenda(player: PlayerProfile): ProfessionalAgen
 
   const processHistory = player.history
     .slice(0, 6)
-    .filter((record) => ramosActive || (independent && isIndependentCase(player, record.caseId)));
+    .filter((record) => employed || (independent && isIndependentCase(player, record.caseId)));
 
   for (const record of processHistory) {
     const info = getProcessStatusInfo(record, player, GAME_CASES);
