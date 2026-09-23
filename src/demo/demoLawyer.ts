@@ -44,6 +44,7 @@ export function createDemoLawyer(caseItem: LegalCase | null): PlayerProfile {
     history: [],
     personalFinances: {
       transactions: [],
+      lastCompensationMonthKey: '2026-09',
     },
     household: {
       ...DEFAULT_HOUSEHOLD_STATE,
