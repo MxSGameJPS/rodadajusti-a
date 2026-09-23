@@ -169,7 +169,7 @@ function SectionTitle({ icon, title, color }: { icon: React.ReactNode; title: st
   return <h3 className={`text-xs font-bold tracking-widest uppercase flex items-center gap-1.5 ${color}`}>{icon}<span>{title}</span></h3>;
 }
 
-function CareerTierCard({ title, description, current, unlocked, salary, requirements, perks }: { title: string; description: string; current: boolean; unlocked: boolean; salary: number; requirements: string; perks: string[] }) {
+function CareerTierCard({ title, description, current, unlocked, salary, requirements, perks }: React.Attributes & { title: string; description: string; current: boolean; unlocked: boolean; salary: number; requirements: string; perks: string[] }) {
   return <div className={`p-4 rounded-xl border ${current ? 'bg-[#1A1A1D] border-[#C5A059]' : unlocked ? 'bg-[#161618] border-[#2A2A2E]' : 'bg-[#111113] border-[#222226] opacity-80'}`}>
     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
       <div className="flex items-start gap-3"><div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${current ? 'bg-[#C5A059] text-[#0A0A0B]' : unlocked ? 'bg-[#34D399]/10 text-[#34D399] border border-[#34D399]/30' : 'bg-[#1A1A1D] text-[#666] border border-[#2A2A2E]'}`}>{current ? <Award size={18}/> : unlocked ? <CheckCircle2 size={16}/> : <Lock size={15}/>}</div><div><h4 className="font-bold text-[#E0E0E0]">{title}{current && <span className="ml-2 text-[9px] px-2 py-0.5 rounded-full bg-[#C5A059] text-[#0A0A0B]">ATUAL</span>}</h4><p className="text-xs text-[#AAAAAA] mt-1">{description}</p></div></div>
