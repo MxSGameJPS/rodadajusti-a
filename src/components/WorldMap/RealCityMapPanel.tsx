@@ -585,19 +585,6 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
         }
       }
     };
-        map.easeTo({
-          center: [currentPoint.lng, currentPoint.lat],
-          zoom: Math.max(14.7, map.getZoom?.() || 15.15),
-          pitch: 55,
-          bearing: -16,
-          duration: 520,
-        });
-      } else if (points.length > 1) {
-        const bounds = new maplibre.LngLatBounds();
-        points.forEach((point) => bounds.extend(point));
-        map.fitBounds(bounds, { padding: 68, maxZoom: 14.4, duration: 520 });
-      }
-    };
 
     void syncMarkers();
 
