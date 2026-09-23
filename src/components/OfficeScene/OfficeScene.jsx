@@ -35,9 +35,11 @@ import {
 import { getDeclaredPlayerCity, readWorldMapProfile } from '../../lib/worldMap';
 import { formatGameDate } from '../../lib/gameDate';
 import { usePlayerDisplayName } from '../../lib/playerTreatment';
+import { isIndependentProfessional, readProfessionalEmploymentState } from '../../lib/professionalEmployment';
 import { sound } from '../../utils/sound';
 import { InternshipCareerPanel } from '../../components/InternshipCareerPanel';
 import { OfficeHub } from '../../components/OfficeHub';
+import { LawFirmMarketModal } from '../../components/LawFirmMarket/LawFirmMarketModal';
 import { GameClock } from '../GameClock/GameClock';
 import styles from './OfficeScene.module.css';
 
@@ -51,6 +53,7 @@ const NAV_ITEMS = [
   { id: 'AGENDA', label: 'Agenda', icon: CalendarDays },
   { id: 'FINANCE', label: 'Finanças', icon: WalletCards },
   { id: 'TEAM', label: 'Equipe', icon: Users },
+  { id: 'MARKET', label: 'Mercado', icon: BriefcaseBusiness },
   { id: 'ACHIEVEMENTS', label: 'Conquistas', icon: Trophy },
 ];
 
@@ -86,8 +89,11 @@ export function OfficeScene({
   onEnableMobileFrame,
 }) {
   const [drawer, setDrawer] = useState(null);
+  const [showJobMarket, setShowJobMarket] = useState(false);
   const currentTier = CAREER_TIERS[player.careerTier] || CAREER_TIERS.ESTAGIARIO;
   const displayName = usePlayerDisplayName(player, 'Profissional');
+  const independent = isIndependentProfessional(player);
+  const employment = readProfessionalEmploymentState(player);
   const activeCase = useMemo(
     () => GAME_CASES.find((caseItem) => caseItem.id === player.activeCase?.caseId) || null,
     [player.activeCase?.caseId],
@@ -130,7 +136,11 @@ export function OfficeScene({
     ? Math.max(0, activeCase.deadlineHours - player.activeCase.hoursSpent)
     : null;
 
-  const currentLocation = 'Ramos & Associados';
+  const currentLocation = independent
+    ? player.officeFinances?.isOfficeOpen
+      ? player.officeFinances.officeName
+      : 'Advocacia independente'
+    : employment?.officeName || 'Ramos & Associados';
 
   const caseProgress = activeCase && player.activeCase
     ? Math.min(100, Math.max(12, Math.round((player.activeCase.hoursSpent / Math.max(1, activeCase.deadlineHours)) * 100)))
@@ -160,6 +170,11 @@ export function OfficeScene({
     if (itemId === 'MAP') {
       if (player.activeCase) onResumeActiveCase();
       else setDrawer('CASES');
+      return;
+    }
+
+    if (itemId === 'MARKET') {
+      setShowJobMarket(true);
       return;
     }
 
@@ -242,7 +257,7 @@ export function OfficeScene({
 
       <aside className={styles.sidebar}>
         <div className={styles.sidebarItems}>
-          {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+          {NAV_ITEMS.filter((item) => item.id !== 'MARKET' || Boolean(player.oabRegistration)).map(({ id, label, icon: Icon }) => (
             <button
               type="button"
               key={id}
@@ -402,12 +417,19 @@ export function OfficeScene({
         <div className={styles.dockQuote}>PLANEJAMENTO<br />HOJE.<br />IMPACTO AMANHÃ.</div>
       </footer>
 
+      <LawFirmMarketModal
+        player={player}
+        isOpen={showJobMarket}
+        onClose={() => setShowJobMarket(false)}
+        onAccepted={() => setShowJobMarket(false)}
+      />
+
       {drawer && (
         <div className={styles.drawerBackdrop} onMouseDown={() => setDrawer(null)}>
           <section className={styles.drawer} onMouseDown={(event) => event.stopPropagation()}>
             <header>
               <div>
-                <span>Ramos & Associados</span>
+                <span>{currentLocation}</span>
                 <h2>{getDrawerTitle(drawer)}</h2>
               </div>
               <button type="button" onClick={() => setDrawer(null)} aria-label="Fechar painel"><X size={20} /></button>
