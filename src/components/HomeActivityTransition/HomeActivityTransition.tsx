@@ -14,6 +14,7 @@ import styles from './HomeActivityTransition.module.css';
 
 export type HomeActivityKind =
   | 'SLEEP'
+  | 'NAP'
   | 'SHOWER'
   | 'MEAL'
   | 'STUDY_HOME'
@@ -38,6 +39,13 @@ const CONFIG: Record<HomeActivityKind, {
     detail: 'A noite passa enquanto sua energia é recuperada.',
     durationMs: 3600,
     simulatedTime: '+8h',
+  },
+  NAP: {
+    eyebrow: 'Quarto',
+    title: 'Tirando um cochilo',
+    detail: 'Um descanso curto durante o dia recupera parte da energia.',
+    durationMs: 2400,
+    simulatedTime: '+1h30',
   },
   SHOWER: {
     eyebrow: 'Banheiro',
@@ -70,7 +78,7 @@ const CONFIG: Record<HomeActivityKind, {
 };
 
 function ActivityIcon({ kind }: { kind: HomeActivityKind }) {
-  if (kind === 'SLEEP') return <BedDouble size={56} />;
+  if (kind === 'SLEEP' || kind === 'NAP') return <BedDouble size={56} />;
   if (kind === 'SHOWER') return <Bath size={56} />;
   if (kind === 'MEAL') return <Utensils size={56} />;
   return <BookOpenCheck size={56} />;
@@ -122,7 +130,7 @@ export const HomeActivityTransition: React.FC<HomeActivityTransitionProps> = ({
   return (
     <section className={styles.scene}>
       <div className={`${styles.ambient} ${styles['ambient' + kind]}`} aria-hidden="true">
-        {kind === 'SLEEP' && (
+        {(kind === 'SLEEP' || kind === 'NAP') && (
           <>
             <Moon className={styles.moon} />
             <Sun className={styles.sun} />
