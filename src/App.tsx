@@ -1839,6 +1839,7 @@ export default function App() {
         }}
         onStudy={() => setHomeActivity('STUDY_HOME')}
         onGoToUniversity={handleRequestUniversityTrip}
+        onGoToOffice={handleRequestGoOffice}
         onPayBills={handlePayHouseholdBills}
         onOpenCityMap={() => {
           setIsPlayerHomeOpen(false);
