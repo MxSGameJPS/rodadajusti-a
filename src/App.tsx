@@ -84,11 +84,16 @@ import {
   currentGameDateLabel,
   currentHouseholdBillKey,
   getHouseholdBillSummary,
+  getHouseholdServiceStatus,
   getLifeBlockingReason,
+  getPantryCapacity,
+  getSleepPlan,
   isHouseholdBillPaid,
   furnitureKindFromGameplay,
+  gameAbsoluteMinute,
   normalizeHousehold,
   restoreAfterMeal,
+  restoreAfterNap,
   restoreAfterShower,
   restoreAfterSleep,
   restoreAfterStudy,
@@ -374,6 +379,7 @@ export default function App() {
   const [lifeTravelConfirm, setLifeTravelConfirm] = useState<LifeTravelRequest | null>(null);
   const [lifeTravelRequest, setLifeTravelRequest] = useState<LifeTravelRequest | null>(null);
   const [homeActivity, setHomeActivity] = useState<HomeActivityKind | null>(null);
+  const [pendingPantryItemId, setPendingPantryItemId] = useState<string | null>(null);
 
   const openOfficeManagement = () => {
     if (!canManageOwnOffice(player)) {
@@ -1131,13 +1137,42 @@ export default function App() {
         household: restoreAfterSleep(
           clock.household,
           currentGameDateLabel(nextPlayer),
+          gameAbsoluteMinute(nextPlayer),
         ),
       };
     });
   };
 
+  const handleNapAtHome = () => {
+    setPlayer((prev) => {
+      const clock = gameClockFields(prev, 90);
+      const nextPlayer = { ...prev, ...clock } as PlayerProfile;
+      return {
+        ...nextPlayer,
+        household: restoreAfterNap(
+          clock.household,
+          gameAbsoluteMinute(nextPlayer),
+        ),
+      };
+    });
+  };
+
+  const handleRequestSleepAtHome = () => {
+    const plan = getSleepPlan(player);
+    if (plan.kind === 'BLOCKED') {
+      setLifeWarning(plan.detail);
+      return;
+    }
+
+    setLifeWarning('');
+    setHomeActivity(plan.kind);
+  };
+
   const handleShowerAtHome = () => {
     setPlayer((prev) => {
+      const services = getHouseholdServiceStatus(prev);
+      if (!services.water) return prev;
+
       const clock = gameClockFields(prev, 30);
       return {
         ...prev,
@@ -1147,20 +1182,28 @@ export default function App() {
     });
   };
 
-  const handleEatAtHome = () => {
+  const handleEatAtHome = (pantryItemId: string) => {
     setPlayer((prev) => {
-      if (prev.household.foodUnits <= 0) return prev;
+      const item = prev.household.pantry.find((entry) => entry.id === pantryItemId);
+      if (!item || item.quantity <= 0) return prev;
+
+      const services = getHouseholdServiceStatus(prev);
+      if (item.requiresCooking && !services.gas) return prev;
+
       const clock = gameClockFields(prev, 45);
       return {
         ...prev,
         ...clock,
-        household: restoreAfterMeal(clock.household),
+        household: restoreAfterMeal(clock.household, pantryItemId),
       };
     });
   };
 
   const handleStudyAtHome = () => {
     setPlayer((prev) => {
+      const services = getHouseholdServiceStatus(prev);
+      if (!services.electricity || !services.internet) return prev;
+
       const clock = gameClockFields(prev, 120);
       const nextPlayer = { ...prev, ...clock } as PlayerProfile;
       return {
@@ -1345,13 +1388,19 @@ export default function App() {
       return;
     }
 
+    if (activity === 'NAP') {
+      handleNapAtHome();
+      return;
+    }
+
     if (activity === 'SHOWER') {
       handleShowerAtHome();
       return;
     }
 
     if (activity === 'MEAL') {
-      handleEatAtHome();
+      if (pendingPantryItemId) handleEatAtHome(pendingPantryItemId);
+      setPendingPantryItemId(null);
       return;
     }
 
