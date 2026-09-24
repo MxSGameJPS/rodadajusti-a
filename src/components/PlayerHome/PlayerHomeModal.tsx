@@ -330,13 +330,64 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
             <section className="rounded-2xl border border-[#343028] bg-[#17140F] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <span className="text-[9px] font-black uppercase tracking-wider text-[#8D7A57]">Despensa</span>
-                  <strong className="mt-1 block text-xl text-[#F0E5CE]">{household.foodUnits} refeições</strong>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-[#8D7A57]">Geladeira & despensa</span>
+                  <strong className="mt-1 block text-xl text-[#F0E5CE]">{household.foodUnits}/{pantryCapacity} unidades</strong>
                 </div>
                 <ShoppingBasket size={24} className="text-[#D8B768]" />
               </div>
-              <p className="mt-2 text-[10px] leading-4 text-[#96886E]">
-                Compre alimentos em supermercados publicados pelo Rota Admin. Cada produto pode adicionar unidades à despensa.
+
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#30291B]">
+                <div
+                  className="h-full rounded-full bg-[#C5A059]"
+                  style={{ width: Math.min(100, (household.foodUnits / pantryCapacity) * 100) + '%' }}
+                />
+              </div>
+
+              {household.pantry.length > 0 ? (
+                <div className="mt-3 grid gap-2">
+                  {household.pantry.map((item) => {
+                    const selected = selectedPantryItem?.id === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setSelectedPantryItemId(item.id)}
+                        className={
+                          'flex items-center gap-3 rounded-xl border p-2.5 text-left transition '
+                          + (selected
+                            ? 'border-[#C5A059]/55 bg-[#C5A059]/10'
+                            : 'border-[#342F24] bg-[#0F110F] hover:border-[#5A4F34]')
+                        }
+                      >
+                        <div className="h-11 w-12 shrink-0 overflow-hidden rounded-lg border border-[#383224] bg-[#17150F]">
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="grid h-full place-items-center text-[#A88F57]"><PackageOpen size={17} /></div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <strong className="block truncate text-[10px] text-[#ECE3D1]">{item.title}</strong>
+                          <span className="mt-1 block text-[8px] uppercase tracking-wider text-[#91856D]">
+                            {item.quantity} un. • +{Math.round(item.hungerRestore)} saciedade
+                            {item.energyRestore > 0 ? ' • +' + Math.round(item.energyRestore) + ' energia' : ''}
+                          </span>
+                          <small className="mt-1 block text-[8px] text-[#756B59]">
+                            {item.requiresCooking ? 'Precisa de gás/preparo' : 'Pronto para consumo'}
+                          </small>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="mt-3 rounded-xl border border-dashed border-[#51462F] bg-[#12110D] p-3 text-center text-[10px] text-[#96886E]">
+                  A despensa está vazia. Vá ao supermercado antes da próxima refeição.
+                </div>
+              )}
+
+              <p className="mt-3 text-[10px] leading-4 text-[#96886E]">
+                Geladeiras e móveis de armazenamento podem aumentar a capacidade máxima da despensa.
               </p>
               <button type="button" onClick={onOpenCityMap} className="mt-3 w-full rounded-xl border border-[#C5A059]/30 bg-[#C5A059]/8 px-4 py-2.5 text-xs font-black text-[#D8BD7A]">
                 Abrir mapa para fazer compras
