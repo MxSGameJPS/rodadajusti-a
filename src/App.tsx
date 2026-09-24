@@ -72,7 +72,6 @@ import { normalizeCareerOrigin, saveCareerOrigin } from './lib/careerOrigin';
 import { saveWorldMapProfile, type WorldAddressProfile, type WorldMapProfile } from './lib/worldMap';
 import type { WorldEstablishment, WorldEstablishmentOffer } from './lib/worldEstablishments';
 import {
-  lifePlaceFromWorldLocation,
   type LifeTravelRequest,
   type LifeTravelResult,
   worldLocationForLifePlace,
@@ -1600,6 +1599,26 @@ export default function App() {
     setCurrentView('HUB');
   };
 
+  const handleBackToOfficeFromCase = () => {
+    setPlayer((prev) => ({
+      ...prev,
+      worldLocation: {
+        kind: 'OFFICE',
+        refId: null,
+        label: 'Ramos & Associados',
+      },
+    }));
+    setCurrentView('HUB');
+  };
+
+  const animatedMealLabel = player.gameCurrentMinutes >= 11 * 60 && player.gameCurrentMinutes < 16 * 60
+    ? 'Almoçando'
+    : player.gameCurrentMinutes >= 18 * 60 && player.gameCurrentMinutes < 23 * 60
+      ? 'Jantando'
+      : player.gameCurrentMinutes >= 5 * 60 && player.gameCurrentMinutes < 11 * 60
+        ? 'Tomando café da manhã'
+        : 'Fazendo uma refeição';
+
   return (
     <div className="min-h-screen bg-[#0A0A0B] text-[#E0E0E0] flex flex-col items-center justify-start antialiased selection:bg-[#C5A059]/30 selection:text-[#C5A059]">
       {currentView === 'HUB' && !isMobileFrame ? (
@@ -1614,7 +1633,7 @@ export default function App() {
           onOpenOabExam={() => setIsOabExamOpen(true)}
           onOpenCityRelocation={() => setIsCityRelocationOpen(true)}
           onOpenCityWorldMap={() => setIsCityWorldMapOpen(true)}
-          onOpenPlayerHome={() => setIsPlayerHomeOpen(true)}
+          onOpenPlayerHome={handleRequestGoHome}
           onCompleteOfficeTask={handleCompleteOfficeTask}
           onToggleSound={handleToggleSound}
           onEnableMobileFrame={() => setIsMobileFrame(true)}
@@ -1637,7 +1656,7 @@ export default function App() {
             onOpenOfficeModal={openOfficeManagement}
             onOpenCityRelocation={() => setIsCityRelocationOpen(true)}
             onOpenCityWorldMap={() => setIsCityWorldMapOpen(true)}
-            onOpenPlayerHome={() => setIsPlayerHomeOpen(true)}
+            onOpenPlayerHome={handleRequestGoHome}
             onToggleSound={handleToggleSound}
           />
 
@@ -1665,9 +1684,9 @@ export default function App() {
                 onTravelToLocation={handleTravelToLocation}
                 onOpenDossier={() => setIsDossierOpen(true)}
                 onOpenCourtroom={() => setIsCourtroomOpen(true)}
-                onBackToOffice={() => setCurrentView('HUB')}
-                onOpenPlayerHome={() => setIsPlayerHomeOpen(true)}
-                onStudyAtUniversity={handleStudyAtUniversity}
+                onBackToOffice={handleBackToOfficeFromCase}
+                onOpenPlayerHome={handleRequestGoHome}
+                onStudyAtUniversity={handleRequestUniversityTrip}
               />
             )}
 
@@ -1796,14 +1815,14 @@ export default function App() {
         player={player}
         isOpen={isPlayerHomeOpen}
         warningMessage={lifeWarning}
-        onClose={() => {
-          setLifeWarning('');
-          setIsPlayerHomeOpen(false);
+        onClose={handleClosePlayerHome}
+        onSleep={() => setHomeActivity('SLEEP')}
+        onShower={() => setHomeActivity('SHOWER')}
+        onEat={() => {
+          if (player.household.foodUnits > 0) setHomeActivity('MEAL');
         }}
-        onSleep={handleSleepAtHome}
-        onShower={handleShowerAtHome}
-        onEat={handleEatAtHome}
-        onStudy={handleStudyAtHome}
+        onStudy={() => setHomeActivity('STUDY_HOME')}
+        onGoToUniversity={handleRequestUniversityTrip}
         onPayBills={handlePayHouseholdBills}
         onOpenCityMap={() => {
           setIsPlayerHomeOpen(false);
@@ -1815,13 +1834,40 @@ export default function App() {
         player={player}
         isOpen={isCityWorldMapOpen}
         onClose={() => setIsCityWorldMapOpen(false)}
-        onOpenHome={() => {
-          setIsCityWorldMapOpen(false);
-          setIsPlayerHomeOpen(true);
-        }}
-        onStudyAtUniversity={handleStudyAtUniversity}
+        onOpenHome={handleRequestGoHome}
+        onGoToOffice={handleRequestGoOffice}
+        onStudyAtUniversity={handleRequestUniversityTrip}
         onPurchaseOffer={handlePurchaseWorldOffer}
       />
+
+      <LifeTravelConfirmModal
+        isOpen={!!lifeTravelConfirm}
+        originLabel={player.worldLocation.label || 'Local atual'}
+        destinationLabel="Sua casa"
+        title="Deseja ir para casa?"
+        message="O personagem sairá do local atual e o deslocamento até a residência será mostrado no mapa. A viagem consome tempo e transporte."
+        confirmLabel="Sim, ir para casa"
+        onCancel={() => setLifeTravelConfirm(null)}
+        onConfirm={() => {
+          if (lifeTravelConfirm) beginLifeTravel(lifeTravelConfirm);
+        }}
+      />
+
+      {lifeTravelRequest && (
+        <LifeTravelTransition
+          player={player}
+          request={lifeTravelRequest}
+          onComplete={handleLifeTravelComplete}
+        />
+      )}
+
+      {homeActivity && (
+        <HomeActivityTransition
+          kind={homeActivity}
+          mealLabel={homeActivity === 'MEAL' ? animatedMealLabel : undefined}
+          onComplete={handleHomeActivityComplete}
+        />
+      )}
 
       <CityRelocationModal
         player={player}
