@@ -4,12 +4,15 @@ import {
   BedDouble,
   BookOpenCheck,
   CheckCircle2,
+  Droplets,
+  Flame,
   GraduationCap,
   Home,
   LogOut,
   Map,
   BriefcaseBusiness,
   Lightbulb,
+  PackageOpen,
   ShoppingBasket,
   Utensils,
   WalletCards,
@@ -22,7 +25,11 @@ import {
   getBestBedBonuses,
   getBestStudyBonus,
   getHouseholdBillSummary,
+  getHouseholdEquipmentBonuses,
   getHouseholdMonthlyBills,
+  getHouseholdServiceStatus,
+  getPantryCapacity,
+  getSleepPlan,
   isHouseholdBillPaid,
   lifeNeedLabel,
 } from '../../lib/lifeSimulation';
@@ -34,7 +41,7 @@ interface PlayerHomeModalProps {
   onClose: () => void;
   onSleep: () => void;
   onShower: () => void;
-  onEat: () => void;
+  onEat: (pantryItemId: string) => void;
   onStudy: () => void;
   onGoToUniversity: () => void;
   onGoToOffice: () => void;
@@ -107,7 +114,27 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
   const billsPaid = isHouseholdBillPaid(player);
   const bed = getBestBedBonuses(household);
   const studyBonus = getBestStudyBonus(household);
+  const equipment = getHouseholdEquipmentBonuses(household);
+  const pantryCapacity = getPantryCapacity(household);
+  const services = getHouseholdServiceStatus(player);
+  const sleepPlan = getSleepPlan(player);
   const isIntern = player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR';
+  const [selectedPantryItemId, setSelectedPantryItemId] = React.useState<string>('');
+  const selectedPantryItem = household.pantry.find((item) => item.id === selectedPantryItemId)
+    || household.pantry.find((item) => item.quantity > 0)
+    || null;
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const currentExists = household.pantry.some(
+      (item) => item.id === selectedPantryItemId && item.quantity > 0,
+    );
+    if (!currentExists) {
+      setSelectedPantryItemId(
+        household.pantry.find((item) => item.quantity > 0)?.id || '',
+      );
+    }
+  }, [isOpen, household.pantry, selectedPantryItemId]);
   const mealLabel = player.gameCurrentMinutes >= 11 * 60 && player.gameCurrentMinutes < 16 * 60
     ? 'Almoçar'
     : player.gameCurrentMinutes >= 18 * 60 && player.gameCurrentMinutes < 23 * 60
@@ -217,15 +244,29 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
                 <h3 className="mt-1 text-base font-black text-[#E9E7E2]">Ações pessoais</h3>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
-                <button type="button" onClick={onSleep} className="rounded-xl border border-[#485B78] bg-[#17202C] p-4 text-left transition hover:border-[#6E8DB9]">
+                <button
+                  type="button"
+                  onClick={onSleep}
+                  disabled={sleepPlan.kind === 'BLOCKED'}
+                  className="rounded-xl border border-[#485B78] bg-[#17202C] p-4 text-left transition hover:border-[#6E8DB9] disabled:cursor-not-allowed disabled:opacity-45"
+                >
                   <BedDouble size={18} className="text-[#8EB6E8]" />
-                  <strong className="mt-2 block text-sm text-[#E7EDF5]">Dormir 8 horas</strong>
-                  <span className="mt-1 block text-[10px] leading-4 text-[#8B9BAE]">Recupera energia. Cama melhor aumenta a recuperação.</span>
+                  <strong className="mt-2 block text-sm text-[#E7EDF5]">{sleepPlan.label}</strong>
+                  <span className="mt-1 block text-[10px] leading-4 text-[#8B9BAE]">{sleepPlan.detail}</span>
                 </button>
-                <button type="button" onClick={onShower} className="rounded-xl border border-[#31586A] bg-[#122028] p-4 text-left transition hover:border-[#4D8299]">
+                <button
+                  type="button"
+                  onClick={onShower}
+                  disabled={!services.water}
+                  className="rounded-xl border border-[#31586A] bg-[#122028] p-4 text-left transition hover:border-[#4D8299] disabled:cursor-not-allowed disabled:opacity-45"
+                >
                   <Bath size={18} className="text-[#75C3E6]" />
                   <strong className="mt-2 block text-sm text-[#E4F0F5]">Tomar banho • 30 min</strong>
-                  <span className="mt-1 block text-[10px] leading-4 text-[#82A5B4]">Recupera higiene e consome tempo do dia.</span>
+                  <span className="mt-1 block text-[10px] leading-4 text-[#82A5B4]">
+                    {services.water
+                      ? 'Recupera higiene' + (equipment.hygieneBonus > 0 ? ' • bônus do banheiro +' + Math.round(equipment.hygieneBonus) : '') + '.'
+                      : 'Água suspensa por contas atrasadas.'}
+                  </span>
                 </button>
                 <button
                   type="button"
