@@ -187,12 +187,16 @@ export function normalizeHousehold(
           .slice(-40)
       : [],
     lastSleptGameDate: typeof value?.lastSleptGameDate === 'string' ? value.lastSleptGameDate : null,
-    lastFullSleepAtMinute: Number.isFinite(Number(value?.lastFullSleepAtMinute))
-      ? Number(value!.lastFullSleepAtMinute)
-      : null,
-    lastNapAtMinute: Number.isFinite(Number(value?.lastNapAtMinute))
-      ? Number(value!.lastNapAtMinute)
-      : null,
+    lastFullSleepAtMinute: value?.lastFullSleepAtMinute == null
+      ? null
+      : Number.isFinite(Number(value.lastFullSleepAtMinute))
+        ? Number(value.lastFullSleepAtMinute)
+        : null,
+    lastNapAtMinute: value?.lastNapAtMinute == null
+      ? null
+      : Number.isFinite(Number(value.lastNapAtMinute))
+        ? Number(value.lastNapAtMinute)
+        : null,
     lastStudiedGameDate: typeof value?.lastStudiedGameDate === 'string' ? value.lastStudiedGameDate : null,
   };
 }
