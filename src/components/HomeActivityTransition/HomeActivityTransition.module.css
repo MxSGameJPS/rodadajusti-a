@@ -1,0 +1,278 @@
+.scene {
+  position: fixed;
+  inset: 0;
+  z-index: 245;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(197, 160, 89, 0.09), transparent 38%),
+    #060809;
+  color: #ece9e2;
+}
+
+.ambient {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0.95;
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+  width: min(520px, calc(100% - 32px));
+  padding: 34px;
+  border: 1px solid rgba(197, 160, 89, 0.2);
+  border-radius: 28px;
+  background: rgba(11, 14, 18, 0.9);
+  box-shadow: 0 34px 80px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  backdrop-filter: blur(14px);
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 18px;
+  color: #a58b58;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.iconShell {
+  width: 112px;
+  height: 112px;
+  margin: 0 auto 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(197, 160, 89, 0.28);
+  border-radius: 50%;
+  background: rgba(197, 160, 89, 0.08);
+  color: #dfc580;
+  box-shadow: 0 0 44px rgba(197, 160, 89, 0.12);
+  animation: breathe 1.8s ease-in-out infinite;
+}
+
+.content h2 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(28px, 4vw, 42px);
+}
+
+.content p {
+  max-width: 390px;
+  margin: 10px auto 0;
+  color: #969da6;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.timeBadge {
+  width: fit-content;
+  margin: 22px auto 16px;
+  padding: 8px 13px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(197, 160, 89, 0.22);
+  border-radius: 999px;
+  background: rgba(197, 160, 89, 0.07);
+}
+
+.timeBadge span {
+  color: #8d949d;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.timeBadge strong {
+  color: #e2c77f;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.progressTrack {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #1d2329;
+}
+
+.progressTrack i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #80632f, #d7b767);
+  transition: width 80ms linear;
+}
+
+.content small {
+  display: block;
+  margin-top: 8px;
+  color: #69717a;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.skip {
+  margin-top: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #343a42;
+  border-radius: 10px;
+  background: #11161b;
+  padding: 9px 13px;
+  color: #abb1b9;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ambientSLEEP {
+  background: linear-gradient(180deg, #07101a 0%, #0b0d13 58%, #17120d 100%);
+  animation: nightCycle 3.6s linear forwards;
+}
+
+.moon,
+.sun {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+}
+
+.moon {
+  left: 18%;
+  top: 20%;
+  color: #d7e5f6;
+  animation: moonSet 3.6s linear forwards;
+}
+
+.sun {
+  right: 18%;
+  bottom: 15%;
+  color: #e8b95e;
+  opacity: 0;
+  animation: sunRise 3.6s linear forwards;
+}
+
+.starOne,
+.starTwo,
+.starThree {
+  position: absolute;
+  color: #e9f0ff;
+  animation: starFade 3.6s linear forwards;
+}
+
+.starOne { left: 34%; top: 19%; }
+.starTwo { right: 31%; top: 27%; }
+.starThree { left: 22%; top: 42%; }
+
+.steamOne,
+.steamTwo,
+.steamThree {
+  position: absolute;
+  bottom: -20%;
+  width: 120px;
+  height: 330px;
+  border-radius: 50%;
+  background: rgba(170, 221, 239, 0.12);
+  filter: blur(24px);
+  animation: steamRise 2.3s ease-in-out infinite;
+}
+
+.steamOne { left: 24%; }
+.steamTwo { left: 47%; animation-delay: -0.8s; }
+.steamThree { right: 22%; animation-delay: -1.4s; }
+
+.mealAccentOne,
+.mealAccentTwo {
+  position: absolute;
+  color: rgba(226, 195, 108, 0.24);
+  animation: orbitFloat 3s ease-in-out infinite;
+}
+
+.mealAccentOne {
+  width: 110px;
+  height: 110px;
+  left: 13%;
+  top: 26%;
+}
+
+.mealAccentTwo {
+  width: 90px;
+  height: 90px;
+  right: 16%;
+  bottom: 24%;
+  animation-delay: -1.2s;
+}
+
+.pageOne,
+.pageTwo,
+.pageThree {
+  position: absolute;
+  font-family: Georgia, serif;
+  color: rgba(182, 155, 233, 0.18);
+  animation: pageFloat 3.2s ease-in-out infinite;
+}
+
+.pageOne { left: 15%; top: 24%; font-size: 86px; }
+.pageTwo { right: 18%; top: 31%; font-size: 54px; animation-delay: -1.1s; }
+.pageThree { left: 26%; bottom: 20%; font-size: 62px; animation-delay: -2s; }
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.045); }
+}
+
+@keyframes nightCycle {
+  0%, 45% { filter: brightness(0.72) saturate(0.8); }
+  100% { filter: brightness(1.16) saturate(1.05); }
+}
+
+@keyframes moonSet {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(180px); opacity: 0; }
+}
+
+@keyframes sunRise {
+  0%, 42% { transform: translateY(80px); opacity: 0; }
+  100% { transform: translateY(-150px); opacity: 0.95; }
+}
+
+@keyframes starFade {
+  0%, 40% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+
+@keyframes steamRise {
+  0% { transform: translateY(35%); opacity: 0; }
+  40% { opacity: 0.6; }
+  100% { transform: translateY(-85%); opacity: 0; }
+}
+
+@keyframes orbitFloat {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50% { transform: translateY(-18px) rotate(8deg); }
+}
+
+@keyframes pageFloat {
+  0%, 100% { transform: translateY(0); opacity: 0.18; }
+  50% { transform: translateY(-26px); opacity: 0.34; }
+}
+
+@media (max-width: 620px) {
+  .content {
+    padding: 28px 20px;
+  }
+
+  .iconShell {
+    width: 92px;
+    height: 92px;
+  }
+}
