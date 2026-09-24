@@ -6,6 +6,9 @@ import {
   CheckCircle2,
   GraduationCap,
   Home,
+  LogOut,
+  Map,
+  BriefcaseBusiness,
   Lightbulb,
   ShoppingBasket,
   Utensils,
@@ -34,6 +37,7 @@ interface PlayerHomeModalProps {
   onEat: () => void;
   onStudy: () => void;
   onGoToUniversity: () => void;
+  onGoToOffice: () => void;
   onPayBills: () => void;
   onOpenCityMap: () => void;
 }
@@ -90,6 +94,7 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
   onEat,
   onStudy,
   onGoToUniversity,
+  onGoToOffice,
   onPayBills,
   onOpenCityMap,
 }) => {
@@ -132,8 +137,14 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
               </small>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#31363D] text-[#999FA7]">
-            <X size={18} />
+          <button
+            type="button"
+            onClick={onClose}
+            title="Sair de casa e abrir o mapa da cidade"
+            aria-label="Sair de casa"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#31363D] text-[#999FA7] transition hover:border-[#C5A059]/40 hover:text-[#D8BD7A]"
+          >
+            <LogOut size={18} />
           </button>
         </header>
 
@@ -142,6 +153,48 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
             {warningMessage}
           </div>
         )}
+
+        <div className="border-b border-[#282D33] bg-[#0F1216] px-5 py-4 sm:px-7">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <span className="text-[9px] font-black uppercase tracking-[0.16em] text-[#7C838C]">Sair de casa</span>
+              <p className="mt-1 text-[10px] leading-4 text-[#777E87]">
+                Escolha para onde o personagem vai. O deslocamento consome tempo e aparece no mapa.
+              </p>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:shrink-0">
+              <button
+                type="button"
+                onClick={onOpenCityMap}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#3A414A] bg-[#14191E] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#B4BBC4] transition hover:border-[#5E6874]"
+              >
+                <Map size={15} />
+                Mapa da cidade
+              </button>
+
+              <button
+                type="button"
+                onClick={onGoToOffice}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#C5A059]/35 bg-[#C5A059]/10 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#DFC77F] transition hover:bg-[#C5A059]/15"
+              >
+                <BriefcaseBusiness size={15} />
+                Ir ao escritório
+              </button>
+
+              {isIntern && (
+                <button
+                  type="button"
+                  onClick={onGoToUniversity}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#60A5FA]/30 bg-[#60A5FA]/10 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#AED0FA] transition hover:bg-[#60A5FA]/15 sm:col-span-2 lg:col-span-1"
+                >
+                  <GraduationCap size={15} />
+                  Ir à faculdade
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
 
         <div className="grid gap-5 p-5 sm:p-7 lg:grid-cols-[1.1fr_.9fr]">
           <div className="space-y-5">
