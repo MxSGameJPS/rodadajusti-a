@@ -3,9 +3,11 @@ import type {
   PlayerProfile,
   PlayerWorldLocationKind,
 } from '../types/game';
+import { GAME_CASES } from '../data/cases';
 import {
   fetchRoadRoute,
   getRamosOfficePoint,
+  getWorldPointForLocation,
   resolveStableRoadPoint,
   resolveWorldMapProfile,
   type WorldGeoPoint,
@@ -19,6 +21,7 @@ import {
 } from './lifeSimulation';
 
 export type LifeTravelPlaceId = 'OFFICE' | 'HOME' | 'UNIVERSITY';
+export type LifeTravelOriginId = LifeTravelPlaceId | 'CURRENT';
 
 export interface LifeTravelPlace {
   id: LifeTravelPlaceId;
@@ -39,7 +42,7 @@ export interface LifeTravelResult {
 }
 
 export interface LifeTravelRequest {
-  origin: LifeTravelPlaceId;
+  origin: LifeTravelOriginId;
   destination: LifeTravelPlaceId;
   reason:
     | 'GO_HOME'
@@ -86,11 +89,50 @@ export function lifePlaceFromWorldLocation(
   return 'OFFICE';
 }
 
+function currentPlaceLabel(player: PlayerProfile, profile: WorldMapProfile) {
+  if (player.worldLocation.kind === 'HOME') return lifeTravelPlace(player, profile, 'HOME');
+  if (player.worldLocation.kind === 'UNIVERSITY') return lifeTravelPlace(player, profile, 'UNIVERSITY');
+  if (player.worldLocation.kind === 'CASE_LOCATION') {
+    const caseItem = player.activeCase
+      ? GAME_CASES.find((item) => item.id === player.activeCase?.caseId)
+      : null;
+    const locationId = player.worldLocation.refId || player.activeCase?.currentLocationId;
+    const location = caseItem?.locations.find((item) => item.id === locationId);
+    if (location) {
+      return {
+        id: 'OFFICE' as const,
+        label: location.name,
+        subtitle: profile.city + '/' + profile.state,
+      };
+    }
+  }
+  return lifeTravelPlace(player, profile, 'OFFICE');
+}
+
 async function resolvePlacePoint(
   player: PlayerProfile,
   profile: WorldMapProfile,
-  place: LifeTravelPlaceId,
+  place: LifeTravelOriginId,
 ): Promise<WorldGeoPoint> {
+  if (place === 'CURRENT') {
+    if (player.worldLocation.kind === 'HOME') return getHomePoint(player, profile);
+    if (player.worldLocation.kind === 'UNIVERSITY') {
+      return resolvePlacePoint(player, profile, 'UNIVERSITY');
+    }
+    if (player.worldLocation.kind === 'CASE_LOCATION' && player.activeCase) {
+      const caseItem = GAME_CASES.find((item) => item.id === player.activeCase?.caseId);
+      const locationId = player.worldLocation.refId || player.activeCase.currentLocationId;
+      const location = caseItem?.locations.find((item) => item.id === locationId);
+      if (caseItem && location) {
+        return resolveStableRoadPoint(
+          [profile.city, profile.state, 'case', caseItem.id, location.id].join(':'),
+          getWorldPointForLocation(profile, caseItem.id, location),
+          profile.center,
+        );
+      }
+    }
+    return resolvePlacePoint(player, profile, 'OFFICE');
+  }
   if (place === 'HOME') {
     return getHomePoint(player, profile);
   }
@@ -121,7 +163,7 @@ function roundTravelMinutes(seconds: number) {
 
 export async function buildLifeTravelResult(
   player: PlayerProfile,
-  originId: LifeTravelPlaceId,
+  originId: LifeTravelOriginId,
   destinationId: LifeTravelPlaceId,
 ): Promise<LifeTravelResult> {
   const profile = await resolveWorldMapProfile(player);
@@ -146,7 +188,9 @@ export async function buildLifeTravelResult(
   return {
     route,
     profile,
-    origin: lifeTravelPlace(player, profile, originId),
+    origin: originId === 'CURRENT'
+      ? currentPlaceLabel(player, profile)
+      : lifeTravelPlace(player, profile, originId),
     destination: lifeTravelPlace(player, profile, destinationId),
     travelMinutes: roundTravelMinutes(route.durationSeconds),
     distanceKm,
