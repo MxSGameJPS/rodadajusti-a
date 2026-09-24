@@ -1214,6 +1214,154 @@ export default function App() {
     });
   };
 
+  const beginLifeTravel = (request: LifeTravelRequest) => {
+    setLifeTravelConfirm(null);
+    setLifeWarning('');
+    setIsPlayerHomeOpen(false);
+    setIsCityWorldMapOpen(false);
+    setLifeTravelRequest(request);
+  };
+
+  const handleRequestGoHome = () => {
+    if (player.worldLocation.kind === 'HOME') {
+      setLifeWarning('');
+      setIsCityWorldMapOpen(false);
+      setIsPlayerHomeOpen(true);
+      return;
+    }
+
+    setLifeTravelConfirm({
+      origin: 'CURRENT',
+      destination: 'HOME',
+      reason: 'GO_HOME',
+    });
+  };
+
+  const handleRequestGoOffice = () => {
+    if (player.worldLocation.kind === 'OFFICE') {
+      setIsCityWorldMapOpen(false);
+      setIsPlayerHomeOpen(false);
+      setCurrentView('HUB');
+      return;
+    }
+
+    beginLifeTravel({
+      origin: 'CURRENT',
+      destination: 'OFFICE',
+      reason: 'GO_OFFICE',
+    });
+  };
+
+  const handleRequestUniversityTrip = () => {
+    const isIntern = player.careerTier === 'ESTAGIARIO'
+      || player.careerTier === 'ESTAGIARIO_SENIOR';
+    if (!isIntern) return;
+
+    if (player.worldLocation.kind === 'UNIVERSITY') {
+      setIsPlayerHomeOpen(false);
+      setIsCityWorldMapOpen(false);
+      setHomeActivity('STUDY_UNIVERSITY');
+      return;
+    }
+
+    beginLifeTravel({
+      origin: 'CURRENT',
+      destination: 'UNIVERSITY',
+      reason: 'GO_UNIVERSITY',
+    });
+  };
+
+  const handleLifeTravelComplete = (result: LifeTravelResult) => {
+    const request = lifeTravelRequest;
+    if (!request) return;
+
+    setPlayer((prev) => {
+      const clock = gameClockFields(prev, result.travelMinutes);
+      const finances = result.cost > 0
+        ? appendPersonalFinanceTransaction(
+            prev.personalFinances,
+            createPersonalExpense(prev, {
+              category: result.expenseCategory,
+              amount: result.cost,
+              title: `Deslocamento — ${result.destination.label}`,
+              description: `${result.transport === 'CAR' ? 'Carro próprio' : 'Ônibus'} • ${result.distanceKm.toFixed(1)} km.`,
+              source: 'LIFE_TRAVEL',
+            }),
+          )
+        : prev.personalFinances;
+
+      return {
+        ...prev,
+        ...clock,
+        money: Math.max(0, prev.money - result.cost),
+        personalFinances: finances,
+        worldLocation: worldLocationForLifePlace(
+          request.destination,
+          result.destination.label,
+        ),
+      };
+    });
+
+    setLifeTravelRequest(null);
+
+    if (request.reason === 'GO_HOME' || request.reason === 'RETURN_HOME_AFTER_STUDY') {
+      setIsPlayerHomeOpen(true);
+      return;
+    }
+
+    if (request.reason === 'GO_OFFICE') {
+      setCurrentView('HUB');
+      return;
+    }
+
+    if (request.reason === 'GO_UNIVERSITY') {
+      setHomeActivity('STUDY_UNIVERSITY');
+    }
+  };
+
+  const handleHomeActivityComplete = () => {
+    const activity = homeActivity;
+    if (!activity) return;
+
+    setHomeActivity(null);
+
+    if (activity === 'SLEEP') {
+      handleSleepAtHome();
+      return;
+    }
+
+    if (activity === 'SHOWER') {
+      handleShowerAtHome();
+      return;
+    }
+
+    if (activity === 'MEAL') {
+      handleEatAtHome();
+      return;
+    }
+
+    if (activity === 'STUDY_HOME') {
+      handleStudyAtHome();
+      return;
+    }
+
+    handleStudyAtUniversity();
+    setLifeTravelRequest({
+      origin: 'UNIVERSITY',
+      destination: 'HOME',
+      reason: 'RETURN_HOME_AFTER_STUDY',
+    });
+  };
+
+  const handleClosePlayerHome = () => {
+    setLifeWarning('');
+    setIsPlayerHomeOpen(false);
+
+    if (player.worldLocation.kind === 'HOME') {
+      setIsCityWorldMapOpen(true);
+    }
+  };
+
   const handlePurchaseWorldOffer = (
     establishment: WorldEstablishment,
     offer: WorldEstablishmentOffer,
