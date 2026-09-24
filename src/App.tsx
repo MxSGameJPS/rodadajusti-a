@@ -1444,6 +1444,26 @@ export default function App() {
       const value = Number(effects[key]);
       return Number.isFinite(value) ? Math.max(0, value) : fallback;
     };
+    const booleanEffect = (key: string, fallback: boolean) => {
+      const value = effects[key];
+      if (typeof value === 'boolean') return value;
+      if (typeof value === 'string') {
+        if (value.toLowerCase() === 'true') return true;
+        if (value.toLowerCase() === 'false') return false;
+      }
+      return fallback;
+    };
+
+    if (kind === 'FOOD') {
+      const units = Math.max(1, Math.floor(numberEffect('foodUnits', 1)));
+      const capacity = getPantryCapacity(player.household);
+      if (player.household.foodUnits + units > capacity) {
+        return {
+          ok: false,
+          message: `Despensa sem espaço. Capacidade atual: ${capacity} unidade(s). Melhore geladeira/armazenamento para guardar mais alimentos.`,
+        };
+      }
+    }
 
     let message = `${offer.title} adquirido por JR$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`;
 
@@ -1456,18 +1476,66 @@ export default function App() {
 
       if (kind === 'FOOD') {
         const foodUnits = Math.max(1, Math.floor(numberEffect('foodUnits', 1)));
+        const hungerRestore = Math.max(10, numberEffect('hungerRestore', 52));
+        const energyRestore = numberEffect('energyRestore', 4);
+        const rawMealType = String(effects.mealType || 'ANY').toUpperCase();
+        const mealType = (
+          ['ANY', 'BREAKFAST', 'LUNCH_DINNER', 'SNACK'].includes(rawMealType)
+            ? rawMealType
+            : 'ANY'
+        ) as PlayerProfile['household']['pantry'][number]['mealType'];
+        const requiresCooking = booleanEffect('requiresCooking', true);
+        const existing = household.pantry.find((item) => item.offerId === offer.id);
+
+        const pantry = existing
+          ? household.pantry.map((item) => item.offerId === offer.id
+              ? {
+                  ...item,
+                  quantity: item.quantity + foodUnits,
+                  hungerRestore,
+                  energyRestore,
+                  mealType,
+                  requiresCooking,
+                  imageUrl: offer.imageUrl || item.imageUrl,
+                }
+              : item)
+          : [
+              ...household.pantry,
+              {
+                id: `pantry-${offer.id}-${Date.now()}`,
+                offerId: offer.id,
+                establishmentId: establishment.id,
+                title: offer.title,
+                imageUrl: offer.imageUrl,
+                quantity: foodUnits,
+                hungerRestore,
+                energyRestore,
+                mealType,
+                requiresCooking,
+                purchasedAtGameDate: currentGameDateLabel(prev),
+              },
+            ].slice(-100);
+
         household = {
           ...household,
+          pantry,
           foodUnits: household.foodUnits + foodUnits,
         };
         category = 'SUPERMERCADO';
         message = `${offer.title}: +${foodUnits} unidade(s) adicionadas à despensa.`;
-      } else if (kind === 'BED' || kind === 'FURNITURE' || kind === 'STUDY_FURNITURE') {
+      } else if (
+        kind === 'BED'
+        || kind === 'FURNITURE'
+        || kind === 'STUDY_FURNITURE'
+        || kind === 'APPLIANCE'
+      ) {
         const furnitureKind = kind === 'BED'
           ? 'BED'
           : kind === 'STUDY_FURNITURE'
             ? (String(effects.furnitureKind || '').toUpperCase() || 'DESK')
-            : String(effects.furnitureKind || '').toUpperCase();
+            : kind === 'APPLIANCE'
+              ? 'APPLIANCE'
+              : String(effects.furnitureKind || '').toUpperCase();
 
         household = {
           ...household,
@@ -1483,6 +1551,9 @@ export default function App() {
               comfortBonus: numberEffect('comfortBonus'),
               energyBonus: numberEffect('energyBonus'),
               studyBonus: numberEffect('studyBonus'),
+              hygieneBonus: numberEffect('hygieneBonus'),
+              mealBonus: numberEffect('mealBonus'),
+              foodStorageBonus: numberEffect('foodStorageBonus'),
               purchasedAtGameDate: currentGameDateLabel(prev),
             },
           ].slice(-100),
