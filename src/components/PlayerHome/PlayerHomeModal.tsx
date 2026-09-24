@@ -407,6 +407,43 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
                 </div>
                 {billsPaid ? <CheckCircle2 size={20} className="text-[#34D399]" /> : <WalletCards size={20} className="text-[#FBBF24]" />}
               </div>
+              <div className="mb-3 grid grid-cols-2 gap-2">
+                {[
+                  { label: 'Água', active: services.water, icon: <Droplets size={13} /> },
+                  { label: 'Energia', active: services.electricity, icon: <Lightbulb size={13} /> },
+                  { label: 'Internet', active: services.internet, icon: <Wifi size={13} /> },
+                  { label: 'Gás', active: services.gas, icon: <Flame size={13} /> },
+                ].map((service) => (
+                  <div
+                    key={service.label}
+                    className={
+                      'flex items-center justify-between rounded-lg border px-2.5 py-2 '
+                      + (service.active
+                        ? 'border-[#34D399]/15 bg-[#34D399]/5 text-[#8FDDBE]'
+                        : 'border-[#F87171]/25 bg-[#F87171]/8 text-[#FCA5A5]')
+                    }
+                  >
+                    <span className="flex items-center gap-1.5 text-[9px] font-black uppercase">
+                      {service.icon}{service.label}
+                    </span>
+                    <strong className="text-[8px]">{service.active ? 'ATIVO' : 'SUSPENSO'}</strong>
+                  </div>
+                ))}
+              </div>
+
+              {services.warning && (
+                <div
+                  className={
+                    'mb-3 rounded-lg border px-3 py-2 text-[9px] leading-4 '
+                    + (services.suspended
+                      ? 'border-[#F87171]/25 bg-[#F87171]/8 text-[#FCA5A5]'
+                      : 'border-[#FBBF24]/20 bg-[#FBBF24]/7 text-[#DCC27B]')
+                  }
+                >
+                  {services.warning}
+                </div>
+              )}
+
               <div className="space-y-2 text-[10px]">
                 <div className="flex justify-between"><span className="text-[#8A9098]">Aluguel</span><strong>JR$ {formatMoney(bills.rent)}</strong></div>
                 <div className="flex justify-between"><span className="text-[#8A9098]">Água</span><strong>JR$ {formatMoney(bills.water)}</strong></div>
@@ -460,6 +497,17 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
                   <span className="mt-2 block text-[#777E87]">Veículos</span>
                   <strong className="mt-1 block text-[#E6EDF7]">{household.vehicles.length}</strong>
                 </div>
+                <div className="rounded-xl border border-[#292D32] bg-[#0D1014] p-3">
+                  <Droplets size={15} className="text-[#75C3E6]" />
+                  <span className="mt-2 block text-[#777E87]">Banheiro</span>
+                  <strong className="mt-1 block text-[#E4F0F5]">+{Math.round(equipment.hygieneBonus)} higiene</strong>
+                </div>
+                <div className="rounded-xl border border-[#292D32] bg-[#0D1014] p-3">
+                  <Utensils size={15} className="text-[#E1C36C]" />
+                  <span className="mt-2 block text-[#777E87]">Cozinha</span>
+                  <strong className="mt-1 block text-[#F2E9D3]">+{Math.round(equipment.mealBonus)} refeição</strong>
+                </div>
+
               </div>
 
               {(household.furniture.length > 0 || household.vehicles.length > 0) && (
@@ -481,7 +529,10 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
                             {item.kind}
                             {item.energyBonus > 0 ? ` • +${item.energyBonus} energia` : ''}
                             {item.comfortBonus > 0 ? ` • +${item.comfortBonus} conforto` : ''}
-                            {item.studyBonus > 0 ? ` • +${item.studyBonus} estudo` : ''}
+                            {item.studyBonus > 0 ? ' • +' + item.studyBonus + ' estudo' : ''}
+                            {item.hygieneBonus > 0 ? ' • +' + item.hygieneBonus + ' higiene' : ''}
+                            {item.mealBonus > 0 ? ' • +' + item.mealBonus + ' refeição' : ''}
+                            {item.foodStorageBonus > 0 ? ' • +' + item.foodStorageBonus + ' armazenamento' : ''}
                           </span>
                         </div>
                       </article>
