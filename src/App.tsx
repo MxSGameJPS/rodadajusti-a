@@ -42,6 +42,12 @@ import {
 import { InternshipCareerPanel } from './components/InternshipCareerPanel';
 import { CityWorldMapModal } from './components/CityWorldMap/CityWorldMapModal';
 import { PlayerHomeModal } from './components/PlayerHome/PlayerHomeModal';
+import { LifeTravelConfirmModal } from './components/LifeTravel/LifeTravelConfirmModal';
+import { LifeTravelTransition } from './components/LifeTravel/LifeTravelTransition';
+import {
+  HomeActivityTransition,
+  type HomeActivityKind,
+} from './components/HomeActivityTransition/HomeActivityTransition';
 import {
   ResidenceSetupModal,
   type ResidenceSetupResult,
@@ -65,6 +71,12 @@ import { sound } from './utils/sound';
 import { normalizeCareerOrigin, saveCareerOrigin } from './lib/careerOrigin';
 import { saveWorldMapProfile, type WorldAddressProfile, type WorldMapProfile } from './lib/worldMap';
 import type { WorldEstablishment, WorldEstablishmentOffer } from './lib/worldEstablishments';
+import {
+  lifePlaceFromWorldLocation,
+  type LifeTravelRequest,
+  type LifeTravelResult,
+  worldLocationForLifePlace,
+} from './lib/lifeTravel';
 import { supabase } from './lib/supabase';
 import { canManageOwnOffice } from './lib/independentPractice';
 import {
@@ -227,6 +239,11 @@ const INITIAL_PLAYER_STATE: PlayerProfile = {
     furniture: [],
     vehicles: [],
   },
+  worldLocation: {
+    kind: 'OFFICE',
+    refId: null,
+    label: 'Ramos & Associados',
+  },
   officeDiscipline: {
     warningCount: 0,
     employmentStatus: 'ACTIVE',
@@ -293,6 +310,17 @@ function normalizeSavedPlayer(saved: Partial<PlayerProfile>): PlayerProfile {
     },
     personalFinances: normalizedPersonalFinances,
     household: normalizeHousehold(saved.household, saved.homeCity || '', saved.homeState || ''),
+    worldLocation: saved.worldLocation
+      ? {
+          kind: saved.worldLocation.kind || 'OFFICE',
+          refId: saved.worldLocation.refId || null,
+          label: saved.worldLocation.label || 'Ramos & Associados',
+        }
+      : {
+          kind: 'OFFICE',
+          refId: null,
+          label: 'Ramos & Associados',
+        },
     officeDiscipline: {
       ...INITIAL_PLAYER_STATE.officeDiscipline,
       ...(saved.officeDiscipline || {}),
@@ -344,6 +372,9 @@ export default function App() {
   const [isCityWorldMapOpen, setIsCityWorldMapOpen] = useState<boolean>(false);
   const [isPlayerHomeOpen, setIsPlayerHomeOpen] = useState<boolean>(false);
   const [lifeWarning, setLifeWarning] = useState('');
+  const [lifeTravelConfirm, setLifeTravelConfirm] = useState<LifeTravelRequest | null>(null);
+  const [lifeTravelRequest, setLifeTravelRequest] = useState<LifeTravelRequest | null>(null);
+  const [homeActivity, setHomeActivity] = useState<HomeActivityKind | null>(null);
 
   const openOfficeManagement = () => {
     if (!canManageOwnOffice(player)) {
