@@ -115,3 +115,48 @@ Para bancos existentes, aplicar:
 `supabase/migrations/20260923110000_establishments_life_products.sql`
 
 Essa migration adiciona `LOJA_MOVEIS` à constraint de tipos comerciais. Os efeitos de produtos usam a coluna JSONB `gameplay_effects`, já existente.
+
+
+## Casa V1 — rotina doméstica avançada
+
+### Sono e cochilo
+
+- entre 20h e 06h o personagem pode fazer sono completo de 8 horas;
+- durante o dia a ação vira cochilo de 1h30;
+- sono completo e cochilo possuem intervalo mínimo para evitar spam;
+- cama e conforto continuam influenciando a recuperação.
+
+### Despensa por item
+
+O save mantém `pantry[]` com:
+
+- título e imagem do produto;
+- quantidade;
+- saciedade e energia;
+- tipo de refeição;
+- necessidade ou não de preparo com gás.
+
+Saves antigos com apenas `foodUnits` são migrados automaticamente para um item de despensa legado.
+
+A capacidade inicial é 12 unidades e pode ser ampliada por eletrodomésticos com `foodStorageBonus`.
+
+### Contas e serviços
+
+Uma competência pendente gera aviso. A partir de duas competências pendentes, os serviços domésticos ficam suspensos até a regularização:
+
+- água: bloqueia banho;
+- gás: bloqueia alimentos que exigem preparo;
+- energia/internet: bloqueiam estudo em casa.
+
+### Equipamentos
+
+Móveis/eletrodomésticos podem fornecer:
+
+- `energyBonus`;
+- `comfortBonus`;
+- `studyBonus`;
+- `hygieneBonus`;
+- `mealBonus`;
+- `foodStorageBonus`.
+
+O Rota Admin grava esses valores em `establishment_offers.gameplay_effects`.
