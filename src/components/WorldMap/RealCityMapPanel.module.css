@@ -1075,3 +1075,15 @@
   transform: translateX(-50%);
   pointer-events: auto;
 }
+
+
+.lifeMarkerOffice .lifeMarkerIcon {
+  border-color: rgba(197, 160, 89, 0.76);
+  color: #e2c77f;
+  box-shadow: 0 0 18px rgba(197, 160, 89, 0.24);
+}
+
+.lifeMarkerOffice .lifeMarkerCaption {
+  border-color: rgba(197, 160, 89, 0.22);
+  color: #eadfca;
+}
