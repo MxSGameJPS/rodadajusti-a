@@ -386,8 +386,19 @@ export default function App() {
   const ensureLifeReady = () => {
     const reason = getLifeBlockingReason(player);
     if (!reason) return true;
+
     setLifeWarning(reason);
-    setIsPlayerHomeOpen(true);
+
+    if (player.worldLocation.kind === 'HOME') {
+      setIsPlayerHomeOpen(true);
+    } else {
+      setLifeTravelConfirm({
+        origin: 'CURRENT',
+        destination: 'HOME',
+        reason: 'GO_HOME',
+      });
+    }
+
     return false;
   };
 
@@ -1543,6 +1554,11 @@ export default function App() {
             billsPaidThroughKey: null,
           },
         },
+        worldLocation: {
+          kind: 'HOME',
+          refId: null,
+          label: 'Sua casa',
+        },
         personalFinances: appendPersonalFinanceTransaction(
           prev.personalFinances,
           createPersonalExpense(prev, {
@@ -1833,7 +1849,12 @@ export default function App() {
       <CityWorldMapModal
         player={player}
         isOpen={isCityWorldMapOpen}
-        onClose={() => setIsCityWorldMapOpen(false)}
+        onClose={() => {
+          setIsCityWorldMapOpen(false);
+          if (player.worldLocation.kind === 'HOME') {
+            setIsPlayerHomeOpen(true);
+          }
+        }}
         onOpenHome={handleRequestGoHome}
         onGoToOffice={handleRequestGoOffice}
         onStudyAtUniversity={handleRequestUniversityTrip}
