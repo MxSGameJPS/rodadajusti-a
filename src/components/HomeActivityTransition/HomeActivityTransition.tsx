@@ -130,13 +130,20 @@ export const HomeActivityTransition: React.FC<HomeActivityTransitionProps> = ({
   return (
     <section className={styles.scene}>
       <div className={`${styles.ambient} ${styles['ambient' + kind]}`} aria-hidden="true">
-        {(kind === 'SLEEP' || kind === 'NAP') && (
+        {kind === 'SLEEP' && (
           <>
             <Moon className={styles.moon} />
             <Sun className={styles.sun} />
             <span className={styles.starOne}>✦</span>
             <span className={styles.starTwo}>✦</span>
             <span className={styles.starThree}>✦</span>
+          </>
+        )}
+
+        {kind === 'NAP' && (
+          <>
+            <Sun className={styles.napSun} />
+            <span className={styles.napGlow} />
           </>
         )}
 
