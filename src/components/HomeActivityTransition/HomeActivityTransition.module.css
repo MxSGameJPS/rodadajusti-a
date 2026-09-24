@@ -276,3 +276,37 @@
     height: 92px;
   }
 }
+
+
+.ambientNAP {
+  background:
+    radial-gradient(circle at 68% 24%, rgba(241, 196, 100, 0.16), transparent 20%),
+    linear-gradient(180deg, #111821 0%, #15171A 58%, #17130E 100%);
+}
+
+.napSun {
+  position: absolute;
+  top: 13%;
+  right: 17%;
+  width: 84px;
+  height: 84px;
+  color: rgba(239, 190, 87, 0.55);
+  animation: napDrift 2.4s ease-in-out infinite;
+}
+
+.napGlow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 25%, rgba(235, 194, 105, 0.06), transparent 70%);
+  animation: napLight 2.4s ease-in-out infinite;
+}
+
+@keyframes napDrift {
+  0%, 100% { transform: translateY(0); opacity: .5; }
+  50% { transform: translateY(10px); opacity: .78; }
+}
+
+@keyframes napLight {
+  0%, 100% { opacity: .45; }
+  50% { opacity: .9; }
+}
