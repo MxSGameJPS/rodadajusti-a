@@ -69,6 +69,11 @@ export function createDemoLawyer(caseItem: LegalCase | null): PlayerProfile {
       employees: [],
       monthlyRevenueHistory: [],
     },
+    worldLocation: {
+      kind: 'OFFICE',
+      refId: null,
+      label: 'Ramos & Associados',
+    },
     officeDiscipline: {
       warningCount: 0,
       employmentStatus: 'ACTIVE',
