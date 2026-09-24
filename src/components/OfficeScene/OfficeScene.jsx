@@ -244,17 +244,22 @@ export function OfficeScene({
         </div>
 
         <div className={styles.caseStatus}>
-          <GameClock
-            player={player}
-            hoursLeft={hoursLeft}
-            caseTitle={activeCase?.title || null}
-            cityLabel={cityLabel}
-            worldProfile={worldProfile}
-            declaredCity={declaredCity}
-          />
-          <PlayerNeedsStrip player={player} compact />
-          <div>
-            <MapPin size={16} />
+          <div className={styles.statusTop}>
+            <GameClock
+              player={player}
+              hoursLeft={hoursLeft}
+              caseTitle={activeCase?.title || null}
+              cityLabel={cityLabel}
+              worldProfile={worldProfile}
+              declaredCity={declaredCity}
+            />
+            <div className={styles.needsRow}>
+              <PlayerNeedsStrip player={player} compact />
+            </div>
+          </div>
+
+          <div className={styles.locationRow}>
+            <MapPin size={15} />
             <span>Local Atual:</span>
             <strong>{currentLocation}</strong>
           </div>
