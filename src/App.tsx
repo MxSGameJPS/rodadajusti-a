@@ -631,6 +631,11 @@ export default function App() {
               }),
             )
           : prev.personalFinances,
+        worldLocation: {
+          kind: 'CASE_LOCATION',
+          refId: loc.id,
+          label: loc.name,
+        },
         activeCase: {
           ...prev.activeCase,
           hoursSpent: newHoursSpent,
