@@ -7,6 +7,7 @@ import {
   loadMapLibre,
 } from '../../lib/maplibreClient';
 import {
+  getRamosOfficePoint,
   readWorldMapProfile,
   resolveWorldMapProfile,
   resolveStableRoadPoint,
@@ -36,6 +37,7 @@ interface CityWorldMapModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenHome: () => void;
+  onGoToOffice: () => void;
   onStudyAtUniversity: () => void;
   onPurchaseOffer: (
     establishment: WorldEstablishment,
@@ -88,12 +90,16 @@ function buildEstablishmentMarker(establishment: WorldEstablishment) {
   return element;
 }
 
-function buildLifeMarker(label: string, glyph: string, tone: 'HOME' | 'UNIVERSITY') {
+function buildLifeMarker(label: string, glyph: string, tone: 'HOME' | 'UNIVERSITY' | 'OFFICE') {
   const element = document.createElement('button');
   element.type = 'button';
   element.className = [
     styles.lifeMarker,
-    tone === 'HOME' ? styles.lifeMarkerHome : styles.lifeMarkerUniversity,
+    tone === 'HOME'
+      ? styles.lifeMarkerHome
+      : tone === 'OFFICE'
+        ? styles.lifeMarkerOffice
+        : styles.lifeMarkerUniversity,
   ].join(' ');
 
   const icon = document.createElement('span');
@@ -115,6 +121,7 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
   isOpen,
   onClose,
   onOpenHome,
+  onGoToOffice,
   onStudyAtUniversity,
   onPurchaseOffer,
 }) => {
@@ -124,7 +131,7 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
   const [profile, setProfile] = useState<WorldMapProfile | null>(null);
   const [establishments, setEstablishments] = useState<WorldEstablishment[]>([]);
   const [selected, setSelected] = useState<WorldEstablishment | null>(null);
-  const [selectedLifeLocation, setSelectedLifeLocation] = useState<'HOME' | 'UNIVERSITY' | null>(null);
+  const [selectedLifeLocation, setSelectedLifeLocation] = useState<'HOME' | 'UNIVERSITY' | 'OFFICE' | null>(null);
   const [purchaseMessage, setPurchaseMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [mapError, setMapError] = useState('');
@@ -212,6 +219,25 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
           markersRef.current.push(
             new maplibre.Marker({ element: homeElement, anchor: 'bottom' })
               .setLngLat([homePoint.lng, homePoint.lat])
+              .addTo(map),
+          );
+
+          const officePoint = await resolveStableRoadPoint(
+            stableCityPointKey(profile, 'office:ramos'),
+            getRamosOfficePoint(profile),
+            profile.center,
+          );
+          if (disposed) return;
+          bounds.extend([officePoint.lng, officePoint.lat]);
+          const officeElement = buildLifeMarker('Ramos & Associados', 'RA', 'OFFICE');
+          officeElement.addEventListener('click', () => {
+            setSelected(null);
+            setSelectedLifeLocation('OFFICE');
+            setPurchaseMessage('');
+          });
+          markersRef.current.push(
+            new maplibre.Marker({ element: officeElement, anchor: 'bottom' })
+              .setLngLat([officePoint.lng, officePoint.lat])
               .addTo(map),
           );
 
@@ -352,6 +378,24 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
           </div>
         )}
 
+        {selectedLifeLocation === 'OFFICE' && (
+          <div className="absolute bottom-5 left-5 right-5 z-20 ml-auto w-[min(520px,calc(100%-40px))] rounded-2xl border border-[#C5A059]/30 bg-[#0B0D10]/95 p-4 shadow-2xl backdrop-blur-xl">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#C5A059]/25 bg-[#C5A059]/10 font-serif text-sm font-black text-[#DFC77F]">R&A</div>
+              <div className="min-w-0 flex-1">
+                <span className="text-[8px] font-black uppercase tracking-wider text-[#9D895B]">Local de trabalho</span>
+                <h3 className="mt-1 font-serif text-xl font-black text-[#F1EEE8]">Ramos & Associados</h3>
+                <p className="mt-1 text-xs leading-5 text-[#9A9FA7]">
+                  Escritório profissional • {profile?.city}/{profile?.state}
+                </p>
+                <button type="button" onClick={onGoToOffice} className="mt-3 rounded-xl bg-[#9A783D] px-4 py-2.5 text-xs font-black text-[#11100D]">
+                  Ir para o escritório
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {selectedLifeLocation === 'HOME' && (
           <div className="absolute bottom-5 left-5 right-5 z-20 ml-auto w-[min(520px,calc(100%-40px))] rounded-2xl border border-[#D8B768]/30 bg-[#0B0D10]/95 p-4 shadow-2xl backdrop-blur-xl">
             <div className="flex items-start gap-3">
@@ -363,7 +407,7 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
                   {player.household.residence.street} • ponto residencial aproximado • {player.household.residence.city}/{player.household.residence.state}
                 </p>
                 <button type="button" onClick={onOpenHome} className="mt-3 rounded-xl bg-[#9A783D] px-4 py-2.5 text-xs font-black text-[#11100D]">
-                  Entrar em casa
+                  Ir para casa
                 </button>
               </div>
             </div>
@@ -382,7 +426,7 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
                   type="button"
                   onClick={() => {
                     onStudyAtUniversity();
-                    setPurchaseMessage('Você estudou na faculdade. 3 horas se passaram.');
+                    setPurchaseMessage('Preparando deslocamento para a faculdade...');
                   }}
                   className="mt-3 rounded-xl bg-[#315F91] px-4 py-2.5 text-xs font-black text-white"
                 >
