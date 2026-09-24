@@ -270,6 +270,19 @@ export interface PlayerHouseholdState {
   lastStudiedGameDate: string | null;
 }
 
+export type PlayerWorldLocationKind =
+  | 'OFFICE'
+  | 'HOME'
+  | 'UNIVERSITY'
+  | 'CASE_LOCATION'
+  | 'ESTABLISHMENT';
+
+export interface PlayerWorldLocationState {
+  kind: PlayerWorldLocationKind;
+  refId: string | null;
+  label: string;
+}
+
 export interface CaseLogEntry {
   id: string;
   timestampGameHours: number;
@@ -493,6 +506,7 @@ export interface PlayerProfile {
   officeFinances: OfficeFinances;
   personalFinances: PersonalFinanceState;
   household: PlayerHouseholdState;
+  worldLocation: PlayerWorldLocationState;
   officeDiscipline: OfficeDisciplineState;
   officePerformance: OfficePerformanceState;
   concursoCompletedPhases: string[];
