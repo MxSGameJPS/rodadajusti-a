@@ -270,18 +270,38 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={onEat}
-                  disabled={household.foodUnits <= 0}
+                  onClick={() => {
+                    if (selectedPantryItem) onEat(selectedPantryItem.id);
+                  }}
+                  disabled={
+                    !selectedPantryItem
+                    || (selectedPantryItem.requiresCooking && !services.gas)
+                  }
                   className="rounded-xl border border-[#5D5231] bg-[#211D12] p-4 text-left transition hover:border-[#8A7844] disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   <Utensils size={18} className="text-[#E1C36C]" />
                   <strong className="mt-2 block text-sm text-[#F2E9D3]">{mealLabel} • 45 min</strong>
-                  <span className="mt-1 block text-[10px] leading-4 text-[#A99B75]">Consome 1 unidade da despensa. Restam {household.foodUnits}.</span>
+                  <span className="mt-1 block text-[10px] leading-4 text-[#A99B75]">
+                    {!selectedPantryItem
+                      ? 'Despensa vazia.'
+                      : selectedPantryItem.requiresCooking && !services.gas
+                        ? 'Este alimento precisa de preparo, mas o gás está suspenso.'
+                        : selectedPantryItem.title + ' • +' + Math.round(selectedPantryItem.hungerRestore + equipment.mealBonus) + ' saciedade.'}
+                  </span>
                 </button>
-                <button type="button" onClick={onStudy} className="rounded-xl border border-[#4A3F69] bg-[#191525] p-4 text-left transition hover:border-[#725F9E]">
+                <button
+                  type="button"
+                  onClick={onStudy}
+                  disabled={!services.electricity || !services.internet}
+                  className="rounded-xl border border-[#4A3F69] bg-[#191525] p-4 text-left transition hover:border-[#725F9E] disabled:cursor-not-allowed disabled:opacity-45"
+                >
                   <BookOpenCheck size={18} className="text-[#B69BE9]" />
                   <strong className="mt-2 block text-sm text-[#EEE8F8]">{isIntern ? 'Estudar para a faculdade • 2h' : 'Estudo profissional • 2h'}</strong>
-                  <span className="mt-1 block text-[10px] leading-4 text-[#9588AA]">Mantém a rotina acadêmica/profissional em dia.</span>
+                  <span className="mt-1 block text-[10px] leading-4 text-[#9588AA]">
+                    {!services.electricity || !services.internet
+                      ? 'Energia e internet precisam estar ativas para estudar em casa.'
+                      : 'Mantém a rotina em dia' + (studyBonus > 0 ? ' • bônus do ambiente +' + Math.round(studyBonus) : '') + '.'}
+                  </span>
                 </button>
               </div>
             </section>
