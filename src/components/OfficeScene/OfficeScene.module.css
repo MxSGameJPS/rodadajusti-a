@@ -40,9 +40,9 @@
   z-index: 20;
   height: 94px;
   display: grid;
-  grid-template-columns: minmax(320px, 1.25fr) minmax(330px, 1fr) minmax(260px, 0.85fr) minmax(125px, 0.42fr) auto;
+  grid-template-columns: minmax(420px, 1.2fr) minmax(390px, 1fr) minmax(240px, 0.64fr) minmax(140px, 0.36fr) auto;
   align-items: center;
-  gap: 22px;
+  gap: 18px;
   padding: 0 24px 0 26px;
   border-bottom: 1px solid rgba(206, 168, 91, 0.52);
   background: rgba(5, 8, 10, 0.92);
@@ -95,35 +95,70 @@
 }
 
 .caseStatus {
+  min-width: 0;
   display: grid;
+  align-content: center;
+  gap: 6px;
+}
+
+.statusTop {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(150px, 0.9fr) minmax(180px, 1.1fr);
+  align-items: center;
   gap: 8px;
+}
+
+.statusTop > button {
+  width: 100%;
   min-width: 0;
 }
 
-.caseStatus > div {
-  display: grid;
-  grid-template-columns: 18px auto 1fr;
-  align-items: center;
-  gap: 9px;
+.needsRow {
   min-width: 0;
+  overflow: hidden;
+}
+
+.needsRow > div {
+  width: 100%;
+  flex-wrap: nowrap;
+  justify-content: stretch;
+  gap: 4px;
+}
+
+.needsRow > div > div {
+  min-width: 0;
+  flex: 1 1 0;
+  justify-content: center;
+  padding: 5px 4px;
+}
+
+.locationRow {
+  min-width: 0;
+  min-height: 23px;
+  display: grid;
+  grid-template-columns: 16px auto minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  padding-inline: 2px;
   font-family: Georgia, 'Times New Roman', serif;
 }
 
-.caseStatus svg {
+.locationRow svg {
   color: var(--gold);
 }
 
-.caseStatus span {
-  font-size: 13px;
-  color: #d8d0c2;
+.locationRow span {
+  color: #aaa295;
+  font-size: 10px;
   white-space: nowrap;
 }
 
-.caseStatus strong {
+.locationRow strong {
   min-width: 0;
   overflow: hidden;
   color: var(--gold-bright);
-  font-size: 14px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -720,8 +755,8 @@
 
 .dockActions {
   display: grid;
-  grid-template-columns: repeat(5, minmax(112px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(6, minmax(100px, 1fr));
+  gap: 9px;
 }
 
 .dockActions button {
@@ -993,9 +1028,31 @@
   padding: 0 20px;
 }
 
+@media (max-width: 1660px) {
+  .topBar {
+    grid-template-columns: minmax(350px, 1.12fr) minmax(360px, 1fr) minmax(205px, 0.58fr) minmax(120px, 0.32fr) auto;
+    gap: 14px;
+    padding-inline: 20px;
+  }
+
+  .brand strong {
+    font-size: clamp(22px, 1.55vw, 29px);
+  }
+
+  .topQuote {
+    padding-inline: 14px;
+    font-size: 12px;
+  }
+
+  .statusTop {
+    grid-template-columns: minmax(142px, 0.88fr) minmax(170px, 1.12fr);
+    gap: 6px;
+  }
+}
+
 @media (max-width: 1420px) {
   .topBar {
-    grid-template-columns: minmax(270px, 1.2fr) minmax(300px, 1fr) minmax(220px, 0.72fr) minmax(112px, 0.38fr) auto;
+    grid-template-columns: minmax(270px, 1.15fr) minmax(330px, 1fr) minmax(190px, 0.62fr) minmax(112px, 0.34fr) auto;
     gap: 12px;
     padding-inline: 18px;
   }
@@ -1059,7 +1116,7 @@
   }
 
   .dockActions {
-    grid-template-columns: repeat(5, minmax(92px, 1fr));
+    grid-template-columns: repeat(6, minmax(68px, 1fr));
     gap: 6px;
   }
 
@@ -1079,6 +1136,22 @@
 
   .topBar {
     height: 82px;
+  }
+
+  .caseStatus {
+    gap: 3px;
+  }
+
+  .statusTop {
+    gap: 5px;
+  }
+
+  .needsRow > div > div {
+    padding-block: 3px;
+  }
+
+  .locationRow {
+    min-height: 18px;
   }
 
   .sidebar {
