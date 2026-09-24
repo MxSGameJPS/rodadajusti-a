@@ -105,8 +105,6 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
   onPayBills,
   onOpenCityMap,
 }) => {
-  if (!isOpen) return null;
-
   const household = player.household;
   const residence = household.residence;
   const bills = getHouseholdMonthlyBills(household);
@@ -135,6 +133,9 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
       );
     }
   }, [isOpen, household.pantry, selectedPantryItemId]);
+
+  if (!isOpen) return null;
+
   const mealLabel = player.gameCurrentMinutes >= 11 * 60 && player.gameCurrentMinutes < 16 * 60
     ? 'Almoçar'
     : player.gameCurrentMinutes >= 18 * 60 && player.gameCurrentMinutes < 23 * 60
