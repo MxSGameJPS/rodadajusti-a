@@ -214,6 +214,22 @@ export interface PersonalFinanceState {
 
 export type HomeFurnitureKind = 'BED' | 'SOFA' | 'DESK' | 'CHAIR' | 'APPLIANCE' | 'OTHER';
 
+export type PantryMealType = 'ANY' | 'BREAKFAST' | 'LUNCH_DINNER' | 'SNACK';
+
+export interface PantryItem {
+  id: string;
+  offerId: string;
+  establishmentId: string;
+  title: string;
+  imageUrl?: string | null;
+  quantity: number;
+  hungerRestore: number;
+  energyRestore: number;
+  mealType: PantryMealType;
+  requiresCooking: boolean;
+  purchasedAtGameDate: string;
+}
+
 export interface OwnedFurnitureItem {
   id: string;
   offerId: string;
@@ -224,6 +240,9 @@ export interface OwnedFurnitureItem {
   comfortBonus: number;
   energyBonus: number;
   studyBonus: number;
+  hygieneBonus: number;
+  mealBonus: number;
+  foodStorageBonus: number;
   purchasedAtGameDate: string;
 }
 
@@ -262,11 +281,14 @@ export interface PlayerLifeNeedsState {
 
 export interface PlayerHouseholdState {
   foodUnits: number;
+  pantry: PantryItem[];
   residence: PlayerResidenceState;
   needs: PlayerLifeNeedsState;
   furniture: OwnedFurnitureItem[];
   vehicles: OwnedVehicleItem[];
   lastSleptGameDate: string | null;
+  lastFullSleepAtMinute: number | null;
+  lastNapAtMinute: number | null;
   lastStudiedGameDate: string | null;
 }
 
