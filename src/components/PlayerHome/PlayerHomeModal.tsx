@@ -33,6 +33,7 @@ interface PlayerHomeModalProps {
   onShower: () => void;
   onEat: () => void;
   onStudy: () => void;
+  onGoToUniversity: () => void;
   onPayBills: () => void;
   onOpenCityMap: () => void;
 }
@@ -88,6 +89,7 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
   onShower,
   onEat,
   onStudy,
+  onGoToUniversity,
   onPayBills,
   onOpenCityMap,
 }) => {
@@ -193,11 +195,18 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
             {isIntern && (
               <section className="flex items-start gap-3 rounded-2xl border border-[#60A5FA]/25 bg-[#60A5FA]/8 p-4">
                 <GraduationCap size={20} className="mt-0.5 shrink-0 text-[#7FB4F4]" />
-                <div>
+                <div className="min-w-0 flex-1">
                   <strong className="text-sm text-[#DCEBFA]">Universidade ativa durante o estágio</strong>
                   <p className="mt-1 text-[10px] leading-4 text-[#8FAEC8]">
-                    Enquanto sua carreira estiver em ESTAGIÁRIO ou ESTAGIÁRIO SÊNIOR, a faculdade aparece no mapa da cidade e seus estudos continuam sendo uma necessidade da rotina.
+                    Vá até a faculdade pelo mapa, cumpra 3 horas de estudo e retorne automaticamente para casa ao final da rotina acadêmica.
                   </p>
+                  <button
+                    type="button"
+                    onClick={onGoToUniversity}
+                    className="mt-3 rounded-xl border border-[#60A5FA]/30 bg-[#60A5FA]/12 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#AED0FA]"
+                  >
+                    Ir para a faculdade
+                  </button>
                 </div>
               </section>
             )}
