@@ -1747,13 +1747,19 @@ export default function App() {
     setCurrentView('HUB');
   };
 
-  const animatedMealLabel = player.gameCurrentMinutes >= 11 * 60 && player.gameCurrentMinutes < 16 * 60
+  const baseMealLabel = player.gameCurrentMinutes >= 11 * 60 && player.gameCurrentMinutes < 16 * 60
     ? 'Almoçando'
     : player.gameCurrentMinutes >= 18 * 60 && player.gameCurrentMinutes < 23 * 60
       ? 'Jantando'
       : player.gameCurrentMinutes >= 5 * 60 && player.gameCurrentMinutes < 11 * 60
         ? 'Tomando café da manhã'
         : 'Fazendo uma refeição';
+  const pendingPantryItem = pendingPantryItemId
+    ? player.household.pantry.find((item) => item.id === pendingPantryItemId) || null
+    : null;
+  const animatedMealLabel = pendingPantryItem
+    ? baseMealLabel + ' • ' + pendingPantryItem.title
+    : baseMealLabel;
 
   return (
     <div className="min-h-screen bg-[#0A0A0B] text-[#E0E0E0] flex flex-col items-center justify-start antialiased selection:bg-[#C5A059]/30 selection:text-[#C5A059]">
@@ -1952,16 +1958,42 @@ export default function App() {
         isOpen={isPlayerHomeOpen}
         warningMessage={lifeWarning}
         onClose={handleClosePlayerHome}
-        onSleep={() => setHomeActivity('SLEEP')}
-        onShower={() => setHomeActivity('SHOWER')}
-        onEat={() => {
-          if (player.household.foodUnits > 0) setHomeActivity('MEAL');
+        onSleep={handleRequestSleepAtHome}
+        onShower={() => {
+          const services = getHouseholdServiceStatus(player);
+          if (!services.water) {
+            setLifeWarning('O fornecimento de água está suspenso. Regularize as contas antes de tomar banho.');
+            return;
+          }
+          setLifeWarning('');
+          setHomeActivity('SHOWER');
         }}
-        onStudy={() => setHomeActivity('STUDY_HOME')}
+        onEat={(pantryItemId) => {
+          const item = player.household.pantry.find((entry) => entry.id === pantryItemId);
+          if (!item) return;
+          const services = getHouseholdServiceStatus(player);
+          if (item.requiresCooking && !services.gas) {
+            setLifeWarning('O gás está suspenso. Escolha um alimento pronto para consumo ou regularize as contas.');
+            return;
+          }
+          setLifeWarning('');
+          setPendingPantryItemId(pantryItemId);
+          setHomeActivity('MEAL');
+        }}
+        onStudy={() => {
+          const services = getHouseholdServiceStatus(player);
+          if (!services.electricity || !services.internet) {
+            setLifeWarning('Energia e internet precisam estar ativas para estudar em casa.');
+            return;
+          }
+          setLifeWarning('');
+          setHomeActivity('STUDY_HOME');
+        }}
         onGoToUniversity={handleRequestUniversityTrip}
         onGoToOffice={handleRequestGoOffice}
         onPayBills={handlePayHouseholdBills}
         onOpenCityMap={() => {
+          setLifeWarning('');
           setIsPlayerHomeOpen(false);
           setIsCityWorldMapOpen(true);
         }}
