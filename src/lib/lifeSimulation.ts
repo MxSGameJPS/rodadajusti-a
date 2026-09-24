@@ -1,5 +1,7 @@
 import type {
   HomeFurnitureKind,
+  PantryItem,
+  PantryMealType,
   PlayerHouseholdState,
   PlayerLifeNeedsState,
   PlayerProfile,
@@ -9,6 +11,21 @@ import { formatGameDate } from './gameDate';
 
 export const DEFAULT_HOUSEHOLD_STATE: PlayerHouseholdState = {
   foodUnits: 6,
+  pantry: [
+    {
+      id: 'starter-pantry',
+      offerId: 'starter',
+      establishmentId: 'starter',
+      title: 'Alimentos básicos',
+      imageUrl: null,
+      quantity: 6,
+      hungerRestore: 52,
+      energyRestore: 4,
+      mealType: 'ANY',
+      requiresCooking: true,
+      purchasedAtGameDate: 'Inicial',
+    },
+  ],
   residence: {
     street: '',
     number: '',
@@ -34,6 +51,8 @@ export const DEFAULT_HOUSEHOLD_STATE: PlayerHouseholdState = {
   furniture: [],
   vehicles: [],
   lastSleptGameDate: null,
+  lastFullSleepAtMinute: null,
+  lastNapAtMinute: null,
   lastStudiedGameDate: null,
 };
 
@@ -47,6 +66,47 @@ function nullableCoordinate(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function normalizeMealType(value: unknown): PantryMealType {
+  const normalized = String(value || '').toUpperCase();
+  if (normalized === 'BREAKFAST') return 'BREAKFAST';
+  if (normalized === 'LUNCH_DINNER') return 'LUNCH_DINNER';
+  if (normalized === 'SNACK') return 'SNACK';
+  return 'ANY';
+}
+
+function normalizePantryItem(value: Partial<PantryItem>): PantryItem | null {
+  if (!value || typeof value.title !== 'string') return null;
+  const quantity = Math.max(0, Math.floor(Number(value.quantity) || 0));
+  if (quantity <= 0) return null;
+
+  return {
+    id: String(value.id || `pantry-${Math.random().toString(36).slice(2, 9)}`),
+    offerId: String(value.offerId || 'legacy'),
+    establishmentId: String(value.establishmentId || 'legacy'),
+    title: value.title.trim() || 'Alimento',
+    imageUrl: value.imageUrl || null,
+    quantity,
+    hungerRestore: clamp(Number(value.hungerRestore ?? 52)),
+    energyRestore: clamp(Number(value.energyRestore ?? 4)),
+    mealType: normalizeMealType(value.mealType),
+    requiresCooking: value.requiresCooking !== false,
+    purchasedAtGameDate: String(value.purchasedAtGameDate || 'Save anterior'),
+  };
+}
+
+function pantryUnits(pantry: PantryItem[]) {
+  return pantry.reduce((sum, item) => sum + Math.max(0, Math.floor(item.quantity || 0)), 0);
+}
+
+export function gameAbsoluteMinute(player: Pick<PlayerProfile, 'gameCurrentDay' | 'gameCurrentMonth' | 'gameCurrentYear' | 'gameCurrentMinutes'>) {
+  const base = Date.UTC(
+    player.gameCurrentYear,
+    Math.max(0, player.gameCurrentMonth - 1),
+    Math.max(1, player.gameCurrentDay),
+  ) / 60000;
+  return base + Math.max(0, Number(player.gameCurrentMinutes) || 0);
+}
+
 export function normalizeHousehold(
   value?: Partial<PlayerHouseholdState> | null,
   fallbackCity = '',
@@ -54,11 +114,36 @@ export function normalizeHousehold(
 ): PlayerHouseholdState {
   const residence: Partial<PlayerHouseholdState['residence']> = value?.residence || {};
   const needs: Partial<PlayerLifeNeedsState> = value?.needs || {};
+  const legacyFoodUnits = Math.max(
+    0,
+    Math.floor(Number(value?.foodUnits ?? DEFAULT_HOUSEHOLD_STATE.foodUnits) || 0),
+  );
+  const normalizedPantry = Array.isArray(value?.pantry)
+    ? value!.pantry
+        .map((item) => normalizePantryItem(item))
+        .filter((item): item is PantryItem => Boolean(item))
+        .slice(-100)
+    : [];
+
+  const pantry = normalizedPantry.length > 0
+    ? normalizedPantry
+    : legacyFoodUnits > 0
+      ? [{
+          ...DEFAULT_HOUSEHOLD_STATE.pantry[0],
+          id: 'legacy-pantry',
+          offerId: 'legacy',
+          establishmentId: 'legacy',
+          title: 'Alimentos da despensa',
+          quantity: legacyFoodUnits,
+          purchasedAtGameDate: 'Save anterior',
+        }]
+      : [];
 
   return {
     ...DEFAULT_HOUSEHOLD_STATE,
     ...(value || {}),
-    foodUnits: Math.max(0, Math.floor(Number(value?.foodUnits ?? DEFAULT_HOUSEHOLD_STATE.foodUnits) || 0)),
+    pantry,
+    foodUnits: pantryUnits(pantry),
     residence: {
       ...DEFAULT_HOUSEHOLD_STATE.residence,
       ...residence,
@@ -85,6 +170,15 @@ export function normalizeHousehold(
     furniture: Array.isArray(value?.furniture)
       ? value!.furniture
           .filter((item) => item && typeof item.id === 'string' && typeof item.title === 'string')
+          .map((item) => ({
+            ...item,
+            comfortBonus: Math.max(0, Number(item.comfortBonus) || 0),
+            energyBonus: Math.max(0, Number(item.energyBonus) || 0),
+            studyBonus: Math.max(0, Number(item.studyBonus) || 0),
+            hygieneBonus: Math.max(0, Number(item.hygieneBonus) || 0),
+            mealBonus: Math.max(0, Number(item.mealBonus) || 0),
+            foodStorageBonus: Math.max(0, Number(item.foodStorageBonus) || 0),
+          }))
           .slice(-100)
       : [],
     vehicles: Array.isArray(value?.vehicles)
@@ -93,6 +187,12 @@ export function normalizeHousehold(
           .slice(-40)
       : [],
     lastSleptGameDate: typeof value?.lastSleptGameDate === 'string' ? value.lastSleptGameDate : null,
+    lastFullSleepAtMinute: Number.isFinite(Number(value?.lastFullSleepAtMinute))
+      ? Number(value!.lastFullSleepAtMinute)
+      : null,
+    lastNapAtMinute: Number.isFinite(Number(value?.lastNapAtMinute))
+      ? Number(value!.lastNapAtMinute)
+      : null,
     lastStudiedGameDate: typeof value?.lastStudiedGameDate === 'string' ? value.lastStudiedGameDate : null,
   };
 }
@@ -185,9 +285,91 @@ export function getBestStudyBonus(household: PlayerHouseholdState) {
   );
 }
 
+export function getHouseholdEquipmentBonuses(household: PlayerHouseholdState) {
+  return household.furniture.reduce(
+    (summary, item) => ({
+      hygieneBonus: Math.max(summary.hygieneBonus, Number(item.hygieneBonus) || 0),
+      mealBonus: Math.max(summary.mealBonus, Number(item.mealBonus) || 0),
+      foodStorageBonus: summary.foodStorageBonus + Math.max(0, Number(item.foodStorageBonus) || 0),
+    }),
+    {
+      hygieneBonus: 0,
+      mealBonus: 0,
+      foodStorageBonus: 0,
+    },
+  );
+}
+
+export function getPantryCapacity(household: PlayerHouseholdState) {
+  const equipment = getHouseholdEquipmentBonuses(household);
+  return Math.max(12, Math.min(80, 12 + Math.round(equipment.foodStorageBonus)));
+}
+
+export function getHouseholdServiceStatus(player: PlayerProfile) {
+  const summary = getHouseholdBillSummary(player);
+  const suspended = summary.dueMonths >= 2;
+
+  return {
+    dueMonths: summary.dueMonths,
+    water: !suspended,
+    electricity: !suspended,
+    internet: !suspended,
+    gas: !suspended,
+    suspended,
+    warning: summary.dueMonths === 1
+      ? 'Contas da competência atual ainda estão pendentes.'
+      : suspended
+        ? 'Serviços domésticos suspensos até a regularização das contas.'
+        : '',
+  };
+}
+
+export function getSleepPlan(player: PlayerProfile) {
+  const now = gameAbsoluteMinute(player);
+  const minutes = Math.max(0, Number(player.gameCurrentMinutes) || 0);
+  const hour = Math.floor(minutes / 60) % 24;
+  const isNight = hour >= 20 || hour < 6;
+  const lastFull = player.household.lastFullSleepAtMinute;
+  const lastNap = player.household.lastNapAtMinute;
+
+  if (isNight) {
+    if (lastFull != null && now - lastFull < 12 * 60) {
+      return {
+        kind: 'BLOCKED' as const,
+        minutes: 0,
+        label: 'Sono completo indisponível',
+        detail: 'Você já teve um sono completo há pouco tempo.',
+      };
+    }
+    return {
+      kind: 'SLEEP' as const,
+      minutes: 8 * 60,
+      label: 'Dormir 8 horas',
+      detail: 'Sono completo noturno. Cama melhor aumenta a recuperação.',
+    };
+  }
+
+  if (lastNap != null && now - lastNap < 6 * 60) {
+    return {
+      kind: 'BLOCKED' as const,
+      minutes: 0,
+      label: 'Cochilo indisponível',
+      detail: 'Você já cochilou há pouco tempo. Espere algumas horas.',
+    };
+  }
+
+  return {
+    kind: 'NAP' as const,
+    minutes: 90,
+    label: 'Cochilar 1h30',
+    detail: 'Durante o dia, um cochilo recupera parte da energia.',
+  };
+}
+
 export function restoreAfterSleep(
   household: PlayerHouseholdState,
   gameDateLabel: string,
+  absoluteMinute: number,
 ): PlayerHouseholdState {
   const bed = getBestBedBonuses(household);
   return {
@@ -198,28 +380,61 @@ export function restoreAfterSleep(
       hygiene: clamp(household.needs.hygiene - 5),
     },
     lastSleptGameDate: gameDateLabel,
+    lastFullSleepAtMinute: absoluteMinute,
   };
 }
 
-export function restoreAfterShower(household: PlayerHouseholdState) {
+export function restoreAfterNap(
+  household: PlayerHouseholdState,
+  absoluteMinute: number,
+): PlayerHouseholdState {
+  const bed = getBestBedBonuses(household);
   return {
     ...household,
     needs: {
       ...household.needs,
-      hygiene: clamp(household.needs.hygiene + 72),
+      energy: clamp(household.needs.energy + 28 + bed.energyBonus * 0.35 + bed.comfortBonus * 0.12),
+    },
+    lastNapAtMinute: absoluteMinute,
+  };
+}
+
+export function restoreAfterShower(household: PlayerHouseholdState) {
+  const equipment = getHouseholdEquipmentBonuses(household);
+  return {
+    ...household,
+    needs: {
+      ...household.needs,
+      hygiene: clamp(household.needs.hygiene + 72 + equipment.hygieneBonus),
       energy: clamp(household.needs.energy + 4),
     },
   };
 }
 
-export function restoreAfterMeal(household: PlayerHouseholdState) {
+export function restoreAfterMeal(
+  household: PlayerHouseholdState,
+  pantryItemId: string,
+) {
+  const selected = household.pantry.find((item) => item.id === pantryItemId)
+    || household.pantry.find((item) => item.quantity > 0);
+
+  if (!selected || selected.quantity <= 0) return household;
+
+  const equipment = getHouseholdEquipmentBonuses(household);
+  const pantry = household.pantry
+    .map((item) => item.id === selected.id
+      ? { ...item, quantity: Math.max(0, item.quantity - 1) }
+      : item)
+    .filter((item) => item.quantity > 0);
+
   return {
     ...household,
-    foodUnits: Math.max(0, household.foodUnits - 1),
+    pantry,
+    foodUnits: pantryUnits(pantry),
     needs: {
       ...household.needs,
-      hunger: clamp(household.needs.hunger + 58),
-      energy: clamp(household.needs.energy + 5),
+      hunger: clamp(household.needs.hunger + selected.hungerRestore + equipment.mealBonus),
+      energy: clamp(household.needs.energy + selected.energyRestore),
     },
   };
 }
