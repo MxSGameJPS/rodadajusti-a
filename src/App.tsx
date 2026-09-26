@@ -1579,16 +1579,17 @@ export default function App() {
         message = `${offer.title} agora faz parte do patrimônio do personagem.`;
       } else if (kind === 'MEAL') {
         const hungerRestore = Math.max(25, numberEffect('hungerRestore', 45));
+        const energyRestore = numberEffect('energyRestore', 4);
         household = {
           ...household,
           needs: {
             ...household.needs,
             hunger: Math.min(100, household.needs.hunger + hungerRestore),
-            energy: Math.min(100, household.needs.energy + 4),
+            energy: Math.min(100, household.needs.energy + energyRestore),
           },
         };
         category = 'ALIMENTACAO';
-        message = `Refeição concluída. Fome recuperada em +${Math.round(hungerRestore)}.`;
+        message = `Refeição concluída. Saciedade +${Math.round(hungerRestore)}${energyRestore > 0 ? ` • Energia +${Math.round(energyRestore)}` : ''}.`;
       } else if (offer.offerType === 'HOSPEDAGEM') {
         category = 'HOTEL';
       }
