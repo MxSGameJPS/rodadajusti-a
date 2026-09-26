@@ -470,6 +470,12 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
                         <div className="min-w-0 flex-1">
                           <strong className="block truncate text-[10px] text-[#E7E8EA]">{offer.title}</strong>
                           <span className="mt-0.5 block text-[9px] font-black text-[#CDB16C]">{formatEstablishmentPrice(offer.price)}</span>
+                          {String(offer.gameplayEffects?.kind || '').toUpperCase() === 'MEAL' && (
+                            <span className="mt-1 block text-[8px] text-[#9FC7A8]">
+                              Refeição • Saciedade +{Math.max(25, Number(offer.gameplayEffects?.hungerRestore) || 45)}
+                              {(Number(offer.gameplayEffects?.energyRestore) || 0) > 0 ? ` • Energia +${Number(offer.gameplayEffects?.energyRestore)}` : ''}
+                            </span>
+                          )}
                           <button
                             type="button"
                             disabled={offer.price == null || player.money < (offer.price || 0)}
@@ -479,7 +485,7 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
                             }}
                             className="mt-2 rounded-lg border border-[#C5A059]/30 bg-[#C5A059]/10 px-2.5 py-1.5 text-[8px] font-black uppercase text-[#D9BF7D] disabled:cursor-not-allowed disabled:opacity-40"
                           >
-                            Comprar
+                            {String(offer.gameplayEffects?.kind || '').toUpperCase() === 'MEAL' ? 'Comprar e comer' : 'Comprar'}
                           </button>
                         </div>
                       </article>
