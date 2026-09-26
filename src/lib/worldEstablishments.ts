@@ -571,6 +571,15 @@ export async function resolveWorldPointForEstablishment(
     };
   }
 
+  // Endereços de estabelecimentos UNIVERSAL são apenas narrativos/editoriais.
+  // Nunca tentamos geocodificar a rua cadastrada em outra cidade, pois ela pode
+  // não existir (ou, pior, coincidir por acaso com um endereço real diferente).
+  // A posição base é determinística por estabelecimento + cidade e depois o
+  // mapa a fixa em uma via válida com resolveStableRoadPoint().
+  if (establishment.presenceScope === 'UNIVERSAL') {
+    return getWorldPointForEstablishment(profile, establishment);
+  }
+
   if (establishment.streetName) {
     const geocoded = await geocodeBrazilianPublicPlace(
       establishment.streetName,
