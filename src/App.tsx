@@ -70,7 +70,11 @@ import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } fr
 import { sound } from './utils/sound';
 import { normalizeCareerOrigin, saveCareerOrigin } from './lib/careerOrigin';
 import { saveWorldMapProfile, type WorldAddressProfile, type WorldMapProfile } from './lib/worldMap';
-import type { WorldEstablishment, WorldEstablishmentOffer } from './lib/worldEstablishments';
+import {
+  establishmentGameplayAction,
+  type WorldEstablishment,
+  type WorldEstablishmentOffer,
+} from './lib/worldEstablishments';
 import {
   type LifeTravelRequest,
   type LifeTravelResult,
@@ -1464,6 +1468,7 @@ export default function App() {
     }
 
     const effects = offer.gameplayEffects || {};
+    const action = establishmentGameplayAction(establishment, offer);
     const kind = String(effects.kind || 'OTHER').toUpperCase();
     const numberEffect = (key: string, fallback = 0) => {
       const value = Number(effects[key]);
@@ -1479,8 +1484,8 @@ export default function App() {
       return fallback;
     };
 
-    if (kind === 'FOOD') {
-      const units = Math.max(1, Math.floor(numberEffect('foodUnits', 1)));
+    if (kind === 'FOOD' || action === 'TAKEAWAY' || action === 'BUY_GROCERIES') {
+      const units = action === 'TAKEAWAY' ? 1 : Math.max(1, Math.floor(numberEffect('foodUnits', 1)));
       const capacity = getPantryCapacity(player.household);
       if (player.household.foodUnits + units > capacity) {
         return {
@@ -1495,12 +1500,17 @@ export default function App() {
     setPlayer((prev) => {
       if (prev.money < price) return prev;
 
-      const clock = gameClockFields(prev, kind === 'MEAL' ? 45 : 20);
+      const actionMinutes = action === 'EAT_HERE' ? 45
+        : action === 'SLEEP' ? Math.max(60, numberEffect('durationMinutes', 480))
+        : action === 'SHOWER' ? Math.max(10, numberEffect('durationMinutes', 20))
+        : action === 'RENT_VEHICLE' ? 15
+        : 20;
+      const clock = gameClockFields(prev, actionMinutes);
       let household = clock.household;
       let category: Parameters<typeof createPersonalExpense>[1]['category'] = 'OUTROS';
 
-      if (kind === 'FOOD') {
-        const foodUnits = Math.max(1, Math.floor(numberEffect('foodUnits', 1)));
+      if (kind === 'FOOD' || action === 'TAKEAWAY' || action === 'BUY_GROCERIES') {
+        const foodUnits = action === 'TAKEAWAY' ? 1 : Math.max(1, Math.floor(numberEffect('foodUnits', 1)));
         const hungerRestore = Math.max(10, numberEffect('hungerRestore', 52));
         const energyRestore = numberEffect('energyRestore', 4);
         const rawMealType = String(effects.mealType || 'ANY').toUpperCase();
@@ -1546,8 +1556,10 @@ export default function App() {
           pantry,
           foodUnits: household.foodUnits + foodUnits,
         };
-        category = 'SUPERMERCADO';
-        message = `${offer.title}: +${foodUnits} unidade(s) adicionadas à despensa.`;
+        category = action === 'TAKEAWAY' ? 'ALIMENTACAO' : 'SUPERMERCADO';
+        message = action === 'TAKEAWAY'
+          ? `${offer.title} foi embalada para viagem e adicionada à despensa. Você poderá comer depois.`
+          : `${offer.title}: +${foodUnits} unidade(s) adicionadas à despensa.`;
       } else if (
         kind === 'BED'
         || kind === 'FURNITURE'
@@ -1585,6 +1597,23 @@ export default function App() {
         };
         category = 'MOVEIS';
         message = `${offer.title} foi entregue na sua residência e seus bônus já estão ativos.`;
+      } else if (action === 'RENT_VEHICLE') {
+        household = {
+          ...household,
+          vehicles: [
+            ...household.vehicles,
+            {
+              id: `rental-${offer.id}-${Date.now()}`,
+              offerId: offer.id,
+              establishmentId: establishment.id,
+              title: `${offer.title} (alugado)`,
+              imageUrl: offer.imageUrl,
+              purchasedAtGameDate: currentGameDateLabel(prev),
+            },
+          ].slice(-40),
+        };
+        category = 'TRANSPORTE';
+        message = `${offer.title} alugado. O veículo está disponível para os deslocamentos do personagem.`;
       } else if (kind === 'VEHICLE') {
         household = {
           ...household,
@@ -1602,7 +1631,19 @@ export default function App() {
         };
         category = 'VEICULO';
         message = `${offer.title} agora faz parte do patrimônio do personagem.`;
-      } else if (kind === 'MEAL') {
+      } else if (action === 'SLEEP') {
+        household = restoreAfterSleep(
+          household,
+          currentGameDateLabel(prev),
+          gameAbsoluteMinute({ ...prev, ...clock }),
+        );
+        category = 'HOTEL';
+        message = `Hospedagem concluída em ${establishment.name}. O personagem dormiu, recuperou energia e avançou ${Math.round(actionMinutes / 60)}h no relógio.`;
+      } else if (action === 'SHOWER') {
+        household = restoreAfterShower(household);
+        category = 'HOTEL';
+        message = `Banho concluído em ${establishment.name}. Higiene e disposição foram recuperadas.`;
+      } else if (kind === 'MEAL' || action === 'EAT_HERE') {
         const hungerRestore = Math.max(25, numberEffect('hungerRestore', 45));
         const energyRestore = numberEffect('energyRestore', 4);
         household = {
