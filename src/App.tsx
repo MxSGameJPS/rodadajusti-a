@@ -61,7 +61,7 @@ import { getSeniorDailyDesk, buildSeniorFirstDayDialogues } from './lib/seniorIn
 import { hydrateInternshipRoutine, persistInternshipRoutine, loadSeniorPortfolio, persistSeniorPortfolio, loadOabPreparation, persistOabPreparation } from './lib/internshipRoutineRepository';
 import { advanceSeniorPortfolioDeadlines, applySeniorDecisionConsequence, buildRobertoCareerRecall, buildSeniorOabReadinessDialogues, buildSupervisorPortfolioReview, completeSeniorPortfolioAction, getSeniorProfessionalScene, portfolioDate, type SeniorLegalDecision, type SeniorPortfolioDecision, type SeniorPortfolioMatter } from './lib/seniorPortfolio';
 import { SeniorProfessionalScene } from './components/SeniorProfessionalScene';
-import { completeOabStudy, emptyOabPreparation, OAB_AREAS, oabReadiness, recordOabMock, unlockOabPreparation, type OabPreparationState, type OabStudyArea } from './lib/oabIntensivePreparation';
+import { completeOabStudy, emptyOabPreparation, OAB_AREAS, oabReadiness, recordOabMock, recordFinalOabExam, unlockOabPreparation, type OabPreparationState, type OabStudyArea } from './lib/oabIntensivePreparation';
 import { evaluatePetition } from './lib/judicialDecisionEngine';
 import { buildSupervisorReview } from './lib/officeDisciplineEngine';
 import {
@@ -423,6 +423,7 @@ export default function App() {
   const [isOfficeModalOpen, setIsOfficeModalOpen] = useState<boolean>(false);
   const [isOabExamOpen, setIsOabExamOpen] = useState<boolean>(false);
   const [isOabPreparationMockOpen, setIsOabPreparationMockOpen] = useState<boolean>(false);
+  const [actOneFinaleDialogues, setActOneFinaleDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
   const [isCityRelocationOpen, setIsCityRelocationOpen] = useState<boolean>(false);
   const [isCityWorldMapOpen, setIsCityWorldMapOpen] = useState<boolean>(false);
   const [isPlayerHomeOpen, setIsPlayerHomeOpen] = useState<boolean>(false);
@@ -1168,6 +1169,18 @@ export default function App() {
     setIsOabPreparationMockOpen(false);
   };
 
+  const handleRequestFinalOabExam = () => {
+    const readiness=oabReadiness(oabPreparation,player);
+    if(!readiness.ready){setLifeWarning('Dr. Roberto ainda não liberou sua inscrição para o Exame da Ordem.');return}
+    setActOneFinaleDialogues([
+      {eyebrow:'Encerramento do estágio',text:'Você chegou ao ponto em que o estágio deixa de ser apenas formação e passa a apontar para sua vida profissional.'},
+      {eyebrow:'Dr. Roberto Ramos',text:'Sua preparação, seus casos e suas decisões mostram que é hora de enfrentar o Exame da Ordem. A prova é sua; o escritório só pode garantir que você chegue até ela preparado.'},
+      {eyebrow:'Próximo passo',text:'Ao confirmar, você fará o Exame da Ordem completo. A aprovação encerra o Ato 1 e abre sua carreira como advogado.'},
+    ]);
+  };
+
+  const beginFinalOabExam = () => {setActOneFinaleDialogues(null);setIsOabExamOpen(true)};
+
   const handleSeniorOabReadinessReview = () => {
     if(player.careerTier!=='ESTAGIARIO_SENIOR'||!ensureOfficeGameplayAvailable())return;
     const review=buildSeniorOabReadinessDialogues(player,seniorPortfolio);
@@ -1482,6 +1495,7 @@ export default function App() {
 
   const handleOabExamComplete = (result: ProfessionalExamResult, exam: ProfessionalExam) => {
     const completedDate = formatGameDate(getPlayerGameDate(player));
+    if(player.careerTier==='ESTAGIARIO_SENIOR'&&oabPreparation.unlocked){const next=recordFinalOabExam(oabPreparation,result.passed,portfolioDate(player));setOabPreparation(next);void persistOabPreparation(player,next);}
 
     setPlayer((prev) => {
       const attemptExists = prev.professionalExamAttempts.some(
@@ -2451,6 +2465,7 @@ export default function App() {
                   oabPreparation={oabPreparation}
                   onOabStudy={handleOabStudy}
                   onOabQuickMock={handleOabQuickMock}
+                  onOabFinalExam={handleRequestFinalOabExam}
           onToggleSound={handleToggleSound}
           onEnableMobileFrame={() => setIsMobileFrame(true)}
         />
@@ -2888,6 +2903,8 @@ export default function App() {
         onClose={() => setIsCityRelocationOpen(false)}
         onConfirm={handleRelocateCity}
       />
+
+      {actOneFinaleDialogues && <NpcGuidanceDialog isOpen npcName="Dr. Roberto Ramos" npcRole="Sócio responsável • Ramos & Associados" portraitSrc="/personagens/dr-roberto-ramos.png" portraitAlt="Dr. Roberto Ramos" contextLabel="Final do Ato 1 • Exame da Ordem" dialogues={actOneFinaleDialogues} finalActionLabel="Realizar Exame da Ordem" onComplete={beginFinalOabExam} />}
 
       <OabExamModal
         isOpen={isOabPreparationMockOpen}
