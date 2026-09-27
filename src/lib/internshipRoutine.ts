@@ -95,7 +95,8 @@ export function readInternshipRoutine(player: PlayerProfile): InternshipRoutineS
 }
 
 export function saveInternshipRoutine(player: PlayerProfile, state: InternshipRoutineState) {
-  try { localStorage.setItem(storageKey(player), JSON.stringify(state)); } catch { /* fallback local indisponível */ }
+  try { localStorage.setItem(storageKey(player), JSON.stringify(state)); } catch { /* cache local indisponível */ }
+  window.dispatchEvent(new CustomEvent('rota:internship-routine-changed', { detail: { careerId: player.cloudCareerId || null } }));
   return state;
 }
 
