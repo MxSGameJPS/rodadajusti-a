@@ -107,6 +107,8 @@ import {
   getWorkTimeConflict,
   shouldCloseInternWorkday,
   buildSupervisorReviewDialogues,
+  getOfficeEventChoices,
+  type OfficeEventChoiceId,
 } from './lib/internshipRoutine';
 import {
   DEFAULT_HOUSEHOLD_STATE,
@@ -931,17 +933,41 @@ export default function App() {
     setPlayer((prev) => ({ ...prev }));
   };
 
-  const handleOfficeRoutineEvent = () => {
+  const handleOfficeRoutineEvent = (choiceId: OfficeEventChoiceId) => {
     if (!ensureOfficeGameplayAvailable()) return;
     const event = getDailyOfficeEvent(player);
     if (!event) return;
+    const choice = getOfficeEventChoices(event.kind).find((item) => item.id === choiceId);
+    if (!choice) return;
+    const conflict = getWorkTimeConflict(player, choice.minutes, 'OFFICE');
+    if (conflict) {
+      setLifeWarning(conflict);
+      return;
+    }
     markOfficeEventHandled(player, event.key);
-    setPlayer((prev) => ({ ...prev, officePerformance: applyRoutinePerformance(prev.officePerformance, event.delta) }));
+    setPlayer((prev) => {
+      const clock = gameClockFields(prev, choice.minutes);
+      return {
+        ...prev,
+        ...clock,
+        officePerformance: applyRoutinePerformance(prev.officePerformance, choice.delta),
+        household: {
+          ...prev.household,
+          needs: {
+            ...prev.household.needs,
+            energy: Math.max(0, prev.household.needs.energy - Math.max(1, Math.round(choice.minutes / 25))),
+          },
+        },
+      };
+    });
     applyRelationshipInteraction(player, {
       entityId: 'npc:MARIANA', entityType: 'NPC', name: 'Mariana Duarte', role: 'Secretária • Ramos & Associados',
-      gameDate: currentGameDateLabel(player), kind: 'OFFICE_EVENT', title: event.title, description: event.text,
-      scope: 'WORKPLACE', intensity: 18, dimensions: { affinity: 1, professionalTrust: 2 }, bond: 'PROFESSIONAL',
+      gameDate: currentGameDateLabel(player), kind: 'OFFICE_EVENT', title: event.title, description: choice.outcome,
+      scope: 'WORKPLACE', intensity: 22,
+      dimensions: { affinity: choice.marianaAffinity, professionalTrust: choice.marianaTrust },
+      bond: 'PROFESSIONAL',
     });
+    setLifeWarning(choice.outcome);
   };
 
   const handlePeriodicInternReview = () => {
