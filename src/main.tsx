@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import { AccountSaveBoundary } from './components/AccountSaveBoundary';
@@ -17,6 +17,7 @@ import { PersonalIncomingCallExperience } from './components/ProfessionalLifeExp
 import { ProfessionalLifeExperience } from './components/ProfessionalLifeExperience/ProfessionalLifeExperience';
 import { ProfessionalPhone } from './components/ProfessionalPhone/ProfessionalPhone';
 import { ProfessionalProfileEmploymentGate } from './components/ProfessionalProfileEmploymentGate';
+import { RelationshipCenter } from './components/RelationshipCenter/RelationshipCenter';
 import { ProfessionalTreatmentGate } from './components/ProfessionalTreatmentGate';
 import { hydrateCaseCatalog } from './lib/caseRepository';
 import './lib/pwaInstallPrompt';
@@ -40,6 +41,15 @@ async function registerServiceWorker() {
 
 function isProfessionalDemoRoute() {
   return window.location.pathname === '/demo/advogado' || window.location.pathname === '/demo/contratacao';
+}
+
+function RelationshipCenterHost() {
+  const [player, setPlayer] = React.useState<any>(null);
+  React.useEffect(() => {
+    const sync = () => { try { const raw = localStorage.getItem('rota_da_justica_save_v1'); setPlayer(raw ? JSON.parse(raw) : null); } catch { setPlayer(null); } };
+    sync(); const timer = window.setInterval(sync, 1500); return () => window.clearInterval(timer);
+  }, []);
+  return player ? <RelationshipCenter player={player} /> : null;
 }
 
 async function bootstrap() {
@@ -71,6 +81,7 @@ async function bootstrap() {
               <PostOabEmploymentExperience />
               <ProfessionalPhone />
               <ProfessionalLifeExperience />
+              <RelationshipCenterHost />
               <PersonalIncomingCallExperience />
               <ProfessionalProfileEmploymentGate />
               <EthicalDilemmaExperience />
