@@ -102,6 +102,8 @@ import {
   OFFICE_CANTEEN_COFFEE_PRICE,
   canUseOfficeGameplay,
   isInternCareer,
+  getWorkTimeConflict,
+  shouldCloseInternWorkday,
 } from './lib/internshipRoutine';
 import {
   DEFAULT_HOUSEHOLD_STATE,
@@ -674,9 +676,27 @@ export default function App() {
     setCurrentView('INVESTIGATION_MAP');
   };
 
+  const ensureCaseTimeAvailable = (durationMinutes: number) => {
+    if (!isInternCareer(player)) return true;
+    if (player.officeDiscipline.employmentStatus !== 'ACTIVE') {
+      setLifeWarning('Seu vínculo de estágio não está ativo. Você não pode realizar diligências pelo Ramos & Associados.');
+      return false;
+    }
+    if (!player.activeCase) return false;
+    return true;
+  };
+
+  const ensureUniversityTimeAvailable = (durationMinutes: number) => {
+    const conflict = getWorkTimeConflict(player, durationMinutes, 'UNIVERSITY');
+    if (!conflict) return true;
+    setLifeWarning(conflict);
+    return false;
+  };
+
   const handleTravelToLocation = (loc: LocationScene) => {
     if (!player.activeCase || !activeCaseData) return;
     if (!ensureLifeReady()) return;
+    if (!ensureCaseTimeAvailable(loc.travelTimeHours * 60)) return;
 
     setPlayer((prev) => {
       if (!prev.activeCase) return prev;
@@ -727,6 +747,7 @@ export default function App() {
   const handleAskQuestion = (character: Character, option: DialogueOption) => {
     if (!player.activeCase) return;
     if (!ensureLifeReady()) return;
+    if (!ensureCaseTimeAvailable(option.timeCostMinutes)) return;
 
     sound.playPaper();
     const additionalHours = Math.ceil(option.timeCostMinutes / 60);
@@ -778,6 +799,7 @@ export default function App() {
   const handleInspectSpot = (spot: SearchableSpot) => {
     if (!player.activeCase) return;
     if (!ensureLifeReady()) return;
+    if (!ensureCaseTimeAvailable(spot.timeCostMinutes)) return;
 
     sound.playPaper();
     const additionalHours = Math.ceil(spot.timeCostMinutes / 60);
@@ -1423,6 +1445,7 @@ export default function App() {
   const handleCampusActivity = (activityId: CampusActivityId) => {
     const activity = CAMPUS_ACTIVITIES.find((item) => item.id === activityId);
     if (!activity) return;
+    if (!ensureUniversityTimeAvailable(activity.minutes)) return;
     setPlayer((prev) => {
       const clock = gameClockFields(prev, activity.minutes);
       return {
@@ -1444,6 +1467,7 @@ export default function App() {
   };
 
   const handleStudyAtUniversity = () => {
+    if (!ensureUniversityTimeAvailable(180)) return;
     setPlayer((prev) => {
       const clock = gameClockFields(prev, 180);
       const nextPlayer = { ...prev, ...clock } as PlayerProfile;
