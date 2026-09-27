@@ -383,6 +383,7 @@ export default function App() {
   const [lifeTravelConfirm, setLifeTravelConfirm] = useState<LifeTravelRequest | null>(null);
   const [lifeTravelRequest, setLifeTravelRequest] = useState<LifeTravelRequest | null>(null);
   const [homeActivity, setHomeActivity] = useState<HomeActivityKind | null>(null);
+  const [isUniversityCampusOpen, setIsUniversityCampusOpen] = useState(false);
   const [pendingPantryItemId, setPendingPantryItemId] = useState<string | null>(null);
 
   const openOfficeManagement = () => {
@@ -1256,6 +1257,29 @@ export default function App() {
     });
   };
 
+  const handleCampusActivity = (activityId: CampusActivityId) => {
+    const activity = CAMPUS_ACTIVITIES.find((item) => item.id === activityId);
+    if (!activity) return;
+    setPlayer((prev) => {
+      const clock = gameClockFields(prev, activity.minutes);
+      return {
+        ...prev,
+        ...clock,
+        legalKnowledge: addLegalKnowledge(prev.legalKnowledge, activity.gains),
+        household: {
+          ...clock.household,
+          needs: {
+            ...clock.household.needs,
+            study: Math.min(100, clock.household.needs.study + activity.study),
+            energy: Math.max(0, Math.min(100, clock.household.needs.energy + activity.energy)),
+            hunger: Math.max(0, Math.min(100, clock.household.needs.hunger + activity.hunger)),
+          },
+          lastStudiedGameDate: currentGameDateLabel({ ...prev, ...clock } as PlayerProfile),
+        },
+      };
+    });
+  };
+
   const handleStudyAtUniversity = () => {
     setPlayer((prev) => {
       const clock = gameClockFields(prev, 180);
@@ -1336,7 +1360,7 @@ export default function App() {
     if (player.worldLocation.kind === 'UNIVERSITY') {
       setIsPlayerHomeOpen(false);
       setIsCityWorldMapOpen(false);
-      setHomeActivity('STUDY_UNIVERSITY');
+      setIsUniversityCampusOpen(true);
       return;
     }
 
@@ -1397,7 +1421,7 @@ export default function App() {
     }
 
     if (request.reason === 'GO_UNIVERSITY') {
-      setHomeActivity('STUDY_UNIVERSITY');
+      setIsUniversityCampusOpen(true);
       return;
     }
 
@@ -2065,6 +2089,13 @@ export default function App() {
           setIsPlayerHomeOpen(false);
           setIsCityWorldMapOpen(true);
         }}
+      />
+
+      <UniversityCampusModal
+        isOpen={isUniversityCampusOpen}
+        player={player}
+        onClose={() => { setIsUniversityCampusOpen(false); setIsCityWorldMapOpen(true); }}
+        onActivity={handleCampusActivity}
       />
 
       <CityWorldMapModal
