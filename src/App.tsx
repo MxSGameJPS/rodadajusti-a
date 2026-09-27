@@ -98,6 +98,7 @@ import {
   registerOfficeDeparture,
   getOfficeAccessDecision,
   getWorkSchedule,
+  getTodayAttendance,
   minuteLabel,
   OFFICE_CANTEEN_COFFEE_PRICE,
   canUseOfficeGameplay,
@@ -470,6 +471,15 @@ export default function App() {
     );
     setPlayer((prev) => ({ ...prev, officePerformance: applyRoutinePerformance(prev.officePerformance, penalty) }));
   }, [player.name, player.careerTier, player.gameCurrentDay, player.gameCurrentMonth, player.gameCurrentYear]);
+
+  useEffect(() => {
+    if (!shouldCloseInternWorkday(player)) return;
+    if (player.worldLocation.kind !== 'OFFICE') return;
+    const attendance = getTodayAttendance(player);
+    if (!attendance || attendance.departureMinute !== null) return;
+    registerOfficeDeparture(player);
+  }, [player.careerTier, player.gameCurrentMinutes, player.worldLocation.kind, player.gameCurrentDay, player.gameCurrentMonth, player.gameCurrentYear]);
+
 
   useEffect(() => {
     if (!player.name) return;
