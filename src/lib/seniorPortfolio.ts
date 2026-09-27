@@ -1,4 +1,5 @@
 import type { PlayerProfile } from '../types/game';
+import { readRelationshipEngine, type RelationshipMemory } from './relationshipEngine';
 
 export type SeniorPortfolioStatus = 'ACTIVE' | 'READY_FOR_REVIEW' | 'COMPLETED';
 export interface SeniorPortfolioMatter {
@@ -134,4 +135,37 @@ export function applySeniorDecisionConsequence(matter:SeniorPortfolioMatter, dec
  return {...matter,decisionCompleted:true,consequence:negative
   ? 'Sua decisão gerou repercussão. O episódio será considerado por Roberto nas próximas avaliações.'
   : 'A condução foi registrada positivamente no histórico supervisionado.'};
+}
+
+
+function meaningfulProfessionalMemories(player:PlayerProfile,entityId:string){
+ const record=readRelationshipEngine(player).records[entityId];
+ return (record?.memories||[]).filter((m:RelationshipMemory)=>['SENIOR_PORTFOLIO_APPROVED','SENIOR_PORTFOLIO_REVISION','SENIOR_LEGAL_DECISION','PERFORMANCE_REVIEW','CASE_SUCCESS','CASE_REVIEW'].includes(m.kind)).slice(0,4);
+}
+export function buildRobertoCareerRecall(player:PlayerProfile){
+ const memories=meaningfulProfessionalMemories(player,'npc:ROBERTO');
+ if(!memories.length)return 'Ainda estamos formando um histórico de trabalho suficiente para uma leitura mais específica.';
+ const strongest=[...memories].sort((a,b)=>b.intensity-a.intensity)[0];
+ return `Eu me lembro de “${strongest.title}”. ${strongest.description}`;
+}
+export function buildSeniorOabReadinessDialogues(player:PlayerProfile,portfolio:SeniorPortfolioMatter[]){
+ const roberto=readRelationshipEngine(player).records['npc:ROBERTO'];
+ const memories=meaningfulProfessionalMemories(player,'npc:ROBERTO');
+ const completed=portfolio.filter(m=>m.status==='COMPLETED'&&m.decisionCompleted).length;
+ const critical=portfolio.filter(m=>m.dueInDays===0&&m.status!=='COMPLETED').length;
+ const trust=roberto?.dimensions.professionalTrust??player.officePerformance.supervisorTrust;
+ const respect=roberto?.dimensions.professionalRespect??player.officePerformance.technique;
+ const recent=memories.slice(0,2);
+ const ready=completed>=2&&critical===0&&trust>=55&&respect>=50&&player.officePerformance.ethics>=55;
+ const evidence=recent.length
+  ? recent.map(m=>`“${m.title}” — ${m.description}`).join(' ')
+  : 'Seu histórico ainda tem poucas situações supervisionadas registradas.';
+ return {
+  ready,
+  dialogues:[
+   {eyebrow:'Histórico real',text:`Não vou avaliar você só por uma nota. Na sua carteira, ${completed} matérias já passaram por todo o ciclo supervisionado. ${evidence}`},
+   {eyebrow:'Confiança profissional',text:`Hoje minha confiança profissional em você está em ${trust}/100 e o respeito técnico em ${respect}/100. ${critical? `Ainda há ${critical} matéria(s) em prazo crítico.`:'Você não deixou matéria supervisionada pendente em prazo crítico.'}`},
+   {eyebrow:'Próximo passo',text:ready?'Você está demonstrando maturidade para entrar na preparação decisiva da OAB. A partir daqui, quero ver constância nos simulados e na rotina de estudo.':'Ainda não vou empurrar você para a etapa decisiva da OAB. Feche as lacunas da carteira, preserve a ética e mostre consistência profissional.'},
+  ]
+ };
 }
