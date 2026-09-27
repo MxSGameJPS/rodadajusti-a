@@ -42,6 +42,10 @@ interface RealCityMapPanelProps {
   onTravelToLocation: (location: LocationScene) => void;
   onOpenPlayerHome?: () => void;
   onStudyAtUniversity?: () => void;
+  onGoToEstablishment?: (
+    establishment: WorldEstablishment,
+    point: { lat: number; lng: number },
+  ) => void;
   immersive?: boolean;
 }
 
@@ -176,6 +180,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   onTravelToLocation,
   onOpenPlayerHome,
   onStudyAtUniversity,
+  onGoToEstablishment,
   immersive = false,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -192,6 +197,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
   const [selectedLocation, setSelectedLocation] = useState<LocationScene | null>(null);
   const [establishments, setEstablishments] = useState<WorldEstablishment[]>([]);
   const [selectedEstablishment, setSelectedEstablishment] = useState<WorldEstablishment | null>(null);
+  const [selectedEstablishmentPoint, setSelectedEstablishmentPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedLifeLocation, setSelectedLifeLocation] = useState<'HOME' | 'UNIVERSITY' | null>(null);
   const [catalogError, setCatalogError] = useState('');
   const [catalogWarning, setCatalogWarning] = useState('');
@@ -556,6 +562,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
           setSelectedLocation(null);
           setRoute(null);
           setSelectedEstablishment(establishment);
+          setSelectedEstablishmentPoint(point);
         });
 
         markersRef.current.push(
@@ -871,13 +878,29 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
                     )}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className={styles.detailCloseButton}
-                  onClick={() => setSelectedEstablishment(null)}
-                >
-                  Fechar
-                </button>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    className={styles.routeButton}
+                    disabled={!selectedEstablishmentPoint || !onGoToEstablishment}
+                    onClick={() => {
+                      if (!selectedEstablishmentPoint || !onGoToEstablishment) return;
+                      onGoToEstablishment(selectedEstablishment, selectedEstablishmentPoint);
+                    }}
+                  >
+                    Ir ao estabelecimento
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.detailCloseButton}
+                    onClick={() => {
+                      setSelectedEstablishment(null);
+                      setSelectedEstablishmentPoint(null);
+                    }}
+                  >
+                    Fechar
+                  </button>
+                </div>
               </div>
             )}
 
