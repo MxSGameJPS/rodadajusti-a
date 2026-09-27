@@ -92,6 +92,7 @@ import { supabase } from './lib/supabase';
 import { canManageOwnOffice } from './lib/independentPractice';
 import { addLegalKnowledge, CAMPUS_ACTIVITIES, type CampusActivityId } from './lib/academicLife';
 import { applyRelationshipInteraction, seedCoreRelationships } from './lib/relationshipEngine';
+import { persistRelationshipEngine } from './lib/relationshipRepository';
 import {
   applyRoutinePerformance,
   attendancePerformanceDelta,
@@ -1130,7 +1131,8 @@ export default function App() {
     const next=seniorPortfolio.map(x=>x.id===matterId?reviewed:x);
     setSeniorPortfolio(next); setSeniorPortfolioReviewDialogues(review.dialogues);
     setPlayer(prev=>({...prev,...gameClockFields(prev,30),officePerformance:applyRoutinePerformance(prev.officePerformance,{technique:review.techniqueDelta,supervisorTrust:review.trustDelta})}));
-    await persistSeniorPortfolio(player,next,seniorPortfolioDecisions);
+    applyRelationshipInteraction(player,{entityId:'npc:ROBERTO',entityType:'NPC',name:'Dr. Roberto Ramos',role:'Sócio responsável • Ramos & Associados',gameDate:portfolioDate(player),kind:review.approved?'SENIOR_PORTFOLIO_APPROVED':'SENIOR_PORTFOLIO_REVISION',title:review.title,description:`${matter.title}: ${review.dialogues[review.dialogues.length-1]?.text||review.title}`,scope:'WORKPLACE',intensity:review.approved?42:34,dimensions:{professionalTrust:review.trustDelta,professionalRespect:review.approved?3:-1,conflict:review.approved?0:2},bond:'PROFESSIONAL'});
+    await Promise.all([persistSeniorPortfolio(player,next,seniorPortfolioDecisions),persistRelationshipEngine(player)]);
   };
 
   const handleSeniorPortfolioDecision = (matterId: string) => {
@@ -1147,7 +1149,12 @@ export default function App() {
     const updatedMatter=applySeniorDecisionConsequence(matter,decision);
     const nextPortfolio=seniorPortfolio.map(item=>item.id===matter.id?updatedMatter:item); setSeniorPortfolio(nextPortfolio);
     setPlayer(prev=>({...prev,...gameClockFields(prev,totalMinutes),officePerformance:applyRoutinePerformance(prev.officePerformance,{technique:decision.technique,ethics:decision.ethics,supervisorTrust:decision.trust})}));
-    await persistSeniorPortfolio(player,nextPortfolio,next); setSeniorLegalDecisionMatter(null); setLifeWarning(decision.outcome);
+    const negative=decision.ethics<0||decision.trust<0||decision.technique<0;
+    applyRelationshipInteraction(player,{entityId:'npc:ROBERTO',entityType:'NPC',name:'Dr. Roberto Ramos',role:'Sócio responsável • Ramos & Associados',gameDate:portfolioDate(player),kind:'SENIOR_LEGAL_DECISION',title:`${scene.title} • ${matter.title}`,description:decision.outcome,scope:'WORKPLACE',intensity:negative?55:38,dimensions:{professionalTrust:decision.trust,professionalRespect:decision.technique,conflict:negative?3:0},bond:'PROFESSIONAL'});
+    if(scene.kind==='CLIENT_MEETING'){
+      applyRelationshipInteraction(player,{entityId:`npc:CLIENT:${matter.id}`,entityType:'NPC',name:matter.client,role:`Cliente • ${matter.title}`,gameDate:portfolioDate(player),kind:'CLIENT_MEETING',title:'Reunião acompanhada pelo Estagiário Sênior',description:decision.outcome,scope:'PROFESSIONAL_COMMUNITY',intensity:negative?48:32,dimensions:{trust:decision.ethics<0?-8:3,professionalTrust:decision.trust<0?-5:2,affinity:decision.ethics<0?-3:1},bond:'CLIENT'});
+    }
+    await Promise.all([persistSeniorPortfolio(player,nextPortfolio,next),persistRelationshipEngine(player)]); setSeniorLegalDecisionMatter(null); setLifeWarning(decision.outcome);
   };
 
   const handleSeniorPortfolioAction = async (matterId: string, action: SeniorPortfolioMatter['pending'][number]) => {
