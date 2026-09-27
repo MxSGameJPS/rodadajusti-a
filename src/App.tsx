@@ -443,6 +443,26 @@ export default function App() {
 
   useEffect(() => {
     if (!player.name) return;
+    if (player.careerTier !== 'ESTAGIARIO' && player.careerTier !== 'ESTAGIARIO_SENIOR') return;
+    const { state, added } = reconcileMissedWorkdays(player);
+    if (added <= 0) return;
+    const missed = state.attendance.filter((item) => item.status === 'ABSENT').slice(-added);
+    const penalty = missed.reduce(
+      (total, record) => {
+        const delta = attendancePerformanceDelta(record);
+        return {
+          diligence: total.diligence + (delta.diligence || 0),
+          deadlineManagement: total.deadlineManagement + (delta.deadlineManagement || 0),
+          supervisorTrust: total.supervisorTrust + (delta.supervisorTrust || 0),
+        };
+      },
+      { diligence: 0, deadlineManagement: 0, supervisorTrust: 0 },
+    );
+    setPlayer((prev) => ({ ...prev, officePerformance: applyRoutinePerformance(prev.officePerformance, penalty) }));
+  }, [player.name, player.careerTier, player.gameCurrentDay, player.gameCurrentMonth, player.gameCurrentYear]);
+
+  useEffect(() => {
+    if (!player.name) return;
 
     const currentKey = gameMonthKey({
       month: player.gameCurrentMonth,
