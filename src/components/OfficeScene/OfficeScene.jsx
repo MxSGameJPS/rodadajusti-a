@@ -107,6 +107,8 @@ export function OfficeScene({
   onChooseSeniorPriority,
   seniorPortfolio,
   onSeniorPortfolioAction,
+  onSeniorPortfolioReview,
+  onSeniorPortfolioDecision,
   onToggleSound,
   onEnableMobileFrame,
 }) {
@@ -510,6 +512,8 @@ export function OfficeScene({
             onChooseSeniorPriority={onChooseSeniorPriority}
             seniorPortfolio={seniorPortfolio}
             onSeniorPortfolioAction={onSeniorPortfolioAction}
+            onSeniorPortfolioReview={onSeniorPortfolioReview}
+            onSeniorPortfolioDecision={onSeniorPortfolioDecision}
                 />
               )}
 
