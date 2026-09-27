@@ -114,6 +114,7 @@ export function OfficeScene({
   oabPreparation,
   onOabStudy,
   onOabQuickMock,
+  onOabFinalExam,
   onToggleSound,
   onEnableMobileFrame,
 }) {
@@ -524,6 +525,7 @@ export function OfficeScene({
             oabPreparation={oabPreparation}
             onOabStudy={onOabStudy}
             onOabQuickMock={onOabQuickMock}
+            onOabFinalExam={onOabFinalExam}
                 />
               )}
 
