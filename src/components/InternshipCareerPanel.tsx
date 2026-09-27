@@ -26,6 +26,7 @@ import { getEarlyCareerSnapshot } from '../lib/earlyCareerEngine';
 import { InternOfficeTaskModal } from './InternOfficeTaskModal';
 import { NpcGuidanceDialog, type NpcGuidanceStep } from './NpcGuidanceDialog';
 import { InternshipRoutinePanel } from './InternshipRoutinePanel';
+import { SeniorInternDesk } from './SeniorInternDesk';
 import { getDailyTaskIds, type OfficeEventChoiceId } from '../lib/internshipRoutine';
 
 interface InternshipCareerPanelProps {
@@ -36,6 +37,7 @@ interface InternshipCareerPanelProps {
   onHandleOfficeEvent: (choiceId: OfficeEventChoiceId) => void;
   onOpenReview: () => void;
   onRequestAbsenceJustification: () => void;
+  onChooseSeniorPriority?: (id: string) => void;
 }
 
 const METRICS = [
@@ -65,7 +67,7 @@ function buildMarianaTaskGuidance(task: OfficeStageTask, isSenior: boolean): Npc
   ];
 }
 
-export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview, onRequestAbsenceJustification }) => {
+export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview, onRequestAbsenceJustification, onChooseSeniorPriority }) => {
   const [selectedTask, setSelectedTask] = useState<OfficeStageTask | null>(null);
   const [pendingTask, setPendingTask] = useState<OfficeStageTask | null>(null);
   const [isTaskGuidanceOpen, setIsTaskGuidanceOpen] = useState(false);
@@ -126,7 +128,9 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
         />
       )}
 
-      <InternOfficeTaskModal
+      {isSenior && onChooseSeniorPriority && <SeniorInternDesk player={player} onChoosePriority={onChooseSeniorPriority} />}
+
+            <InternOfficeTaskModal
         isOpen={!!selectedTask}
         task={selectedTask}
         onClose={() => setSelectedTask(null)}
