@@ -231,3 +231,20 @@ export function minuteLabel(minute: number | null) {
   const normalized = Math.max(0, minute) % (24 * 60);
   return `${pad(Math.floor(normalized / 60))}:${pad(normalized % 60)}`;
 }
+
+export const OFFICE_CANTEEN_COFFEE_PRICE = 8;
+
+export type OfficeAccessDecision =
+  | { allowed: true; reason: 'OPEN' | 'OFF_DAY'; arrivalMinute: number }
+  | { allowed: false; reason: 'TOO_EARLY'; arrivalMinute: number; opensAtMinute: number; waitMinutes: number }
+  | { allowed: false; reason: 'CLOSED'; arrivalMinute: number };
+
+export function getOfficeAccessDecision(player: PlayerProfile, arrivalMinute = player.gameCurrentMinutes || 0): OfficeAccessDecision {
+  const schedule = getWorkSchedule(player);
+  if (!schedule.workday) return { allowed: false, reason: 'CLOSED', arrivalMinute };
+  if (arrivalMinute < schedule.startMinute) {
+    return { allowed: false, reason: 'TOO_EARLY', arrivalMinute, opensAtMinute: schedule.startMinute, waitMinutes: schedule.startMinute - arrivalMinute };
+  }
+  if (arrivalMinute > schedule.endMinute + 60) return { allowed: false, reason: 'CLOSED', arrivalMinute };
+  return { allowed: true, reason: 'OPEN', arrivalMinute };
+}
