@@ -1855,6 +1855,7 @@ export default function App() {
                 onBackToOffice={handleBackToOfficeFromCase}
                 onOpenPlayerHome={handleRequestGoHome}
                 onStudyAtUniversity={handleRequestUniversityTrip}
+                onGoToEstablishment={handleRequestEstablishment}
               />
             )}
 
