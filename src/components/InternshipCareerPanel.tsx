@@ -62,6 +62,7 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
   const [selectedTask, setSelectedTask] = useState<OfficeStageTask | null>(null);
   const [pendingTask, setPendingTask] = useState<OfficeStageTask | null>(null);
   const [isTaskGuidanceOpen, setIsTaskGuidanceOpen] = useState(false);
+  const [showActOneDetails, setShowActOneDetails] = useState(false);
 
   const isInternStage = player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR';
   const isSenior = player.careerTier === 'ESTAGIARIO_SENIOR';
@@ -165,8 +166,18 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
             ))}
           </div>
 
-          {(actOne.strengths.length > 0 || actOne.risks.length > 0) && (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowActOneDetails((value) => !value)}
+              className="rounded-lg border border-[#C5A059]/25 bg-[#C5A059]/[0.06] px-3 py-2 text-[9px] font-black uppercase tracking-[0.14em] text-[#CDB06F] transition hover:bg-[#C5A059]/10"
+            >
+              {showActOneDetails ? 'Ocultar leitura do supervisor' : 'Ver leitura do supervisor'}
+            </button>
+          </div>
+
+          {showActOneDetails && (actOne.strengths.length > 0 || actOne.risks.length > 0) && (
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-[#34D399]/15 bg-[#34D399]/[0.025] p-3">
                 <span className="text-[9px] font-black uppercase tracking-wider text-[#70CDA8]">Pontos que o escritório reconhece</span>
                 <p className="mt-1.5 text-[10px] leading-relaxed text-[#9FAEA7]">
