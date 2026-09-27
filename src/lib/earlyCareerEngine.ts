@@ -73,9 +73,9 @@ export function getEarlyCareerSnapshot(player: PlayerProfile): EarlyCareerSnapsh
   const actOneComplete = Boolean(player.oabRegistration)
     || !['ESTAGIARIO', 'ESTAGIARIO_SENIOR'].includes(player.careerTier);
 
-  let stage: ActOneStageId = 'ARRIVAL';
-  let title = 'Chegada ao Ramos & Associados';
-  let objective = 'Conheça a rotina do escritório e comece a construir sua reputação profissional.';
+  let stage: ActOneStageId;
+  let title: string;
+  let objective: string;
 
   if (actOneComplete) {
     stage = 'ACT_ONE_COMPLETE';
@@ -101,10 +101,14 @@ export function getEarlyCareerSnapshot(player: PlayerProfile): EarlyCareerSnapsh
     stage = 'INTERN_FOUNDATIONS';
     title = 'Construindo sua base profissional';
     objective = 'Conclua tarefas supervisionadas e prepare-se para assumir casos do escritório.';
-  } else {
+  } else if (internTasks === 0 && player.history.length === 0) {
     stage = 'FIRST_DAY';
     title = 'Primeiro dia de estágio';
     objective = 'Comece pelas atividades supervisionadas e conheça como o Ramos & Associados trabalha.';
+  } else {
+    stage = 'ARRIVAL';
+    title = 'Chegada ao Ramos & Associados';
+    objective = 'Conheça a rotina do escritório e comece a construir sua reputação profissional.';
   }
 
   const milestones: ActOneMilestone[] = [
