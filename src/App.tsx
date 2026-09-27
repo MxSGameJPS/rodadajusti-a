@@ -61,6 +61,7 @@ import { getSeniorDailyDesk, buildSeniorFirstDayDialogues } from './lib/seniorIn
 import { hydrateInternshipRoutine, persistInternshipRoutine, loadSeniorPortfolio, persistSeniorPortfolio } from './lib/internshipRoutineRepository';
 import { advanceSeniorPortfolioDeadlines, applySeniorDecisionConsequence, buildRobertoCareerRecall, buildSeniorOabReadinessDialogues, buildSupervisorPortfolioReview, completeSeniorPortfolioAction, getSeniorProfessionalScene, portfolioDate, type SeniorLegalDecision, type SeniorPortfolioDecision, type SeniorPortfolioMatter } from './lib/seniorPortfolio';
 import { SeniorProfessionalScene } from './components/SeniorProfessionalScene';
+import { completeOabStudy, emptyOabPreparation, OAB_AREAS, oabReadiness, recordOabMock, unlockOabPreparation, type OabPreparationState, type OabStudyArea } from './lib/oabIntensivePreparation';
 import { evaluatePetition } from './lib/judicialDecisionEngine';
 import { buildSupervisorReview } from './lib/officeDisciplineEngine';
 import {
@@ -476,6 +477,7 @@ export default function App() {
   const [seniorPortfolioDecisions, setSeniorPortfolioDecisions] = useState<SeniorPortfolioDecision[]>([]);
   const [seniorPortfolioReviewDialogues, setSeniorPortfolioReviewDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
   const [seniorOabReviewDialogues, setSeniorOabReviewDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
+  const [oabPreparation, setOabPreparation] = useState<OabPreparationState>(emptyOabPreparation());
   const [seniorLegalDecisionMatter, setSeniorLegalDecisionMatter] = useState<SeniorPortfolioMatter | null>(null);
 
   useEffect(() => {
@@ -1136,11 +1138,38 @@ export default function App() {
     await Promise.all([persistSeniorPortfolio(player,next,seniorPortfolioDecisions),persistRelationshipEngine(player)]);
   };
 
+  useEffect(() => {
+    if(!player.cloudCareerId||player.careerTier!=='ESTAGIARIO_SENIOR')return;
+    void loadOabPreparation(player).then(setOabPreparation);
+  },[player.cloudCareerId,player.careerTier]);
+
+  const handleOabStudy = async (area:OabStudyArea) => {
+    if(!oabPreparation.unlocked||!ensureOfficeGameplayAvailable())return;
+    const minutes=OAB_AREAS[area].minutes;const conflict=getWorkTimeConflict(player,minutes,'OFFICE');
+    if(conflict){setLifeWarning(conflict);return}
+    const next=completeOabStudy(oabPreparation,area,portfolioDate(player));setOabPreparation(next);
+    setPlayer(prev=>({...prev,...gameClockFields(prev,minutes),energy:Math.max(0,prev.energy-5)}));
+    await persistOabPreparation(player,next);
+  };
+
+  const handleOabQuickMock = async () => {
+    if(!oabPreparation.unlocked||!ensureOfficeGameplayAvailable())return;
+    const minutes=75,conflict=getWorkTimeConflict(player,minutes,'OFFICE');if(conflict){setLifeWarning(conflict);return}
+    const readiness=oabReadiness(oabPreparation,player);
+    const correct=Math.max(4,Math.min(20,Math.round(6+readiness.knowledge*.12+oabPreparation.sessions.length*.18)));
+    const next=recordOabMock(oabPreparation,{gameDate:portfolioDate(player),mode:'QUICK',questions:20,correct,score:Math.round(correct/20*100)});
+    setOabPreparation(next);setPlayer(prev=>({...prev,...gameClockFields(prev,minutes),energy:Math.max(0,prev.energy-8)}));
+    await persistOabPreparation(player,next);
+  };
+
   const handleSeniorOabReadinessReview = () => {
     if(player.careerTier!=='ESTAGIARIO_SENIOR'||!ensureOfficeGameplayAvailable())return;
     const review=buildSeniorOabReadinessDialogues(player,seniorPortfolio);
     setSeniorOabReviewDialogues(review.dialogues);
     setPlayer(prev=>({...prev,...gameClockFields(prev,25)}));
+    if(review.ready&&!oabPreparation.unlocked){
+      const next=unlockOabPreparation(oabPreparation,portfolioDate(player));setOabPreparation(next);void persistOabPreparation(player,next);
+    }
   };
 
   const handleSeniorPortfolioDecision = (matterId: string) => {
@@ -2413,6 +2442,9 @@ export default function App() {
                   onSeniorPortfolioDecision={handleSeniorPortfolioDecision}
                   onSeniorOabReadinessReview={handleSeniorOabReadinessReview}
                   seniorCareerRecall={buildRobertoCareerRecall(player)}
+                  oabPreparation={oabPreparation}
+                  onOabStudy={handleOabStudy}
+                  onOabQuickMock={handleOabQuickMock}
           onToggleSound={handleToggleSound}
           onEnableMobileFrame={() => setIsMobileFrame(true)}
         />
