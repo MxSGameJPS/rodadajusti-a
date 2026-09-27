@@ -546,7 +546,7 @@ export const ProfessionalLifeExperience: React.FC = () => {
                 ['LAWYER_FELIPE', 'Dr. Felipe Martins'],
                 ['FRIEND_CARLOS', 'Carlos Nogueira'],
                 ...(hasPartner ? [['PARTNER', social.profile.partnerName || 'Parceiro(a)']] : []),
-              ] as Array<[keyof typeof social.relationships, string]>).map(([contactId, name]) => (
+              ] as Array<[import('../../lib/socialLife').SocialContactId, string]>).map(([contactId, name]) => (
                 <div key={contactId} className={styles.historyRow}>
                   <div><strong>{name}</strong><span>{getRelationshipLabelForContact(player, contactId)}</span></div>
                   <small>{readRelationshipEngine(player).records[`npc:${contactId}`]?.dimensions.affinity ?? 20}/100</small>
