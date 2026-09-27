@@ -1064,10 +1064,8 @@ export default function App() {
 
   const handleCompleteAbsenceJustification = () => {
     excuseTodayAbsence(player);
-    setPlayer((prev) => ({
-      ...prev,
-      officePerformance: applyRoutinePerformance(prev.officePerformance, { diligence: 5, deadlineManagement: 4, supervisorTrust: 5 }),
-    }));
+    // A justificativa impede que a ausência conte como infração futura, mas não
+    // concede bônus nem apaga automaticamente uma penalidade já processada.
     applyRelationshipInteraction(player, {
       entityId: 'npc:MARIANA', entityType: 'NPC', name: 'Mariana Duarte', role: 'Secretária • Ramos & Associados',
       gameDate: currentGameDateLabel(player), kind: 'EXCUSED_ABSENCE', title: 'Ausência justificada',
