@@ -82,3 +82,24 @@ export function getSeniorLegalDecisions(matter:SeniorPortfolioMatter):SeniorLega
   {id:'CLIENT_GUARANTEE',label:'Garantir que o cliente vencerá',description:'Tentar tranquilizar o cliente prometendo um resultado favorável.',minutes:10,technique:-2,ethics:-5,trust:-4,outcome:'A promessa de resultado é inadequada. Roberto intervém e corrige a orientação dada ao cliente.'},
  ];
 }
+
+
+export type SeniorSceneKind='CLIENT_MEETING'|'HEARING';
+export interface SeniorProfessionalScene {
+  kind:SeniorSceneKind; title:string; subtitle:string; context:string; participants:string[];
+  minutes:number; choices:SeniorLegalDecision[];
+}
+export function getSeniorProfessionalScene(matter:SeniorPortfolioMatter):SeniorProfessionalScene {
+ const hearing=matter.id==='labor';
+ return hearing ? {
+  kind:'HEARING',title:'Audiência supervisionada',subtitle:matter.title,
+  context:'Durante a audiência, um depoimento entra em tensão com documentos que você revisou. Dr. Roberto olha para suas anotações e espera sua leitura antes de definir a estratégia.',
+  participants:['Dr. Roberto Ramos','Maria Fernandes','Representante da parte contrária'],
+  minutes:45,choices:getSeniorLegalDecisions(matter),
+ } : {
+  kind:'CLIENT_MEETING',title:'Reunião com cliente',subtitle:matter.title,
+  context:`${matter.client} quer saber o que aconteceu no processo e pergunta diretamente se vai ganhar a causa. Você participa da reunião ao lado do Dr. Roberto.`,
+  participants:['Dr. Roberto Ramos',matter.client],
+  minutes:30,choices:getSeniorLegalDecisions(matter),
+ };
+}
