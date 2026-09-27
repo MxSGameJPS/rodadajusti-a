@@ -59,7 +59,8 @@ import { OfficeScene } from './components/OfficeScene/OfficeScene';
 import { InternPromotionCeremonyModal } from './components/InternPromotionCeremonyModal';
 import { getSeniorDailyDesk, buildSeniorFirstDayDialogues } from './lib/seniorInternEngine';
 import { hydrateInternshipRoutine, persistInternshipRoutine, loadSeniorPortfolio, persistSeniorPortfolio } from './lib/internshipRoutineRepository';
-import { buildSupervisorPortfolioReview, completeSeniorPortfolioAction, getSeniorLegalDecisions, portfolioDate, type SeniorLegalDecision, type SeniorPortfolioDecision, type SeniorPortfolioMatter } from './lib/seniorPortfolio';
+import { buildSupervisorPortfolioReview, completeSeniorPortfolioAction, getSeniorProfessionalScene, portfolioDate, type SeniorLegalDecision, type SeniorPortfolioDecision, type SeniorPortfolioMatter } from './lib/seniorPortfolio';
+import { SeniorProfessionalScene } from './components/SeniorProfessionalScene';
 import { evaluatePetition } from './lib/judicialDecisionEngine';
 import { buildSupervisorReview } from './lib/officeDisciplineEngine';
 import {
@@ -1134,10 +1135,12 @@ export default function App() {
 
   const applySeniorLegalDecision = async (decision: SeniorLegalDecision) => {
     const matter=seniorLegalDecisionMatter; if(!matter)return;
-    const conflict=getWorkTimeConflict(player,decision.minutes,'OFFICE'); if(conflict){setLifeWarning(conflict);return;}
+    const scene=getSeniorProfessionalScene(matter);
+    const totalMinutes=scene.minutes+decision.minutes;
+    const conflict=getWorkTimeConflict(player,totalMinutes,'OFFICE'); if(conflict){setLifeWarning(conflict);return;}
     const record:SeniorPortfolioDecision={id:`${matter.id}:${decision.id}:${Date.now()}`,matterId:matter.id,gameDate:portfolioDate(player),action:decision.id,outcome:decision.outcome};
     const next=[...seniorPortfolioDecisions,record].slice(-100); setSeniorPortfolioDecisions(next);
-    setPlayer(prev=>({...prev,...gameClockFields(prev,decision.minutes),officePerformance:applyRoutinePerformance(prev.officePerformance,{technique:decision.technique,ethics:decision.ethics,supervisorTrust:decision.trust})}));
+    setPlayer(prev=>({...prev,...gameClockFields(prev,totalMinutes),officePerformance:applyRoutinePerformance(prev.officePerformance,{technique:decision.technique,ethics:decision.ethics,supervisorTrust:decision.trust})}));
     await persistSeniorPortfolio(player,seniorPortfolio,next); setSeniorLegalDecisionMatter(null); setLifeWarning(decision.outcome);
   };
 
@@ -2648,15 +2651,11 @@ export default function App() {
       )}
 
       {seniorLegalDecisionMatter && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-[#C5A059]/30 bg-[#101012] p-6 shadow-2xl">
-            <span className="text-[9px] font-black uppercase tracking-[.18em] text-[#C5A059]">Decisão supervisionada</span>
-            <h3 className="mt-1 font-serif text-xl font-black text-[#F1EFE9]">{seniorLegalDecisionMatter.title}</h3>
-            <p className="mt-2 text-xs text-[#999590]">Roberto quer saber como você conduziria a próxima situação. Sua escolha afeta técnica, ética e confiança.</p>
-            <div className="mt-5 space-y-3">{getSeniorLegalDecisions(seniorLegalDecisionMatter).map(d=><button key={d.id} onClick={()=>void applySeniorLegalDecision(d)} className="w-full rounded-xl border border-[#303036] p-4 text-left hover:border-[#C5A059]/50"><strong className="block text-sm text-[#E4E1DA]">{d.label}</strong><span className="mt-1 block text-[10px] text-[#8F8F96]">{d.description} • {d.minutes} min</span></button>)}</div>
-            <button onClick={()=>setSeniorLegalDecisionMatter(null)} className="mt-4 text-[10px] text-[#888]">Voltar</button>
-          </div>
-        </div>
+        <SeniorProfessionalScene
+          scene={getSeniorProfessionalScene(seniorLegalDecisionMatter)}
+          onChoose={(decision) => void applySeniorLegalDecision(decision)}
+          onClose={() => setSeniorLegalDecisionMatter(null)}
+        />
       )}
 
       {seniorGuidanceDialogues && (
