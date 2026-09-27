@@ -198,7 +198,7 @@ export function getPeriodicReview(player: PlayerProfile) {
   if (state.meetings.some((item) => item.id === key)) return null;
   const present = relevant.filter((item) => item.status === 'PRESENT').length;
   const late = relevant.filter((item) => item.status === 'LATE').length;
-  const absent = relevant.filter((item) => item.status === 'ABSENT').length;
+  const absent = relevant.filter((item) => item.status === 'ABSENT' && !state.excusedAbsenceKeys.includes(item.date)).length;
   const p = player.officePerformance;
   const score = clamp((p.technique + p.diligence + p.ethics + p.deadlineManagement + p.supervisorTrust) / 5 - late * 2 - absent * 6);
   return {
@@ -265,7 +265,7 @@ export function getOfficeAccessDecision(player: PlayerProfile, arrivalMinute = p
   if (arrivalMinute < schedule.startMinute) {
     return { allowed: false, reason: 'TOO_EARLY', arrivalMinute, opensAtMinute: schedule.startMinute, waitMinutes: schedule.startMinute - arrivalMinute };
   }
-  if (arrivalMinute > schedule.endMinute + 60) return { allowed: false, reason: 'CLOSED', arrivalMinute };
+  if (arrivalMinute >= schedule.endMinute) return { allowed: false, reason: 'CLOSED', arrivalMinute };
   return { allowed: true, reason: 'OPEN', arrivalMinute };
 }
 
@@ -344,7 +344,7 @@ export function buildSupervisorReviewDialogues(player: PlayerProfile, meeting: I
   const state = readInternshipRoutine(player);
   const recent = state.attendance.filter((item) => item.status !== 'OFF_DAY').slice(-10);
   const late = recent.filter((item) => item.status === 'LATE').length;
-  const absent = recent.filter((item) => item.status === 'ABSENT').length;
+  const absent = recent.filter((item) => item.status === 'ABSENT' && !state.excusedAbsenceKeys.includes(item.date)).length;
   const p = player.officePerformance;
   const strongest = [
     ['técnica', p.technique],
@@ -479,10 +479,8 @@ export function excuseTodayAbsence(player: PlayerProfile) {
   if (!state.excusedAbsenceKeys.includes(key)) state.excusedAbsenceKeys.push(key);
   state.excusedAbsenceKeys = state.excusedAbsenceKeys.slice(-60);
   const record = state.attendance.find((item) => item.date === key);
-  if (record?.status === 'ABSENT') {
-    record.status = 'OFF_DAY';
-    record.lateMinutes = 0;
-  }
+  // Mantemos o registro como ABSENT para preservar o histórico real de frequência.
+  // excusedAbsenceKeys é a fonte de verdade para diferenciar ausência justificada de falta disciplinar.
   saveInternshipRoutine(player, state);
   return state;
 }
