@@ -518,6 +518,16 @@ export interface PlayerProfile {
   careerTier: CareerTierId;
   academicDegree: AcademicDegreeId;
   completedCourseIds: string[];
+  legalKnowledge?: {
+    CIVIL: number;
+    PROCESSO_CIVIL: number;
+    PENAL: number;
+    PROCESSO_PENAL: number;
+    CONSTITUCIONAL: number;
+    TRABALHO: number;
+    ADMINISTRATIVO: number;
+    ETICA: number;
+  };
   money: number;
   xp: number;
   reputation: number;
