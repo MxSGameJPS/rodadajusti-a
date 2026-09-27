@@ -119,6 +119,8 @@ import {
   type RoutineDisciplineAssessment,
   registerAuthorizedOfficeDeparture,
   excuseTodayAbsence,
+  buildInternPromotionNarrative,
+  type InternPromotionNarrative,
 } from './lib/internshipRoutine';
 import {
   DEFAULT_HOUSEHOLD_STATE,
@@ -462,6 +464,8 @@ export default function App() {
   const [promotedTierAnnouncement, setPromotedTierAnnouncement] = useState<CareerTierId | null>(null);
   const [pendingSupervisorReview, setPendingSupervisorReview] = useState<SupervisorReview | null>(null);
   const [isInternPromotionCeremonyOpen, setIsInternPromotionCeremonyOpen] = useState(false);
+  const [internPromotionNarrative, setInternPromotionNarrative] = useState<InternPromotionNarrative | null>(null);
+  const [promotionReviewDialogues, setPromotionReviewDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
 
   useEffect(() => {
     try {
@@ -1141,15 +1145,21 @@ export default function App() {
     const nextXp = player.xp + task.xpReward;
     const nextMoney = player.money + task.moneyReward;
     let nextTier = player.careerTier;
+    let promotionNarrative: InternPromotionNarrative | null = null;
 
     if (player.careerTier === 'ESTAGIARIO') {
-      const promotion = getInternPromotionStatus({
-        casesSolved: player.casesSolved,
-        xp: nextXp,
-        performance,
-        discipline: player.officeDiscipline,
-      });
-      if (promotion.eligible) nextTier = 'ESTAGIARIO_SENIOR';
+      const projectedPlayer = { ...player, xp: nextXp, money: nextMoney, officePerformance: performance };
+      promotionNarrative = buildInternPromotionNarrative(projectedPlayer);
+      if (promotionNarrative.eligible) nextTier = 'ESTAGIARIO_SENIOR';
+      else {
+        const status = getInternPromotionStatus({
+          casesSolved: player.casesSolved,
+          xp: nextXp,
+          performance,
+          discipline: player.officeDiscipline,
+        });
+        if (status.progressPercent >= 67) setPromotionReviewDialogues(promotionNarrative.dialogues);
+      }
     }
 
     setPlayer((prev) => ({
@@ -1161,7 +1171,8 @@ export default function App() {
       ...gameDayFields(prev, 1),
     }));
 
-    if (nextTier === 'ESTAGIARIO_SENIOR' && player.careerTier === 'ESTAGIARIO') {
+    if (nextTier === 'ESTAGIARIO_SENIOR' && player.careerTier === 'ESTAGIARIO' && promotionNarrative) {
+      setInternPromotionNarrative(promotionNarrative);
       setPromotedTierAnnouncement('ESTAGIARIO_SENIOR');
       setIsInternPromotionCeremonyOpen(true);
     }
@@ -2429,7 +2440,8 @@ export default function App() {
       <InternPromotionCeremonyModal
         isOpen={isInternPromotionCeremonyOpen}
         playerName={player.name || 'Colega'}
-        onClose={() => setIsInternPromotionCeremonyOpen(false)}
+        narrative={internPromotionNarrative}
+        onClose={() => { setIsInternPromotionCeremonyOpen(false); setInternPromotionNarrative(null); }}
       />
 
       <CareerModal
@@ -2529,6 +2541,20 @@ export default function App() {
         onGoToEstablishment={handleRequestEstablishment}
         onPurchaseOffer={handlePurchaseWorldOffer}
       />
+
+      {promotionReviewDialogues && (
+        <NpcGuidanceDialog
+          isOpen
+          npcName="Dr. Roberto Ramos"
+          npcRole="Sócio responsável • Ramos & Associados"
+          portraitSrc="/personagens/dr-roberto-ramos.png"
+          portraitAlt="Dr. Roberto Ramos, supervisor do estágio"
+          contextLabel="Avaliação para Estagiário Sênior"
+          dialogues={promotionReviewDialogues}
+          finalActionLabel="Continuar evoluindo"
+          onComplete={() => setPromotionReviewDialogues(null)}
+        />
+      )}
 
       {absenceJustificationDialogues && (
         <NpcGuidanceDialog
