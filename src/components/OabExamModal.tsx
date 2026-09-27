@@ -38,6 +38,7 @@ interface OabExamModalProps {
   onComplete: (result: ProfessionalExamResult, exam: ProfessionalExam) => void;
   allowedModes?: ProfessionalExamMode[];
   contextLabel?: string;
+  officialOnly?: boolean;
 }
 
 type Phase = 'loading' | 'intro' | 'exam' | 'submitting' | 'result' | 'error';
@@ -130,7 +131,9 @@ export const OabExamModal: React.FC<OabExamModalProps> = ({
   onComplete,
   allowedModes = ['full', 'quick'],
   contextLabel,
+  officialOnly = false,
 }) => {
+  const effectiveModes: ProfessionalExamMode[] = officialOnly ? ['full'] : allowedModes;
   const storageKey = useMemo(() => attemptStorageKey(player), [player.cloudCareerId, player.name]);
   const [phase, setPhase] = useState<Phase>('loading');
   const [exam, setExam] = useState<ProfessionalExam | null>(null);
@@ -418,7 +421,7 @@ export const OabExamModal: React.FC<OabExamModalProps> = ({
                       Qual simulado você quer realizar?
                     </h3>
                     <p className="text-sm text-[#D6C59C] mt-3 leading-relaxed">
-                      {allowedModes.length === 1 && allowedModes[0] === 'quick' ? 'Este simulado faz parte da preparação intensiva. O resultado será incorporado ao seu histórico de estudos.' : 'Os dois formatos permitem avançar para Advogado Contratado. O completo exige mais dedicação e oferece uma recompensa muito maior em Jures Reais.'}
+                      {effectiveModes.length === 1 && effectiveModes[0] === 'quick' ? 'Este simulado faz parte da preparação intensiva. O resultado será incorporado ao seu histórico de estudos.' : 'Os dois formatos permitem avançar para Advogado Contratado. O completo exige mais dedicação e oferece uma recompensa muito maior em Jures Reais.'}
                     </p>
                   </div>
                 </div>
@@ -451,7 +454,7 @@ export const OabExamModal: React.FC<OabExamModalProps> = ({
               )}
 
               <div className="grid lg:grid-cols-2 gap-4">
-                {allowedModes.map((examMode: ProfessionalExamMode) => {
+                {effectiveModes.map((examMode: ProfessionalExamMode) => {
                   const item = MODE_CONFIG[examMode];
                   const isSavedMode = hasSavedAttempt && mode === examMode;
                   return (
