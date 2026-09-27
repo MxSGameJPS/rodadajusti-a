@@ -84,7 +84,7 @@ import {
 import { supabase } from './lib/supabase';
 import { canManageOwnOffice } from './lib/independentPractice';
 import { addLegalKnowledge, CAMPUS_ACTIVITIES, type CampusActivityId } from './lib/academicLife';
-import { applyRelationshipInteraction } from './lib/relationshipEngine';
+import { applyRelationshipInteraction, seedCoreRelationships } from './lib/relationshipEngine';
 import {
   DEFAULT_HOUSEHOLD_STATE,
   applyLifeTimePassage,
@@ -599,6 +599,7 @@ export default function App() {
       gameCurrentMinutes: DEFAULT_GAME_START_MINUTES,
     };
     setPlayer(freshProfile);
+    seedCoreRelationships(freshProfile);
     saveCareerOrigin(normalizeCareerOrigin(setup.city, setup.state));
     setIsNewGameModalOpen(false);
     setSelectedCaseToBrief(GAME_CASES[0]);
