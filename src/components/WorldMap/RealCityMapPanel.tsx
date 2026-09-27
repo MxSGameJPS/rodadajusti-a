@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Building2, Loader2, MapPin, Navigation, Route } from 'lucide-react';
+import { Building2, GraduationCap, Loader2, MapPin, Navigation, Route } from 'lucide-react';
 import type { LegalCase, LocationScene, PlayerProfile } from '../../types/game';
 import { readCurrentPlayerSnapshot } from '../../lib/professionalRpg';
 import { applyRotaJusticeMapTheme, buildOpenStreetMapStyle, loadMapLibre } from '../../lib/maplibreClient';
@@ -828,19 +828,23 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
             )}
 
             {selectedLifeLocation === 'UNIVERSITY' && player && (
-              <div className={styles.detailCard}>
-                <div>
-                  <strong>{getUniversityName(profile)}</strong>
-                  <span>Vida acadêmica • {profile.city}/{profile.state}</span>
-                  <small>Disponível enquanto o personagem estiver em estágio.</small>
+              <div className={styles.universityDetailOverlay} onClick={() => setSelectedLifeLocation(null)}>
+                <div className={styles.universityDetailCard} onClick={(event) => event.stopPropagation()}>
+                  <div className={styles.universityDetailIcon}><GraduationCap size={28}/></div>
+                  <div className={styles.universityDetailCopy}>
+                    <span className={styles.universityEyebrow}>Vida acadêmica</span>
+                    <strong>{getUniversityName(profile)}</strong>
+                    <span>{profile.city}/{profile.state} • Campus de Direito</span>
+                    <small>Aulas, biblioteca e grupos de estudo desenvolvem conhecimento jurídico e preparação profissional.</small>
+                    <div className={styles.universityFeatures}><span>Aulas</span><span>Biblioteca</span><span>Grupo de estudos</span></div>
+                  </div>
+                  <div className={styles.universityDetailActions}>
+                    <button type="button" className={styles.routeButton} onClick={() => onStudyAtUniversity?.()}>
+                      Ir para a faculdade
+                    </button>
+                    <button type="button" className={styles.detailCloseButton} onClick={() => setSelectedLifeLocation(null)}>Fechar</button>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  className={styles.routeButton}
-                  onClick={() => onStudyAtUniversity?.()}
-                >
-                  Estudar • 3h
-                </button>
               </div>
             )}
 
