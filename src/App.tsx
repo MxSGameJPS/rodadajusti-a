@@ -1820,7 +1820,7 @@ export default function App() {
 
   const handleRequestGoHome = () => {
     if (player.worldLocation.kind === 'OFFICE' && isInternCareer(player)) {
-      registerOfficeDeparture(player);
+      handleRegisterInternDeparture();
     }
     if (player.worldLocation.kind === 'HOME') {
       setLifeWarning('');
@@ -1897,6 +1897,17 @@ export default function App() {
     const request = lifeTravelRequest;
     if (!request) return;
 
+    const projectedPlayer = (() => {
+      const clock = gameClockFields(player, result.travelMinutes);
+      return {
+        ...player,
+        ...clock,
+        worldLocation: request.destination === 'ESTABLISHMENT'
+          ? { kind: 'ESTABLISHMENT' as const, refId: request.destinationRefId || null, label: result.destination.label }
+          : worldLocationForLifePlace(request.destination, result.destination.label),
+      } as PlayerProfile;
+    })();
+
     setPlayer((prev) => {
       const clock = gameClockFields(prev, result.travelMinutes);
       const finances = result.cost > 0
@@ -1938,8 +1949,8 @@ export default function App() {
     }
 
     if (request.reason === 'GO_OFFICE') {
-      const arrivalMinute = Math.max(0, player.gameCurrentMinutes + result.travelMinutes);
-      const access = getOfficeAccessDecision(player, arrivalMinute);
+      const arrivalMinute = Math.max(0, projectedPlayer.gameCurrentMinutes);
+      const access = getOfficeAccessDecision(projectedPlayer, arrivalMinute);
       if (!access.allowed) {
         setOfficeClosedArrivalMinute(arrivalMinute);
         setIsCityWorldMapOpen(false);
@@ -1947,7 +1958,21 @@ export default function App() {
       }
       setOfficeClosedArrivalMinute(null);
       setCurrentView('HUB');
-      setTimeout(() => handleRegisterInternArrival(), 0);
+      if (isInternCareer(projectedPlayer)) {
+        const resultArrival = registerOfficeArrival(projectedPlayer);
+        if (resultArrival.created) {
+          const delta = attendancePerformanceDelta(resultArrival.record);
+          setPlayer((prev) => ({ ...prev, officePerformance: applyRoutinePerformance(prev.officePerformance, delta) }));
+          const disciplineAssessment = assessArrivalDiscipline(projectedPlayer, resultArrival.record);
+          if (disciplineAssessment) applyRoutineDiscipline(disciplineAssessment);
+          if (!hasReceivedDailyBriefing(projectedPlayer)) {
+            const tasks = getTasksForTier(projectedPlayer.careerTier);
+            const assignedIds = getDailyTaskIds(projectedPlayer, tasks.map((task) => task.id));
+            const titles = tasks.filter((task) => assignedIds.includes(task.id)).map((task) => task.title);
+            setMarianaArrivalDialogues(buildMarianaArrivalDialogues(projectedPlayer, titles));
+          }
+        }
+      }
       return;
     }
 
