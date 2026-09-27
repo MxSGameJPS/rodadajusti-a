@@ -1472,6 +1472,9 @@ export default function App() {
   };
 
   const handleRequestGoHome = () => {
+    if (player.worldLocation.kind === 'OFFICE' && isInternCareer(player)) {
+      registerOfficeDeparture(player);
+    }
     if (player.worldLocation.kind === 'HOME') {
       setLifeWarning('');
       setIsCityWorldMapOpen(false);
@@ -2054,6 +2057,12 @@ export default function App() {
   };
 
   const handleBackToOfficeFromCase = () => {
+    const access = getOfficeAccessDecision(player);
+    if (!access.allowed) {
+      setLifeWarning(access.reason === 'TOO_EARLY' ? 'O Ramos & Associados ainda está fechado.' : 'O expediente do Ramos & Associados já terminou. Retorne no próximo dia útil.');
+      setIsCityWorldMapOpen(true);
+      return;
+    }
     setPlayer((prev) => ({
       ...prev,
       worldLocation: {
