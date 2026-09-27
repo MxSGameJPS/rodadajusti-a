@@ -58,7 +58,8 @@ import {
 import { OfficeScene } from './components/OfficeScene/OfficeScene';
 import { InternPromotionCeremonyModal } from './components/InternPromotionCeremonyModal';
 import { getSeniorDailyDesk, buildSeniorFirstDayDialogues } from './lib/seniorInternEngine';
-import { hydrateInternshipRoutine, persistInternshipRoutine } from './lib/internshipRoutineRepository';
+import { hydrateInternshipRoutine, persistInternshipRoutine, loadSeniorPortfolio, persistSeniorPortfolio } from './lib/internshipRoutineRepository';
+import { completeSeniorPortfolioAction, portfolioDate, type SeniorPortfolioDecision, type SeniorPortfolioMatter } from './lib/seniorPortfolio';
 import { evaluatePetition } from './lib/judicialDecisionEngine';
 import { buildSupervisorReview } from './lib/officeDisciplineEngine';
 import {
@@ -469,11 +470,18 @@ export default function App() {
   const [internPromotionNarrative, setInternPromotionNarrative] = useState<InternPromotionNarrative | null>(null);
   const [promotionReviewDialogues, setPromotionReviewDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
   const [seniorGuidanceDialogues, setSeniorGuidanceDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
+  const [seniorPortfolio, setSeniorPortfolio] = useState<SeniorPortfolioMatter[]>([]);
+  const [seniorPortfolioDecisions, setSeniorPortfolioDecisions] = useState<SeniorPortfolioDecision[]>([]);
 
   useEffect(() => {
     if (!player.name || !player.cloudCareerId) return;
     void hydrateInternshipRoutine(player);
   }, [player.cloudCareerId, player.name]);
+
+  useEffect(() => {
+    if (!player.cloudCareerId || player.careerTier !== 'ESTAGIARIO_SENIOR') return;
+    void loadSeniorPortfolio(player).then(({ portfolio, decisions }) => { setSeniorPortfolio(portfolio); setSeniorPortfolioDecisions(decisions); });
+  }, [player.cloudCareerId, player.careerTier]);
 
   useEffect(() => {
     if (!player.cloudCareerId) return;
@@ -1106,6 +1114,23 @@ export default function App() {
     });
     setPeriodicSupervisorReview(null);
     setSupervisorReviewDialogues(null);
+  };
+
+  const handleSeniorPortfolioAction = async (matterId: string, action: SeniorPortfolioMatter['pending'][number]) => {
+    if (player.careerTier !== 'ESTAGIARIO_SENIOR' || !ensureOfficeGameplayAvailable()) return;
+    const matter = seniorPortfolio.find((item) => item.id === matterId);
+    if (!matter || !matter.pending.includes(action)) return;
+    const minutes = action === 'DRAFT' ? 70 : action === 'HEARING_PREP' ? 60 : action === 'RESEARCH' ? 50 : 35;
+    const conflict = getWorkTimeConflict(player, minutes, 'OFFICE');
+    if (conflict) { setLifeWarning(conflict); return; }
+    const nextMatter = completeSeniorPortfolioAction(matter, action);
+    const nextPortfolio = seniorPortfolio.map((item) => item.id === matterId ? nextMatter : item);
+    const decision: SeniorPortfolioDecision = { id: `${matterId}:${action}:${Date.now()}`, matterId, gameDate: portfolioDate(player), action, outcome: nextMatter.status === 'READY_FOR_REVIEW' ? 'Matéria pronta para revisão do supervisor.' : 'Pendência concluída e carteira atualizada.' };
+    const nextDecisions = [...seniorPortfolioDecisions, decision].slice(-100);
+    setSeniorPortfolio(nextPortfolio); setSeniorPortfolioDecisions(nextDecisions);
+    setPlayer((prev) => ({ ...prev, ...gameClockFields(prev, minutes), officePerformance: applyRoutinePerformance(prev.officePerformance, { technique: 1, diligence: 1, supervisorTrust: nextMatter.status === 'READY_FOR_REVIEW' ? 2 : 1 }) }));
+    const ok = await persistSeniorPortfolio(player, nextPortfolio, nextDecisions);
+    setLifeWarning(ok ? decision.outcome : 'A atividade foi concluída, mas não foi possível confirmar a gravação da carteira no servidor.');
   };
 
   const handleChooseSeniorPriority = (priorityId: string) => {
@@ -2333,6 +2358,8 @@ export default function App() {
           onOpenReview={handlePeriodicInternReview}
           onRequestAbsenceJustification={handleRequestAbsenceJustification}
                   onChooseSeniorPriority={handleChooseSeniorPriority}
+                  seniorPortfolio={seniorPortfolio}
+                  onSeniorPortfolioAction={handleSeniorPortfolioAction}
           onToggleSound={handleToggleSound}
           onEnableMobileFrame={() => setIsMobileFrame(true)}
         />
