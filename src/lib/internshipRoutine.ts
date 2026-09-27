@@ -494,3 +494,52 @@ export function registerAuthorizedOfficeDeparture(player: PlayerProfile) {
   const result = registerOfficeDeparture(player);
   return { ...result, authorized: true as const };
 }
+
+export interface InternPromotionNarrative {
+  eligible: boolean;
+  headline: string;
+  dialogues: Array<{ eyebrow: string; text: string }>;
+  blockers: string[];
+}
+
+export function buildInternPromotionNarrative(player: PlayerProfile): InternPromotionNarrative {
+  const performance = player.officePerformance;
+  const state = readInternshipRoutine(player);
+  const attendance = state.attendance.filter((item) => item.status !== 'OFF_DAY');
+  const present = attendance.filter((item) => item.status === 'PRESENT').length;
+  const late = attendance.filter((item) => item.status === 'LATE').length;
+  const absent = attendance.filter((item) => item.status === 'ABSENT').length;
+  const internTaskIds = new Set(['intern-prazos-agenda', 'intern-jurisprudencia', 'intern-documentos', 'intern-minuta']);
+  const completedTasks = performance.completedTaskIds.filter((id) => internTaskIds.has(id)).length;
+  const blockers: string[] = [];
+  if (player.casesSolved < 2) blockers.push(`concluir mais ${2 - player.casesSolved} caso(s) com êxito`);
+  if (player.xp < 350) blockers.push(`alcançar 350 XP (atual: ${player.xp})`);
+  if (completedTasks < 2) blockers.push(`concluir mais ${2 - completedTasks} tarefa(s) supervisionada(s)`);
+  if (performance.diligence < 58) blockers.push(`elevar diligência de ${performance.diligence} para 58`);
+  if (performance.supervisorTrust < 58) blockers.push(`elevar a confiança do Dr. Roberto de ${performance.supervisorTrust} para 58`);
+  if (player.officeDiscipline.employmentStatus !== 'ACTIVE') blockers.push('restabelecer um vínculo profissional ativo');
+  else if (player.officeDiscipline.warningCount >= 2) blockers.push('resolver a situação disciplinar do vínculo');
+
+  const eligible = blockers.length === 0;
+  const frequency = attendance.length === 0
+    ? 'Ainda temos pouco histórico de frequência registrado.'
+    : `No ponto, foram ${present} presença(s) regular(es), ${late} atraso(s) e ${absent} falta(s) não justificada(s).`;
+  const discipline = player.officeDiscipline.warningCount === 0
+    ? 'Seu histórico não tem advertências formais.'
+    : `Seu histórico registra ${player.officeDiscipline.warningCount} advertência(s) formal(is), e isso pesa na avaliação de confiança.`;
+
+  const dialogues = eligible
+    ? [
+        { eyebrow: 'Avaliação do Dr. Roberto', text: `${player.name || 'Colega'}, esta promoção não vem de uma barra de progresso. Eu revi seu trabalho: ${player.casesSolved} caso(s) concluído(s) com êxito, ${completedTasks} atividade(s) supervisionada(s) e ${player.xp} XP de experiência prática.` },
+        { eyebrow: 'Frequência e disciplina', text: `${frequency} ${discipline}` },
+        { eyebrow: 'Desempenho profissional', text: `Sua diligência está em ${performance.diligence}/100 e minha confiança no seu trabalho está em ${performance.supervisorTrust}/100. Técnica: ${performance.technique}/100; ética: ${performance.ethics}/100; gestão de prazos: ${performance.deadlineManagement}/100.` },
+        { eyebrow: 'Decisão', text: 'Você demonstrou os requisitos para deixar de ser apenas um executor supervisionado. A partir de hoje, passa a atuar como Estagiário Sênior, com mais autonomia e responsabilidade dentro do escritório.' },
+      ]
+    : [
+        { eyebrow: 'Avaliação do Dr. Roberto', text: `${player.name || 'Colega'}, eu revisei seu histórico antes de decidir sobre a promoção. Você tem ${player.casesSolved} caso(s) concluído(s) com êxito, ${completedTasks} atividade(s) supervisionada(s) e ${player.xp} XP.` },
+        { eyebrow: 'Frequência e disciplina', text: `${frequency} ${discipline}` },
+        { eyebrow: 'Promoção adiada', text: `Ainda não vou promover você. O que falta é objetivo: ${blockers.join('; ')}.` },
+        { eyebrow: 'Próxima avaliação', text: 'A promoção não foi perdida. Corrija esses pontos e eu farei uma nova avaliação quando os requisitos forem alcançados.' },
+      ];
+  return { eligible, headline: eligible ? 'Promoção para Estagiário Sênior' : 'Promoção adiada', dialogues, blockers };
+}
