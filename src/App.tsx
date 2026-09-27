@@ -106,6 +106,8 @@ import {
   registerOfficeDeparture,
   getOfficeAccessDecision,
   getWorkSchedule,
+  hasHandledSeniorPriority,
+  markSeniorPriorityHandled,
   getTodayAttendance,
   minuteLabel,
   OFFICE_CANTEEN_COFFEE_PRICE,
@@ -1235,8 +1237,13 @@ export default function App() {
     if (!ensureOfficeGameplayAvailable()) return;
     const priority = getSeniorDailyDesk(player).find((item) => item.id === priorityId);
     if (!priority) return;
+    if (hasHandledSeniorPriority(player, priorityId)) {
+      setLifeWarning('Esta prioridade já foi tratada hoje. Escolha outra demanda da sua mesa.');
+      return;
+    }
     const conflict = getWorkTimeConflict(player, priority.minutes, 'OFFICE');
     if (conflict) { setLifeWarning(conflict); return; }
+    markSeniorPriorityHandled(player, priorityId);
     const diligenceDelta = priority.recommended ? 2 : 0;
     const trustDelta = priority.recommended ? 2 : -1;
     setPlayer((prev) => ({
