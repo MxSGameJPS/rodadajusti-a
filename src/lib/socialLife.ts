@@ -3,6 +3,7 @@ import type { PlayerProfile } from '../types/game';
 import { getProfessionalOwnerKey } from './professionalRpg';
 import { shouldRunPlayableHearing } from './reactiveWorldStore';
 import { applyRelationshipInteraction, readRelationshipEngine } from './relationshipEngine';
+import { persistRelationshipEngine } from './relationshipRepository';
 
 export type RelationshipStatus = 'UNDEFINED' | 'SINGLE' | 'DATING' | 'MARRIED' | 'STABLE_UNION';
 export type SocialContactId = 'MARIANA' | 'PARTNER' | 'ROBERTO' | 'LAWYER_FELIPE' | 'FRIEND_CARLOS';
@@ -617,6 +618,7 @@ export function completeSocialEvent(player: PlayerProfile, state: SocialLifeStat
     bond: professional ? 'PROFESSIONAL' : sourceEvent.sourceContactId === 'PARTNER' ? 'PARTNER' : 'FRIEND',
     adultOnly: true,
   });
+  void persistRelationshipEngine(player);
   const spent = Math.max(0, chosen.cost);
   const nextEnergy = clamp(state.energy + chosen.energyDelta);
   const endKey = endDateKey(player, chosen.daysAdvance);
