@@ -9,6 +9,7 @@ export interface SeniorPortfolioMatter {
   decisionCompleted?: boolean;
   consequence?: string;
   lastDeadlineDate?: string;
+  deadlinePenaltyApplied?: boolean;
 }
 export interface SeniorPortfolioDecision {
   id: string; matterId: string; gameDate: string; action: string; outcome: string;
@@ -124,7 +125,7 @@ export function advanceSeniorPortfolioDeadlines(player:PlayerProfile, portfolio:
   if(last===today)return m;
   const elapsed=last===null?0:Math.max(0,today-last);
   const dueInDays=Math.max(0,m.dueInDays-elapsed);
-  const consequence=dueInDays===0&&m.status!=='COMPLETED'?'Prazo crítico: o processo chegou ao limite sem conclusão da sua etapa supervisionada.':m.consequence;
+  const consequence=dueInDays===0&&m.status!=='COMPLETED'?'Prazo crítico: o processo chegou ao limite sem conclusão da sua etapa supervisionada. Roberto registrou a falha de prazo na sua avaliação.':m.consequence;
   if(dueInDays!==m.dueInDays||m.lastDeadlineDate!==portfolioDate(player)||consequence!==m.consequence)changed=true;
   return {...m,dueInDays,lastDeadlineDate:portfolioDate(player),consequence};
  });
@@ -168,4 +169,21 @@ export function buildSeniorOabReadinessDialogues(player:PlayerProfile,portfolio:
    {eyebrow:'Próximo passo',text:ready?'Você está demonstrando maturidade para entrar na preparação decisiva da OAB. A partir daqui, quero ver constância nos simulados e na rotina de estudo.':'Ainda não vou empurrar você para a etapa decisiva da OAB. Feche as lacunas da carteira, preserve a ética e mostre consistência profissional.'},
   ]
  };
+}
+
+export function seniorDeadlinePenalty(portfolio:SeniorPortfolioMatter[]) {
+  const overdue=portfolio.filter((matter)=>matter.dueInDays===0&&matter.status!=='COMPLETED'&&!matter.deadlinePenaltyApplied);
+  return {
+    matterIds: overdue.map((matter)=>matter.id),
+    delta: {
+      deadlineManagement: -4 * overdue.length,
+      supervisorTrust: -3 * overdue.length,
+      diligence: -2 * overdue.length,
+    },
+  };
+}
+
+export function markSeniorDeadlinePenalties(portfolio:SeniorPortfolioMatter[],matterIds:string[]) {
+  const ids=new Set(matterIds);
+  return portfolio.map((matter)=>ids.has(matter.id)?{...matter,deadlinePenaltyApplied:true}:matter);
 }
