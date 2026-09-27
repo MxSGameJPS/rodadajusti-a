@@ -4,6 +4,7 @@ import { ACADEMIC_COURSES } from '../data/careers';
 import { ACADEMIC_TRACKS } from '../lib/progressionRules';
 import { X, GraduationCap, CheckCircle2, BookOpen, Lock, FileQuestion } from 'lucide-react';
 import { sound } from '../utils/sound';
+import { LEGAL_KNOWLEDGE_LABELS, normalizeLegalKnowledge } from '../lib/academicLife';
 
 interface AcademicModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export const AcademicModal: React.FC<AcademicModalProps> = ({ isOpen, onClose, p
   const masterLevel = Number(extended.masterLevel || 0);
   const doctorateLevel = Number(extended.doctorateLevel || 0);
   const regularCourses = ACADEMIC_COURSES.filter((course) => !['MESTRE', 'DOUTOR'].includes(course.degree));
+  const knowledge = normalizeLegalKnowledge(player.legalKnowledge);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A0A0B]/85 backdrop-blur-md overflow-y-auto">
@@ -42,6 +44,19 @@ export const AcademicModal: React.FC<AcademicModalProps> = ({ isOpen, onClose, p
 
           <section className="p-4 rounded-xl border border-[#C5A059]/25 bg-[#C5A059]/[0.05] text-xs text-[#CFC5AD]">
             O antigo botão que concedia Mestrado ou Doutorado instantaneamente foi removido. Esses títulos passam a depender das provas de progressão criadas no painel administrativo.
+          </section>
+
+          <section className="p-5 rounded-xl border border-[#34D399]/20 bg-[#34D399]/[0.04]">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div><h3 className="text-xs uppercase tracking-widest font-bold text-[#34D399]">Conhecimento jurídico</h3><p className="text-[11px] text-[#888] mt-1">Evolui com aulas, biblioteca, grupos de estudo, cursinhos e experiência profissional.</p></div>
+              <BookOpen size={20} className="text-[#34D399]"/>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-x-5 gap-y-3">
+              {Object.entries(knowledge).map(([area, value]) => <div key={area}>
+                <div className="flex justify-between text-[10px] mb-1"><span className="text-[#BBB]">{LEGAL_KNOWLEDGE_LABELS[area as keyof typeof LEGAL_KNOWLEDGE_LABELS]}</span><strong className="font-mono text-[#E8E8E8]">{value}/100</strong></div>
+                <div className="h-1.5 rounded-full bg-[#202126] overflow-hidden"><div className="h-full bg-[#34D399]" style={{ width: value + '%' }}/></div>
+              </div>)}
+            </div>
           </section>
 
           <section className="space-y-3">
