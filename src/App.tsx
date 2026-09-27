@@ -59,7 +59,7 @@ import { OfficeScene } from './components/OfficeScene/OfficeScene';
 import { InternPromotionCeremonyModal } from './components/InternPromotionCeremonyModal';
 import { getSeniorDailyDesk, buildSeniorFirstDayDialogues } from './lib/seniorInternEngine';
 import { hydrateInternshipRoutine, persistInternshipRoutine, loadSeniorPortfolio, persistSeniorPortfolio, loadOabPreparation, persistOabPreparation } from './lib/internshipRoutineRepository';
-import { advanceSeniorPortfolioDeadlines, applySeniorDecisionConsequence, buildRobertoCareerRecall, buildSeniorOabReadinessDialogues, buildSupervisorPortfolioReview, completeSeniorPortfolioAction, getSeniorProfessionalScene, portfolioDate, type SeniorLegalDecision, type SeniorPortfolioDecision, type SeniorPortfolioMatter } from './lib/seniorPortfolio';
+import { advanceSeniorPortfolioDeadlines, applySeniorDecisionConsequence, buildRobertoCareerRecall, buildSeniorOabReadinessDialogues, buildSupervisorPortfolioReview, completeSeniorPortfolioAction, getSeniorProfessionalScene, portfolioDate, seniorDeadlinePenalty, markSeniorDeadlinePenalties, type SeniorLegalDecision, type SeniorPortfolioDecision, type SeniorPortfolioMatter } from './lib/seniorPortfolio';
 import { SeniorProfessionalScene } from './components/SeniorProfessionalScene';
 import { completeOabStudy, emptyOabPreparation, OAB_AREAS, oabReadiness, recordOabMock, recordFinalOabExam, unlockOabPreparation, type OabPreparationState, type OabStudyArea } from './lib/oabIntensivePreparation';
 import { evaluatePetition } from './lib/judicialDecisionEngine';
@@ -493,8 +493,14 @@ export default function App() {
     if (!player.cloudCareerId || player.careerTier !== 'ESTAGIARIO_SENIOR') return;
     void loadSeniorPortfolio(player).then(async ({ portfolio, decisions }) => {
       const advanced=advanceSeniorPortfolioDeadlines(player,portfolio);
-      setSeniorPortfolio(advanced.portfolio); setSeniorPortfolioDecisions(decisions);
-      if(advanced.changed) await persistSeniorPortfolio(player,advanced.portfolio,decisions);
+      const penalty=seniorDeadlinePenalty(advanced.portfolio);
+      const hardened=penalty.matterIds.length?markSeniorDeadlinePenalties(advanced.portfolio,penalty.matterIds):advanced.portfolio;
+      setSeniorPortfolio(hardened); setSeniorPortfolioDecisions(decisions);
+      if(penalty.matterIds.length){
+        setPlayer((prev)=>({...prev,officePerformance:applyRoutinePerformance(prev.officePerformance,penalty.delta)}));
+        applyRelationshipInteraction(player,{entityId:'npc:ROBERTO',entityType:'NPC',name:'Dr. Roberto Ramos',role:'Sócio responsável • Ramos & Associados',gameDate:portfolioDate(player),kind:'SENIOR_DEADLINE_MISSED',title:'Prazo supervisionado perdido',description:`Roberto registrou ${penalty.matterIds.length} falha(s) de prazo na carteira supervisionada.`,scope:'WORKPLACE',intensity:34,dimensions:{professionalTrust:-3*penalty.matterIds.length,professionalRespect:-2*penalty.matterIds.length},bond:'PROFESSIONAL'});
+      }
+      if(advanced.changed||penalty.matterIds.length) await persistSeniorPortfolio(player,hardened,decisions);
     });
   }, [player.cloudCareerId, player.careerTier, player.gameCurrentDay, player.gameCurrentMonth, player.gameCurrentYear]);
 
