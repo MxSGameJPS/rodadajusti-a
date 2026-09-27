@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { LegalCase, ActiveCaseState, LocationScene } from '../types/game';
+import type { WorldEstablishment } from '../lib/worldEstablishments';
 import {
   Clock,
   MapPin,
@@ -51,6 +52,10 @@ interface InvestigationMapProps {
   onBackToOffice: () => void;
   onOpenPlayerHome: () => void;
   onStudyAtUniversity: () => void;
+  onGoToEstablishment: (
+    establishment: WorldEstablishment,
+    point: { lat: number; lng: number },
+  ) => void;
 }
 
 export const InvestigationMap: React.FC<InvestigationMapProps> = ({
@@ -62,6 +67,7 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
   onBackToOffice,
   onOpenPlayerHome,
   onStudyAtUniversity,
+  onGoToEstablishment,
 }) => {
   const [travelTarget, setTravelTarget] = useState<LocationScene | null>(null);
   const [locationsOpen, setLocationsOpen] = useState(false);
@@ -142,6 +148,7 @@ export const InvestigationMap: React.FC<InvestigationMapProps> = ({
           onTravelToLocation={beginTravel}
           onOpenPlayerHome={onOpenPlayerHome}
           onStudyAtUniversity={onStudyAtUniversity}
+          onGoToEstablishment={onGoToEstablishment}
           immersive
         />
 
