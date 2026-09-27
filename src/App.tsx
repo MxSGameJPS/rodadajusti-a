@@ -602,7 +602,8 @@ export default function App() {
     seedCoreRelationships(freshProfile);
     saveCareerOrigin(normalizeCareerOrigin(setup.city, setup.state));
     setIsNewGameModalOpen(false);
-    setSelectedCaseToBrief(GAME_CASES[0]);
+    setSelectedCaseToBrief(null);
+    setCurrentView('HUB');
   };
 
   const handleAcceptCase = (caseItem: LegalCase) => {
