@@ -59,7 +59,7 @@ import { OfficeScene } from './components/OfficeScene/OfficeScene';
 import { InternPromotionCeremonyModal } from './components/InternPromotionCeremonyModal';
 import { getSeniorDailyDesk, buildSeniorFirstDayDialogues } from './lib/seniorInternEngine';
 import { hydrateInternshipRoutine, persistInternshipRoutine, loadSeniorPortfolio, persistSeniorPortfolio } from './lib/internshipRoutineRepository';
-import { advanceSeniorPortfolioDeadlines, applySeniorDecisionConsequence, buildSupervisorPortfolioReview, completeSeniorPortfolioAction, getSeniorProfessionalScene, portfolioDate, type SeniorLegalDecision, type SeniorPortfolioDecision, type SeniorPortfolioMatter } from './lib/seniorPortfolio';
+import { advanceSeniorPortfolioDeadlines, applySeniorDecisionConsequence, buildRobertoCareerRecall, buildSeniorOabReadinessDialogues, buildSupervisorPortfolioReview, completeSeniorPortfolioAction, getSeniorProfessionalScene, portfolioDate, type SeniorLegalDecision, type SeniorPortfolioDecision, type SeniorPortfolioMatter } from './lib/seniorPortfolio';
 import { SeniorProfessionalScene } from './components/SeniorProfessionalScene';
 import { evaluatePetition } from './lib/judicialDecisionEngine';
 import { buildSupervisorReview } from './lib/officeDisciplineEngine';
@@ -475,6 +475,7 @@ export default function App() {
   const [seniorPortfolio, setSeniorPortfolio] = useState<SeniorPortfolioMatter[]>([]);
   const [seniorPortfolioDecisions, setSeniorPortfolioDecisions] = useState<SeniorPortfolioDecision[]>([]);
   const [seniorPortfolioReviewDialogues, setSeniorPortfolioReviewDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
+  const [seniorOabReviewDialogues, setSeniorOabReviewDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
   const [seniorLegalDecisionMatter, setSeniorLegalDecisionMatter] = useState<SeniorPortfolioMatter | null>(null);
 
   useEffect(() => {
@@ -1133,6 +1134,13 @@ export default function App() {
     setPlayer(prev=>({...prev,...gameClockFields(prev,30),officePerformance:applyRoutinePerformance(prev.officePerformance,{technique:review.techniqueDelta,supervisorTrust:review.trustDelta})}));
     applyRelationshipInteraction(player,{entityId:'npc:ROBERTO',entityType:'NPC',name:'Dr. Roberto Ramos',role:'Sócio responsável • Ramos & Associados',gameDate:portfolioDate(player),kind:review.approved?'SENIOR_PORTFOLIO_APPROVED':'SENIOR_PORTFOLIO_REVISION',title:review.title,description:`${matter.title}: ${review.dialogues[review.dialogues.length-1]?.text||review.title}`,scope:'WORKPLACE',intensity:review.approved?42:34,dimensions:{professionalTrust:review.trustDelta,professionalRespect:review.approved?3:-1,conflict:review.approved?0:2},bond:'PROFESSIONAL'});
     await Promise.all([persistSeniorPortfolio(player,next,seniorPortfolioDecisions),persistRelationshipEngine(player)]);
+  };
+
+  const handleSeniorOabReadinessReview = () => {
+    if(player.careerTier!=='ESTAGIARIO_SENIOR'||!ensureOfficeGameplayAvailable())return;
+    const review=buildSeniorOabReadinessDialogues(player,seniorPortfolio);
+    setSeniorOabReviewDialogues(review.dialogues);
+    setPlayer(prev=>({...prev,...gameClockFields(prev,25)}));
   };
 
   const handleSeniorPortfolioDecision = (matterId: string) => {
@@ -2403,6 +2411,8 @@ export default function App() {
                   onSeniorPortfolioAction={handleSeniorPortfolioAction}
                   onSeniorPortfolioReview={handleSeniorPortfolioReview}
                   onSeniorPortfolioDecision={handleSeniorPortfolioDecision}
+                  onSeniorOabReadinessReview={handleSeniorOabReadinessReview}
+                  seniorCareerRecall={buildRobertoCareerRecall(player)}
           onToggleSound={handleToggleSound}
           onEnableMobileFrame={() => setIsMobileFrame(true)}
         />
@@ -2658,6 +2668,10 @@ export default function App() {
         onGoToEstablishment={handleRequestEstablishment}
         onPurchaseOffer={handlePurchaseWorldOffer}
       />
+
+      {seniorOabReviewDialogues && (
+        <NpcGuidanceDialog isOpen npcName="Dr. Roberto Ramos" npcRole="Sócio responsável • Ramos & Associados" portraitSrc="/personagens/dr-roberto-ramos.png" portraitAlt="Dr. Roberto Ramos" contextLabel="Conversa de preparação para a OAB" dialogues={seniorOabReviewDialogues} finalActionLabel="Continuar minha preparação" onComplete={() => setSeniorOabReviewDialogues(null)} />
+      )}
 
       {seniorPortfolioReviewDialogues && (
         <NpcGuidanceDialog isOpen npcName="Dr. Roberto Ramos" npcRole="Sócio responsável • Ramos & Associados" portraitSrc="/personagens/dr-roberto-ramos.png" portraitAlt="Dr. Roberto Ramos" contextLabel="Revisão da carteira supervisionada" dialogues={seniorPortfolioReviewDialogues} finalActionLabel="Entendido" onComplete={() => setSeniorPortfolioReviewDialogues(null)} />
