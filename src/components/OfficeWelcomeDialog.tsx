@@ -38,11 +38,11 @@ export const OfficeWelcomeDialog: React.FC<OfficeWelcomeDialogProps> = ({
       },
       {
         eyebrow: 'Primeira demanda',
-        text: 'E como seu primeiro dia já começou de verdade, temos uma demanda esperando por você. Vou encaminhar agora o seu primeiro caso para análise.',
+        text: 'E como seu primeiro dia já começou de verdade, o Dr. Roberto separou algumas atividades supervisionadas para você. Antes de assumir casos maiores, queremos conhecer sua forma de trabalhar.',
       },
       {
         eyebrow: 'Antes de começar',
-        text: 'Leia o relato do cliente e os fatos iniciais com bastante atenção. Quando estiver pronto(a), aceite o caso e inicie as diligências. Bem-vindo(a) à sua Rota da Justiça.',
+        text: 'Comece pela sua avaliação no escritório. Suas entregas, sua postura, os casos em que participar e a relação construída com a equipe definirão quando você estará pronto(a) para assumir mais autonomia. Bem-vindo(a) à sua Rota da Justiça.',
       },
     ],
     [playerName],
@@ -173,7 +173,7 @@ export const OfficeWelcomeDialog: React.FC<OfficeWelcomeDialogProps> = ({
                 {isLastStep && isTextComplete ? (
                   <>
                     <CheckCircle2 size={17} />
-                    Ver primeiro caso
+                    Conhecer meu posto
                   </>
                 ) : (
                   <>
