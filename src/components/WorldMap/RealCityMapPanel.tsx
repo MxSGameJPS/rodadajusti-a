@@ -845,7 +845,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
             )}
 
             {selectedEstablishment && (
-              <div className={`${styles.detailCard} ${styles.establishmentDetailCard}`}>
+              <div className={styles.establishmentDetailOverlay} onClick={() => { setSelectedEstablishment(null); setSelectedEstablishmentPoint(null); }}><div className={styles.establishmentDetailCard} onClick={(event) => event.stopPropagation()}>
                 <div className={styles.establishmentDetailBody}>
                   {selectedEstablishment.bannerUrl && (
                     <img
@@ -878,7 +878,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
                     )}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div className={styles.establishmentDetailActions}>
                   <button
                     type="button"
                     className={styles.routeButton}
@@ -900,6 +900,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
                   >
                     Fechar
                   </button>
+                </div>
                 </div>
               </div>
             )}
