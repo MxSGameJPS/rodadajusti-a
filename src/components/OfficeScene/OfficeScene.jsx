@@ -99,6 +99,10 @@ export function OfficeScene({
   onOpenCityWorldMap,
   onOpenPlayerHome,
   onCompleteOfficeTask,
+  onRegisterArrival,
+  onRegisterDeparture,
+  onHandleOfficeEvent,
+  onOpenReview,
   onToggleSound,
   onEnableMobileFrame,
 }) {
@@ -491,7 +495,14 @@ export function OfficeScene({
               )}
 
               {drawer === 'AGENDA' && isIntern && (
-                <InternshipCareerPanel player={player} onCompleteTask={onCompleteOfficeTask} />
+                <InternshipCareerPanel
+                  player={player}
+                  onCompleteTask={onCompleteOfficeTask}
+                  onRegisterArrival={onRegisterArrival}
+                  onRegisterDeparture={onRegisterDeparture}
+                  onHandleOfficeEvent={onHandleOfficeEvent}
+                  onOpenReview={onOpenReview}
+                />
               )}
 
               {drawer === 'AGENDA' && !isIntern && (
