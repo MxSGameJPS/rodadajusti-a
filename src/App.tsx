@@ -45,6 +45,7 @@ import { CityWorldMapModal } from './components/CityWorldMap/CityWorldMapModal';
 import { PlayerHomeModal } from './components/PlayerHome/PlayerHomeModal';
 import { LifeTravelConfirmModal } from './components/LifeTravel/LifeTravelConfirmModal';
 import { LifeTravelTransition } from './components/LifeTravel/LifeTravelTransition';
+import { OfficeClosedModal } from './components/OfficeClosedModal';
 import {
   HomeActivityTransition,
   type HomeActivityKind,
@@ -95,6 +96,10 @@ import {
   recordPeriodicReview,
   registerOfficeArrival,
   registerOfficeDeparture,
+  getOfficeAccessDecision,
+  getWorkSchedule,
+  minuteLabel,
+  OFFICE_CANTEEN_COFFEE_PRICE,
 } from './lib/internshipRoutine';
 import {
   DEFAULT_HOUSEHOLD_STATE,
@@ -399,6 +404,7 @@ export default function App() {
   const [homeActivity, setHomeActivity] = useState<HomeActivityKind | null>(null);
   const [isUniversityCampusOpen, setIsUniversityCampusOpen] = useState(false);
   const [pendingPantryItemId, setPendingPantryItemId] = useState<string | null>(null);
+  const [officeClosedArrivalMinute, setOfficeClosedArrivalMinute] = useState<number | null>(null);
 
   const openOfficeManagement = () => {
     if (!canManageOwnOffice(player)) {
@@ -1560,7 +1566,16 @@ export default function App() {
     }
 
     if (request.reason === 'GO_OFFICE') {
+      const arrivalMinute = Math.max(0, player.gameCurrentMinutes + result.travelMinutes);
+      const access = getOfficeAccessDecision(player, arrivalMinute);
+      if (!access.allowed) {
+        setOfficeClosedArrivalMinute(arrivalMinute);
+        setIsCityWorldMapOpen(false);
+        return;
+      }
+      setOfficeClosedArrivalMinute(null);
       setCurrentView('HUB');
+      setTimeout(() => handleRegisterInternArrival(), 0);
       return;
     }
 
@@ -2318,6 +2333,45 @@ export default function App() {
         onStudyAtUniversity={handleRequestUniversityTrip}
         onGoToEstablishment={handleRequestEstablishment}
         onPurchaseOffer={handlePurchaseWorldOffer}
+      />
+
+      <OfficeClosedModal
+        isOpen={officeClosedArrivalMinute !== null}
+        currentTime={minuteLabel(officeClosedArrivalMinute)}
+        opensAt={getWorkSchedule(player).startLabel}
+        waitMinutes={officeClosedArrivalMinute === null ? 0 : Math.max(0, getWorkSchedule(player).startMinute - officeClosedArrivalMinute)}
+        coffeePrice={OFFICE_CANTEEN_COFFEE_PRICE}
+        canAffordCoffee={player.money >= OFFICE_CANTEEN_COFFEE_PRICE}
+        onClose={() => { setOfficeClosedArrivalMinute(null); setIsCityWorldMapOpen(true); }}
+        onGoHome={() => {
+          setOfficeClosedArrivalMinute(null);
+          beginLifeTravel({ origin: 'OFFICE', destination: 'HOME', reason: 'GO_HOME' });
+        }}
+        onCoffee={() => {
+          if (officeClosedArrivalMinute === null || player.money < OFFICE_CANTEEN_COFFEE_PRICE) return;
+          const waitMinutes = Math.max(0, getWorkSchedule(player).startMinute - officeClosedArrivalMinute);
+          setPlayer((prev) => {
+            const clock = gameClockFields(prev, waitMinutes);
+            return {
+              ...prev,
+              ...clock,
+              money: Math.max(0, prev.money - OFFICE_CANTEEN_COFFEE_PRICE),
+              personalFinances: appendPersonalFinanceTransaction(
+                prev.personalFinances,
+                createPersonalExpense(prev, {
+                  category: 'ALIMENTACAO',
+                  amount: OFFICE_CANTEEN_COFFEE_PRICE,
+                  title: 'Café na cantina do escritório',
+                  description: 'Café enquanto aguardava a abertura do Ramos & Associados.',
+                  source: 'OFFICE_CANTEEN',
+                }),
+              ),
+            };
+          });
+          setOfficeClosedArrivalMinute(null);
+          setCurrentView('HUB');
+          setTimeout(() => handleRegisterInternArrival(), 0);
+        }}
       />
 
       <LifeTravelConfirmModal
