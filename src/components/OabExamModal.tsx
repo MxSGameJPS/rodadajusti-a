@@ -129,7 +129,7 @@ export const OabExamModal: React.FC<OabExamModalProps> = ({
   onClose,
   player,
   onComplete,
-  allowedModes = ['full', 'quick'],
+  allowedModes = ['full', 'quick'] as ProfessionalExamMode[],
   contextLabel,
   officialOnly = false,
 }) => {
