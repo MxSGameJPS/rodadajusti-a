@@ -27,6 +27,8 @@ import { InternOfficeTaskModal } from './InternOfficeTaskModal';
 import { NpcGuidanceDialog, type NpcGuidanceStep } from './NpcGuidanceDialog';
 import { InternshipRoutinePanel } from './InternshipRoutinePanel';
 import { SeniorInternDesk } from './SeniorInternDesk';
+import { SeniorPortfolioPanel } from './SeniorPortfolioPanel';
+import type { SeniorPortfolioMatter } from '../lib/seniorPortfolio';
 import { getDailyTaskIds, type OfficeEventChoiceId } from '../lib/internshipRoutine';
 
 interface InternshipCareerPanelProps {
@@ -38,6 +40,8 @@ interface InternshipCareerPanelProps {
   onOpenReview: () => void;
   onRequestAbsenceJustification: () => void;
   onChooseSeniorPriority?: (id: string) => void;
+  seniorPortfolio?: SeniorPortfolioMatter[];
+  onSeniorPortfolioAction?: (matterId: string, action: SeniorPortfolioMatter['pending'][number]) => void;
 }
 
 const METRICS = [
@@ -67,7 +71,7 @@ function buildMarianaTaskGuidance(task: OfficeStageTask, isSenior: boolean): Npc
   ];
 }
 
-export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview, onRequestAbsenceJustification, onChooseSeniorPriority }) => {
+export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview, onRequestAbsenceJustification, onChooseSeniorPriority, seniorPortfolio = [], onSeniorPortfolioAction }) => {
   const [selectedTask, setSelectedTask] = useState<OfficeStageTask | null>(null);
   const [pendingTask, setPendingTask] = useState<OfficeStageTask | null>(null);
   const [isTaskGuidanceOpen, setIsTaskGuidanceOpen] = useState(false);
@@ -129,6 +133,8 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
       )}
 
       {isSenior && onChooseSeniorPriority && <SeniorInternDesk player={player} onChoosePriority={onChooseSeniorPriority} />}
+
+      {isSenior && onSeniorPortfolioAction && <SeniorPortfolioPanel portfolio={seniorPortfolio} onAction={onSeniorPortfolioAction} />}
 
             <InternOfficeTaskModal
         isOpen={!!selectedTask}
