@@ -109,7 +109,13 @@ export const LifeTravelTransition: React.FC<LifeTravelTransitionProps> = ({
     setFallback(false);
     setError('');
 
-    void buildLifeTravelResult(player, request.origin, request.destination)
+    void buildLifeTravelResult(
+      player,
+      request.origin,
+      request.destination,
+      request.destinationPoint,
+      request.destinationLabel,
+    )
       .then((next) => {
         if (active) setResult(next);
       })
@@ -125,6 +131,9 @@ export const LifeTravelTransition: React.FC<LifeTravelTransitionProps> = ({
     request.origin,
     request.destination,
     request.reason,
+    request.destinationPoint?.lat,
+    request.destinationPoint?.lng,
+    request.destinationLabel,
     player.homeCity,
     player.homeState,
     player.household.residence.latitude,
