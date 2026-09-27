@@ -117,6 +117,7 @@ import {
   assessArrivalDiscipline,
   assessEarlyDeparture,
   type RoutineDisciplineAssessment,
+  registerAuthorizedOfficeDeparture,
 } from './lib/internshipRoutine';
 import {
   DEFAULT_HOUSEHOLD_STATE,
@@ -723,6 +724,16 @@ export default function App() {
     if (!player.activeCase || !activeCaseData) return;
     if (!ensureLifeReady()) return;
     if (!ensureCaseTimeAvailable(loc.travelTimeHours * 60)) return;
+
+    if (isInternCareer(player) && player.worldLocation.kind === 'OFFICE') {
+      registerAuthorizedOfficeDeparture(player);
+      applyRelationshipInteraction(player, {
+        entityId: 'npc:MARIANA', entityType: 'NPC', name: 'Mariana Duarte', role: 'Secretária • Ramos & Associados',
+        gameDate: currentGameDateLabel(player), kind: 'AUTHORIZED_DILIGENCE', title: 'Saída para diligência',
+        description: `Mariana registrou a saída autorizada para a diligência em ${loc.name}.`,
+        scope: 'WORKPLACE', intensity: 10, dimensions: { professionalTrust: 1 }, bond: 'PROFESSIONAL',
+      });
+    }
 
     setPlayer((prev) => {
       if (!prev.activeCase) return prev;
@@ -1643,6 +1654,15 @@ export default function App() {
     const isIntern = player.careerTier === 'ESTAGIARIO'
       || player.careerTier === 'ESTAGIARIO_SENIOR';
     if (!isIntern) return;
+
+    if (player.worldLocation.kind === 'OFFICE') {
+      const conflict = getWorkTimeConflict(player, 180, 'UNIVERSITY');
+      if (conflict) {
+        setLifeWarning(conflict);
+        return;
+      }
+      handleRegisterInternDeparture();
+    }
 
     if (player.worldLocation.kind === 'UNIVERSITY') {
       setIsPlayerHomeOpen(false);
