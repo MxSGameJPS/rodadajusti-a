@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Building2, GraduationCap, Loader2, MapPin, Navigation, Route } from 'lucide-react';
 import type { LegalCase, LocationScene, PlayerProfile } from '../../types/game';
 import { readCurrentPlayerSnapshot } from '../../lib/professionalRpg';
+import { ensureRelationship } from '../../lib/relationshipEngine';
 import { applyRotaJusticeMapTheme, buildOpenStreetMapStyle, loadMapLibre } from '../../lib/maplibreClient';
 import { registerActiveWorldMap, unregisterActiveWorldMap } from '../../lib/worldMapRuntime';
 import {
@@ -276,6 +277,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
     void loadWorldEstablishmentsWithDiagnostics(profile).then((result) => {
       if (!active) return;
       setEstablishments(result.items);
+      if (player) result.items.forEach((item) => ensureRelationship(player, { entityId: 'establishment:' + item.id, entityType: 'ESTABLISHMENT', name: item.name, role: establishmentTypeLabel(item.businessType), adultOnly: false }));
       setCatalogError(result.error || '');
       setCatalogWarning((result.warnings || []).join(' • '));
       setSelectedEstablishment((current) => (
@@ -563,6 +565,7 @@ export const RealCityMapPanel: React.FC<RealCityMapPanelProps> = ({
           setRoute(null);
           setSelectedEstablishment(establishment);
           setSelectedEstablishmentPoint(point);
+          if (player) ensureRelationship(player, { entityId: 'establishment:' + establishment.id, entityType: 'ESTABLISHMENT', name: establishment.name, role: establishmentTypeLabel(establishment.businessType), adultOnly: false });
         });
 
         markersRef.current.push(
