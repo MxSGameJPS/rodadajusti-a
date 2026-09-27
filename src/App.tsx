@@ -560,6 +560,8 @@ export default function App() {
     const freshProfile: PlayerProfile = {
       ...INITIAL_PLAYER_STATE,
       name: setup.name,
+      relationshipStatus: setup.relationshipStatus,
+      partnerName: setup.partnerName,
       homeCity: setup.city,
       homeState: setup.state,
       money: 1200,
