@@ -19,6 +19,45 @@ export interface WorldEstablishmentOffer {
   gameplayEffects: Record<string, unknown>;
 }
 
+export type EstablishmentGameplayAction =
+  | 'EAT_HERE'
+  | 'TAKEAWAY'
+  | 'SLEEP'
+  | 'SHOWER'
+  | 'RENT_VEHICLE'
+  | 'BUY_VEHICLE'
+  | 'BUY_GROCERIES'
+  | 'BUY_FURNITURE'
+  | 'BUY'
+  | 'SERVICE';
+
+export function establishmentGameplayAction(
+  establishment: WorldEstablishment,
+  offer: WorldEstablishmentOffer,
+): EstablishmentGameplayAction {
+  const effects = offer.gameplayEffects || {};
+  const explicit = String(effects.action || effects.actionType || '').toUpperCase();
+  if (['EAT_HERE','TAKEAWAY','SLEEP','SHOWER','RENT_VEHICLE','BUY_VEHICLE','BUY_GROCERIES','BUY_FURNITURE','BUY','SERVICE'].includes(explicit)) {
+    return explicit as EstablishmentGameplayAction;
+  }
+
+  const kind = String(effects.kind || '').toUpperCase();
+  const offerType = String(offer.offerType || '').toUpperCase();
+  const business = (establishment.businessType + ' ' + (establishment.subcategory || '')).toUpperCase();
+  const title = offer.title.toUpperCase();
+
+  if (kind === 'MEAL') return /MARMITA|VIAGEM|LEVAR|TAKE/.test(title) ? 'TAKEAWAY' : 'EAT_HERE';
+  if (kind === 'FOOD') return 'BUY_GROCERIES';
+  if (kind === 'VEHICLE') return offerType.includes('LOCAC') || business.includes('LOCADOR') ? 'RENT_VEHICLE' : 'BUY_VEHICLE';
+  if (['BED','FURNITURE','STUDY_FURNITURE','APPLIANCE'].includes(kind)) return 'BUY_FURNITURE';
+  if (offerType === 'HOSPEDAGEM' || business.includes('HOTEL') || business.includes('POUSADA')) {
+    if (/BANHO|CHUVEIRO/.test(title)) return 'SHOWER';
+    return 'SLEEP';
+  }
+  if (offerType.includes('LOCACAO_VEICULO') || offerType.includes('LOCAÇÃO_VEÍCULO')) return 'RENT_VEHICLE';
+  return 'BUY';
+}
+
 export interface WorldEstablishment {
   id: string;
   slug: string;
