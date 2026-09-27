@@ -58,6 +58,7 @@ import {
 import { OfficeScene } from './components/OfficeScene/OfficeScene';
 import { InternPromotionCeremonyModal } from './components/InternPromotionCeremonyModal';
 import { getSeniorDailyDesk, buildSeniorFirstDayDialogues } from './lib/seniorInternEngine';
+import { hydrateInternshipRoutine, persistInternshipRoutine } from './lib/internshipRoutineRepository';
 import { evaluatePetition } from './lib/judicialDecisionEngine';
 import { buildSupervisorReview } from './lib/officeDisciplineEngine';
 import {
@@ -468,6 +469,25 @@ export default function App() {
   const [internPromotionNarrative, setInternPromotionNarrative] = useState<InternPromotionNarrative | null>(null);
   const [promotionReviewDialogues, setPromotionReviewDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
   const [seniorGuidanceDialogues, setSeniorGuidanceDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
+
+  useEffect(() => {
+    if (!player.name || !player.cloudCareerId) return;
+    void hydrateInternshipRoutine(player);
+  }, [player.cloudCareerId, player.name]);
+
+  useEffect(() => {
+    if (!player.cloudCareerId) return;
+    let timer: number | null = null;
+    const sync = () => {
+      if (timer !== null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => { void persistInternshipRoutine(player); }, 250);
+    };
+    window.addEventListener('rota:internship-routine-changed', sync);
+    return () => {
+      window.removeEventListener('rota:internship-routine-changed', sync);
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [player.cloudCareerId, player.name, player.gameCurrentDay, player.gameCurrentMonth, player.gameCurrentYear]);
 
   useEffect(() => {
     try {
