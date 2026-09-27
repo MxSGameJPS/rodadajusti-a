@@ -2,6 +2,18 @@ import type { OfficePerformanceState, PlayerProfile } from '../types/game';
 
 export type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT' | 'OFF_DAY';
 export type OfficeEventKind = 'CLIENT_URGENT' | 'SYSTEM_DOWN' | 'COLLEAGUE_HELP' | 'DEADLINE_PRESSURE' | 'QUIET_DAY';
+export type OfficeEventChoiceId = 'HELP_NOW' | 'ASK_MARIANA' | 'PROTECT_PRIORITY';
+
+export interface OfficeEventChoice {
+  id: OfficeEventChoiceId;
+  label: string;
+  description: string;
+  minutes: number;
+  delta: Partial<Pick<OfficePerformanceState, 'technique' | 'diligence' | 'ethics' | 'deadlineManagement' | 'supervisorTrust'>>;
+  marianaAffinity: number;
+  marianaTrust: number;
+  outcome: string;
+}
 
 export interface InternshipAttendanceRecord {
   date: string;
@@ -212,11 +224,11 @@ export function getDailyOfficeEvent(player: PlayerProfile) {
   const roll = hash(`${key}:${player.avatarSeed}`) % 100;
   if (roll >= 42) return null;
   const events = [
-    { kind: 'CLIENT_URGENT' as const, title: 'Cliente chegou sem aviso', text: 'Mariana pede ajuda para organizar documentos de um cliente que chegou com urgência.', delta: { diligence: 2, supervisorTrust: 1 } },
-    { kind: 'SYSTEM_DOWN' as const, title: 'Sistema indisponível', text: 'O sistema do escritório caiu perto de um prazo. Você precisa reorganizar a prioridade do trabalho.', delta: { deadlineManagement: 2, diligence: 1 } },
-    { kind: 'COLLEAGUE_HELP' as const, title: 'Colega precisa de ajuda', text: 'Um colega está sobrecarregado e Mariana pergunta se você consegue assumir uma conferência rápida.', delta: { supervisorTrust: 2, diligence: 1 } },
-    { kind: 'DEADLINE_PRESSURE' as const, title: 'Prazo inesperado', text: 'Uma intimação exige resposta rápida. O escritório precisa de atenção redobrada na conferência.', delta: { deadlineManagement: 3, technique: 1 } },
-    { kind: 'QUIET_DAY' as const, title: 'Uma manhã mais tranquila', text: 'O movimento diminuiu e surgiu uma oportunidade para adiantar pesquisas e organização.', delta: { technique: 1, diligence: 1 } },
+    { kind: 'CLIENT_URGENT' as const, title: 'Cliente chegou sem aviso', text: 'Mariana pede ajuda para organizar documentos de um cliente que chegou com urgência.' },
+    { kind: 'SYSTEM_DOWN' as const, title: 'Sistema indisponível', text: 'O sistema do escritório caiu perto de um prazo. Você precisa reorganizar a prioridade do trabalho.' },
+    { kind: 'COLLEAGUE_HELP' as const, title: 'Colega precisa de ajuda', text: 'Um colega está sobrecarregado e Mariana pergunta se você consegue assumir uma conferência rápida.' },
+    { kind: 'DEADLINE_PRESSURE' as const, title: 'Prazo inesperado', text: 'Uma intimação exige resposta rápida. O escritório precisa de atenção redobrada na conferência.' },
+    { kind: 'QUIET_DAY' as const, title: 'Uma manhã mais tranquila', text: 'O movimento diminuiu e surgiu uma oportunidade para adiantar pesquisas e organização.' },
   ];
   return { key, ...events[roll % events.length] };
 }
@@ -349,4 +361,35 @@ export function buildSupervisorReviewDialogues(player: PlayerProfile, meeting: I
     { eyebrow: 'Desempenho', text: `Seu ponto mais forte neste momento é ${strongest}. O aspecto que mais precisa de atenção é ${weakest}. Não espero perfeição de um estagiário; espero evolução e capacidade de corrigir o que ainda está fraco.` },
     { eyebrow: meeting.score >= 75 ? 'Próximos passos' : meeting.score >= 60 ? 'Evolução esperada' : 'Alinhamento necessário', text: meeting.summary },
   ];
+}
+
+export function getOfficeEventChoices(kind: OfficeEventKind): OfficeEventChoice[] {
+  const contextual: Record<OfficeEventKind, OfficeEventChoice[]> = {
+    CLIENT_URGENT: [
+      { id: 'HELP_NOW', label: 'Atender a urgência agora', description: 'Interromper sua prioridade e ajudar Mariana com o cliente.', minutes: 35, delta: { diligence: 2, supervisorTrust: 2 }, marianaAffinity: 2, marianaTrust: 2, outcome: 'Você reorganizou os documentos e ajudou a estabilizar o atendimento urgente.' },
+      { id: 'ASK_MARIANA', label: 'Alinhar a prioridade com Mariana', description: 'Confirmar o que pode ser adiado antes de mudar sua agenda.', minutes: 15, delta: { deadlineManagement: 2, supervisorTrust: 1 }, marianaAffinity: 1, marianaTrust: 2, outcome: 'Mariana ajudou a reorganizar a fila e você protegeu as prioridades sem ignorar o cliente.' },
+      { id: 'PROTECT_PRIORITY', label: 'Manter a tarefa atual', description: 'Explicar que sua entrega atual tem prioridade e não interrompê-la.', minutes: 5, delta: { deadlineManagement: 1, supervisorTrust: -1 }, marianaAffinity: -1, marianaTrust: -1, outcome: 'Você preservou sua entrega, mas Mariana precisou resolver a urgência com outra pessoa.' },
+    ],
+    SYSTEM_DOWN: [
+      { id: 'HELP_NOW', label: 'Buscar uma alternativa manual', description: 'Organizar documentos e informações fora do sistema enquanto ele não volta.', minutes: 30, delta: { diligence: 2, deadlineManagement: 2 }, marianaAffinity: 1, marianaTrust: 2, outcome: 'Seu plano alternativo manteve o trabalho andando apesar da indisponibilidade.' },
+      { id: 'ASK_MARIANA', label: 'Reorganizar a fila com Mariana', description: 'Mapear o que depende do sistema e adiantar o restante.', minutes: 15, delta: { deadlineManagement: 3 }, marianaAffinity: 1, marianaTrust: 2, outcome: 'Vocês reorganizaram as prioridades e reduziram o impacto da falha.' },
+      { id: 'PROTECT_PRIORITY', label: 'Esperar o sistema voltar', description: 'Não alterar a rotina e aguardar.', minutes: 25, delta: { diligence: -1, deadlineManagement: -2, supervisorTrust: -1 }, marianaAffinity: 0, marianaTrust: -1, outcome: 'A espera consumiu parte do expediente e deixou pendências acumuladas.' },
+    ],
+    COLLEAGUE_HELP: [
+      { id: 'HELP_NOW', label: 'Ajudar o colega', description: 'Assumir a conferência rápida antes de voltar à sua mesa.', minutes: 25, delta: { diligence: 1, supervisorTrust: 2 }, marianaAffinity: 2, marianaTrust: 2, outcome: 'A ajuda evitou que a equipe acumulasse mais uma pendência.' },
+      { id: 'ASK_MARIANA', label: 'Dividir a demanda', description: 'Pedir a Mariana que organize quem consegue absorver cada parte.', minutes: 15, delta: { deadlineManagement: 2, supervisorTrust: 1 }, marianaAffinity: 1, marianaTrust: 2, outcome: 'A demanda foi dividida sem comprometer completamente sua própria agenda.' },
+      { id: 'PROTECT_PRIORITY', label: 'Recusar por enquanto', description: 'Manter o foco na sua entrega atual.', minutes: 5, delta: { diligence: 1, supervisorTrust: -1 }, marianaAffinity: -1, marianaTrust: -1, outcome: 'Você protegeu sua prioridade, mas a equipe precisou encontrar outra solução.' },
+    ],
+    DEADLINE_PRESSURE: [
+      { id: 'HELP_NOW', label: 'Conferir imediatamente', description: 'Parar o restante e participar da conferência urgente.', minutes: 40, delta: { technique: 2, deadlineManagement: 3, supervisorTrust: 2 }, marianaAffinity: 1, marianaTrust: 2, outcome: 'Sua conferência ajudou o escritório a tratar o prazo com mais segurança.' },
+      { id: 'ASK_MARIANA', label: 'Confirmar responsáveis e prazo', description: 'Organizar a responsabilidade antes de executar qualquer coisa.', minutes: 15, delta: { deadlineManagement: 3, diligence: 1 }, marianaAffinity: 1, marianaTrust: 2, outcome: 'Você eliminou a ambiguidade e a equipe conseguiu trabalhar com responsabilidades claras.' },
+      { id: 'PROTECT_PRIORITY', label: 'Não interromper sua entrega', description: 'Manter a tarefa atual e deixar o novo prazo para a equipe responsável.', minutes: 5, delta: { deadlineManagement: -1, supervisorTrust: -2 }, marianaAffinity: -1, marianaTrust: -1, outcome: 'Sua entrega avançou, mas a postura diante do prazo urgente foi percebida pela equipe.' },
+    ],
+    QUIET_DAY: [
+      { id: 'HELP_NOW', label: 'Adiantar pesquisa jurídica', description: 'Usar o tempo livre para estudar um tema útil ao escritório.', minutes: 45, delta: { technique: 3, diligence: 1 }, marianaAffinity: 0, marianaTrust: 1, outcome: 'Você transformou o tempo livre em preparação técnica.' },
+      { id: 'ASK_MARIANA', label: 'Perguntar onde pode ajudar', description: 'Procurar Mariana e assumir uma pequena pendência da equipe.', minutes: 30, delta: { diligence: 2, supervisorTrust: 2 }, marianaAffinity: 2, marianaTrust: 2, outcome: 'Mariana encontrou uma pendência e percebeu sua iniciativa.' },
+      { id: 'PROTECT_PRIORITY', label: 'Organizar sua própria mesa', description: 'Revisar arquivos e preparar suas próximas entregas.', minutes: 20, delta: { deadlineManagement: 2, diligence: 1 }, marianaAffinity: 0, marianaTrust: 0, outcome: 'Você aproveitou a tranquilidade para deixar sua rotina mais organizada.' },
+    ],
+  };
+  return contextual[kind];
 }
