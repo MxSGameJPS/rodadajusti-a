@@ -2,7 +2,7 @@ import { GAME_CASES } from '../data/cases';
 import type { PlayerProfile } from '../types/game';
 import { getProfessionalOwnerKey } from './professionalRpg';
 import { shouldRunPlayableHearing } from './reactiveWorldStore';
-import { applyRelationshipInteraction } from './relationshipEngine';
+import { applyRelationshipInteraction, readRelationshipEngine } from './relationshipEngine';
 
 export type RelationshipStatus = 'UNDEFINED' | 'SINGLE' | 'DATING' | 'MARRIED' | 'STABLE_UNION';
 export type SocialContactId = 'MARIANA' | 'PARTNER' | 'ROBERTO' | 'LAWYER_FELIPE' | 'FRIEND_CARLOS';
@@ -119,6 +119,7 @@ export function isCommittedRelationship(status: RelationshipStatus) {
   return status === 'DATING' || status === 'MARRIED' || status === 'STABLE_UNION';
 }
 
+/** @deprecated Compatibilidade temporária de saves antigos. Relações vivem em relationshipEngine. */
 function defaultRelationships(): Record<SocialContactId, number> {
   return {
     MARIANA: 45,
@@ -566,10 +567,7 @@ export function declineSocialEvent(player: PlayerProfile, state: SocialLifeState
     pendingEvent: null,
     history: [event, ...state.history].slice(0, 50),
     socialBalance: clamp(state.socialBalance - (event.sourceContactId === 'PARTNER' ? 2 : event.sourceContactId === 'FRIEND_CARLOS' ? 1 : 0)),
-    relationships: {
-      ...state.relationships,
-      [event.sourceContactId]: clamp(state.relationships[event.sourceContactId] + relationshipDelta),
-    },
+    relationships: state.relationships,
   });
 }
 
@@ -643,10 +641,7 @@ export function completeSocialEvent(player: PlayerProfile, state: SocialLifeStat
     socialBalance: clamp(state.socialBalance + chosen.socialGain),
     socialCapital: clamp(state.socialCapital + chosen.capitalGain),
     energy: nextEnergy,
-    relationships: {
-      ...state.relationships,
-      [event.sourceContactId]: clamp(state.relationships[event.sourceContactId] + chosen.relationshipDelta),
-    },
+    relationships: state.relationships,
     activeCondition: buildCondition(event, chosen, nextEnergy, endKey),
     lastEnergyDateKey: endKey,
   });
@@ -680,13 +675,7 @@ export function getSocialProfessionalCondition(player: PlayerProfile) {
   };
 }
 
-export function getRelationshipLabel(score: number) {
-  if (score >= 85) return 'Grande confiança';
-  if (score >= 65) return 'Próximo';
-  if (score >= 45) return 'Boa relação';
-  if (score >= 25) return 'Conhecido';
-  return 'Distante';
-}
+export function getRelationshipLabelForContact(player:PlayerProfile,contactId:SocialContactId){const record=readRelationshipEngine(player).records['npc:'+contactId];if(!record)return 'Conhecido';const score=record.dimensions.affinity;if(score>=85)return'Grande confiança';if(score>=65)return'Próximo';if(score>=45)return'Boa relação';if(score>=25)return'Conhecido';return'Distante'}
 
 export function addGameDays(
   player: Pick<PlayerProfile, 'gameCurrentDay' | 'gameCurrentMonth' | 'gameCurrentYear'>,
