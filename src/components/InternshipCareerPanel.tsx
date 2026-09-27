@@ -25,10 +25,15 @@ import { sound } from '../utils/sound';
 import { getEarlyCareerSnapshot } from '../lib/earlyCareerEngine';
 import { InternOfficeTaskModal } from './InternOfficeTaskModal';
 import { NpcGuidanceDialog, type NpcGuidanceStep } from './NpcGuidanceDialog';
+import { InternshipRoutinePanel } from './InternshipRoutinePanel';
 
 interface InternshipCareerPanelProps {
   player: PlayerProfile;
   onCompleteTask: (taskId: string) => void;
+  onRegisterArrival: () => void;
+  onRegisterDeparture: () => void;
+  onHandleOfficeEvent: () => void;
+  onOpenReview: () => void;
 }
 
 const METRICS = [
@@ -58,7 +63,7 @@ function buildMarianaTaskGuidance(task: OfficeStageTask, isSenior: boolean): Npc
   ];
 }
 
-export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask }) => {
+export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview }) => {
   const [selectedTask, setSelectedTask] = useState<OfficeStageTask | null>(null);
   const [pendingTask, setPendingTask] = useState<OfficeStageTask | null>(null);
   const [isTaskGuidanceOpen, setIsTaskGuidanceOpen] = useState(false);
@@ -194,6 +199,14 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
           )}
         </div>
       </section>
+
+      <InternshipRoutinePanel
+        player={player}
+        onRegisterArrival={onRegisterArrival}
+        onRegisterDeparture={onRegisterDeparture}
+        onHandleOfficeEvent={onHandleOfficeEvent}
+        onOpenReview={onOpenReview}
+      />
 
       <section className="mb-6 overflow-hidden rounded-2xl border border-[#2A2A2E] bg-[#111113] shadow-xl">
         <div className="border-b border-[#2A2A2E] bg-gradient-to-r from-[#171513] to-[#111113] p-5 sm:p-6">
