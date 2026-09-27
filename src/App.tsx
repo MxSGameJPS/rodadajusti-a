@@ -84,6 +84,7 @@ import {
 import { supabase } from './lib/supabase';
 import { canManageOwnOffice } from './lib/independentPractice';
 import { addLegalKnowledge, CAMPUS_ACTIVITIES, type CampusActivityId } from './lib/academicLife';
+import { applyRelationshipInteraction } from './lib/relationshipEngine';
 import {
   DEFAULT_HOUSEHOLD_STATE,
   applyLifeTimePassage,
@@ -1522,6 +1523,20 @@ export default function App() {
     }
 
     let message = `${offer.title} adquirido por JR$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`;
+
+    applyRelationshipInteraction(player, {
+      entityId: `establishment:${establishment.id}`,
+      entityType: 'ESTABLISHMENT',
+      name: establishment.name,
+      gameDate: currentGameDateLabel(player),
+      kind: action,
+      title: offer.title,
+      description: `Interação realizada em ${establishment.name}: ${offer.title}.`,
+      scope: 'PRIVATE',
+      intensity: Math.max(5, Math.min(35, Math.round(price / 10))),
+      dimensions: { institutionalReputation: 1, loyalty: 2, trust: 1 },
+      bond: 'FREQUENT_CUSTOMER',
+    });
 
     setPlayer((prev) => {
       if (prev.money < price) return prev;
