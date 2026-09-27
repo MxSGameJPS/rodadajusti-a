@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Building2, Heart, History, Scale, ShieldCheck, Users, X } from 'lucide-react';
+import { Building2, Heart, History, ShieldCheck, Users, X } from 'lucide-react';
 import type { PlayerProfile } from '../../types/game';
 import { readRelationshipEngine, relationshipLabel, type RelationshipRecord } from '../../lib/relationshipEngine';
 import styles from './RelationshipCenter.module.css';
