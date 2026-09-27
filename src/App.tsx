@@ -86,6 +86,17 @@ import { canManageOwnOffice } from './lib/independentPractice';
 import { addLegalKnowledge, CAMPUS_ACTIVITIES, type CampusActivityId } from './lib/academicLife';
 import { applyRelationshipInteraction, seedCoreRelationships } from './lib/relationshipEngine';
 import {
+  applyRoutinePerformance,
+  attendancePerformanceDelta,
+  getDailyOfficeEvent,
+  getPeriodicReview,
+  markOfficeEventHandled,
+  reconcileMissedWorkdays,
+  recordPeriodicReview,
+  registerOfficeArrival,
+  registerOfficeDeparture,
+} from './lib/internshipRoutine';
+import {
   DEFAULT_HOUSEHOLD_STATE,
   applyLifeTimePassage,
   currentGameDateLabel,
@@ -826,6 +837,55 @@ export default function App() {
         },
       };
     });
+  };
+
+  const handleRegisterInternArrival = () => {
+    if (player.careerTier !== 'ESTAGIARIO' && player.careerTier !== 'ESTAGIARIO_SENIOR') return;
+    const result = registerOfficeArrival(player);
+    if (!result.created) return;
+    const delta = attendancePerformanceDelta(result.record);
+    setPlayer((prev) => ({ ...prev, officePerformance: applyRoutinePerformance(prev.officePerformance, delta) }));
+    applyRelationshipInteraction(player, {
+      entityId: 'npc:MARIANA', entityType: 'NPC', name: 'Mariana Duarte', role: 'Secretária • Ramos & Associados',
+      gameDate: result.record.date, kind: 'ATTENDANCE', title: result.record.status === 'LATE' ? 'Chegada com atraso' : 'Presença no expediente',
+      description: result.record.status === 'LATE' ? `Mariana registrou uma chegada com ${result.record.lateMinutes} minutos de atraso.` : 'Mariana registrou a presença regular no expediente.',
+      scope: 'WORKPLACE', intensity: result.record.status === 'LATE' ? 24 : 10,
+      dimensions: { professionalTrust: result.record.status === 'LATE' ? -2 : 1, affinity: result.record.status === 'LATE' ? -1 : 0 }, bond: 'PROFESSIONAL',
+    });
+  };
+
+  const handleRegisterInternDeparture = () => {
+    registerOfficeDeparture(player);
+    setPlayer((prev) => ({ ...prev }));
+  };
+
+  const handleOfficeRoutineEvent = () => {
+    const event = getDailyOfficeEvent(player);
+    if (!event) return;
+    markOfficeEventHandled(player, event.key);
+    setPlayer((prev) => ({ ...prev, officePerformance: applyRoutinePerformance(prev.officePerformance, event.delta) }));
+    applyRelationshipInteraction(player, {
+      entityId: 'npc:MARIANA', entityType: 'NPC', name: 'Mariana Duarte', role: 'Secretária • Ramos & Associados',
+      gameDate: currentGameDateLabel(player), kind: 'OFFICE_EVENT', title: event.title, description: event.text,
+      scope: 'WORKPLACE', intensity: 18, dimensions: { affinity: 1, professionalTrust: 2 }, bond: 'PROFESSIONAL',
+    });
+  };
+
+  const handlePeriodicInternReview = () => {
+    const review = getPeriodicReview(player);
+    if (!review) return;
+    recordPeriodicReview(player, review);
+    const trustDelta = review.score >= 75 ? 3 : review.score >= 60 ? 1 : -4;
+    setPlayer((prev) => ({
+      ...prev,
+      officePerformance: applyRoutinePerformance(prev.officePerformance, { supervisorTrust: trustDelta, diligence: review.score < 60 ? -1 : 1 }),
+    }));
+    applyRelationshipInteraction(player, {
+      entityId: 'npc:ROBERTO', entityType: 'NPC', name: 'Dr. Roberto Ramos', role: 'Sócio responsável • Ramos & Associados',
+      gameDate: review.date, kind: 'PERFORMANCE_REVIEW', title: review.title, description: review.summary,
+      scope: 'WORKPLACE', intensity: 36, dimensions: { professionalTrust: trustDelta, professionalRespect: review.score >= 60 ? 2 : -2, conflict: review.score < 60 ? 3 : 0 }, bond: 'PROFESSIONAL',
+    });
+    window.alert(`${review.title}\n\n${review.summary}\n\nAvaliação: ${review.score}/100`);
   };
 
   const handleCompleteOfficeTask = (taskId: string) => {
@@ -2015,7 +2075,14 @@ export default function App() {
           <main className="flex-1 p-3 sm:p-5 flex flex-col">
             {currentView === 'HUB' && (
               <>
-                <InternshipCareerPanel player={player} onCompleteTask={handleCompleteOfficeTask} />
+                <InternshipCareerPanel
+                  player={player}
+                  onCompleteTask={handleCompleteOfficeTask}
+                  onRegisterArrival={handleRegisterInternArrival}
+                  onRegisterDeparture={handleRegisterInternDeparture}
+                  onHandleOfficeEvent={handleOfficeRoutineEvent}
+                  onOpenReview={handlePeriodicInternReview}
+                />
                 <OfficeHub
                   player={player}
                   onSelectCaseToView={(c) => setSelectedCaseToBrief(c)}
