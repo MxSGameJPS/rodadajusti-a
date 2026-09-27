@@ -165,6 +165,9 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
       const items = await loadWorldEstablishments(resolved);
       if (!active) return;
       setEstablishments(items);
+      if (player.worldLocation.kind === 'ESTABLISHMENT' && player.worldLocation.refId) {
+        setSelected(items.find((item) => item.id === player.worldLocation.refId) || null);
+      }
       setLoading(false);
     };
 
@@ -339,7 +342,6 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
     player.household.residence.longitude,
     player.worldLocation.kind,
     player.worldLocation.refId,
-    onGoToEstablishment,
   ]);
 
   if (!isOpen) return null;
