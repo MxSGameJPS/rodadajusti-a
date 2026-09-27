@@ -1680,12 +1680,23 @@ export default function App() {
           },
           lastStudiedGameDate: currentGameDateLabel(prev),
         };
+        const finances = appendPersonalFinanceTransaction(
+          prev.personalFinances,
+          createPersonalExpense(prev, {
+            category,
+            amount: price,
+            description: `${establishment.name} • ${offer.title}`,
+            establishmentId: establishment.id,
+            offerId: offer.id,
+          }),
+        );
         return {
           ...prev,
           ...clock,
-          money: prev.money - price,
+          money: Math.max(0, prev.money - price),
           legalKnowledge: addLegalKnowledge(prev.legalKnowledge, academicGains),
           household,
+          personalFinances: finances,
         };
       } else if (action === 'SLEEP') {
         household = restoreAfterSleep(
