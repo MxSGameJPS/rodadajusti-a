@@ -451,7 +451,7 @@ export const OabExamModal: React.FC<OabExamModalProps> = ({
               )}
 
               <div className="grid lg:grid-cols-2 gap-4">
-                {allowedModes.map((examMode) => {
+                {allowedModes.map((examMode: ProfessionalExamMode) => {
                   const item = MODE_CONFIG[examMode];
                   const isSavedMode = hasSavedAttempt && mode === examMode;
                   return (
