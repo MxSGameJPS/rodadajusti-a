@@ -37,6 +37,7 @@ export interface InternshipRoutineState {
   handledEventKeys: string[];
   lastTaskDeliveryKey: string | null;
   dailyTaskKeys: Record<string, string[]>;
+  greetedWorkdays: string[];
 }
 
 export interface WorkSchedule {
@@ -75,7 +76,7 @@ function hash(value: string) {
 export function readInternshipRoutine(player: PlayerProfile): InternshipRoutineState {
   try {
     const raw = localStorage.getItem(storageKey(player));
-    if (!raw) return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {} };
+    if (!raw) return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [] };
     const parsed = JSON.parse(raw);
     return {
       attendance: Array.isArray(parsed.attendance) ? parsed.attendance.slice(-90) : [],
@@ -83,9 +84,10 @@ export function readInternshipRoutine(player: PlayerProfile): InternshipRoutineS
       handledEventKeys: Array.isArray(parsed.handledEventKeys) ? parsed.handledEventKeys.slice(-120) : [],
       lastTaskDeliveryKey: typeof parsed.lastTaskDeliveryKey === 'string' ? parsed.lastTaskDeliveryKey : null,
       dailyTaskKeys: parsed.dailyTaskKeys && typeof parsed.dailyTaskKeys === 'object' ? parsed.dailyTaskKeys : {},
+      greetedWorkdays: Array.isArray(parsed.greetedWorkdays) ? parsed.greetedWorkdays.slice(-60) : [],
     };
   } catch {
-    return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {} };
+    return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [] };
   }
 }
 
@@ -392,4 +394,33 @@ export function getOfficeEventChoices(kind: OfficeEventKind): OfficeEventChoice[
     ],
   };
   return contextual[kind];
+}
+
+export function hasReceivedDailyBriefing(player: PlayerProfile) {
+  return readInternshipRoutine(player).greetedWorkdays.includes(dateKey(player));
+}
+
+export function markDailyBriefingReceived(player: PlayerProfile) {
+  const state = readInternshipRoutine(player);
+  const key = dateKey(player);
+  if (!state.greetedWorkdays.includes(key)) state.greetedWorkdays.push(key);
+  state.greetedWorkdays = state.greetedWorkdays.slice(-60);
+  saveInternshipRoutine(player, state);
+}
+
+export function buildMarianaArrivalDialogues(player: PlayerProfile, taskTitles: string[]) {
+  const attendance = getTodayAttendance(player);
+  const greeting = attendance?.status === 'LATE'
+    ? `Você chegou com ${attendance.lateMinutes} minutos de atraso. Eu registrei seu horário. Tente organizar melhor o deslocamento, porque o Dr. Roberto acompanha pontualidade junto com as entregas.`
+    : 'Bom dia. Sua entrada já está registrada. O Dr. Roberto deixou algumas prioridades para o seu expediente e eu organizei a ordem do que precisa de atenção hoje.';
+  const workload = taskTitles.length
+    ? `Para hoje, suas prioridades são: ${taskTitles.join('; ')}. Você não precisa fazer tudo ao mesmo tempo; observe os prazos e escolha a ordem com cuidado.`
+    : 'Não há uma nova atividade supervisionada pendente para hoje. Aproveite o expediente para acompanhar casos, revisar pendências e manter sua rotina organizada.';
+  return [
+    { eyebrow: attendance?.status === 'LATE' ? 'Chegada registrada' : 'Bom dia', text: greeting },
+    { eyebrow: 'Prioridades do expediente', text: workload },
+    { eyebrow: 'Rotina profissional', text: player.careerTier === 'ESTAGIARIO_SENIOR'
+      ? 'Como Estagiário Sênior, você terá mais autonomia. Nem toda demanda virá com instruções detalhadas, então organização e iniciativa passam a pesar ainda mais.'
+      : 'Se surgir uma urgência durante o expediente, eu aviso você. O escritório observa não só se a tarefa foi concluída, mas como você administra prioridades e imprevistos.' },
+  ];
 }
