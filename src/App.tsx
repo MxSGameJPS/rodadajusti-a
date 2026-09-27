@@ -849,6 +849,39 @@ export default function App() {
 
     if (!task) return;
 
+    applyRelationshipInteraction(player, {
+      entityId: 'npc:ROBERTO',
+      entityType: 'NPC',
+      name: 'Dr. Roberto Ramos',
+      role: 'Sócio responsável • Ramos & Associados',
+      gameDate: completedDate,
+      kind: 'OFFICE_TASK',
+      title: `Entrega profissional — ${task.title}`,
+      description: 'O trabalho supervisionado foi concluído e passou a compor o histórico profissional do estágio.',
+      scope: 'WORKPLACE',
+      intensity: player.careerTier === 'ESTAGIARIO_SENIOR' ? 32 : 24,
+      dimensions: {
+        professionalRespect: Math.max(1, task.deltas.technique || task.deltas.diligence || 1),
+        professionalTrust: Math.max(1, task.deltas.supervisorTrust || 1),
+        trust: task.deltas.supervisorTrust ? 1 : 0,
+      },
+      bond: 'PROFESSIONAL',
+    });
+    applyRelationshipInteraction(player, {
+      entityId: 'npc:MARIANA',
+      entityType: 'NPC',
+      name: 'Mariana Duarte',
+      role: 'Secretária • Ramos & Associados',
+      gameDate: completedDate,
+      kind: 'OFFICE_ROUTINE',
+      title: 'Rotina de trabalho compartilhada',
+      description: 'Mariana acompanhou a organização e a entrega de uma atividade do estágio.',
+      scope: 'WORKPLACE',
+      intensity: 12,
+      dimensions: { affinity: 1, professionalTrust: 1 },
+      bond: 'PROFESSIONAL',
+    });
+
     const nextXp = player.xp + task.xpReward;
     const nextMoney = player.money + task.moneyReward;
     let nextTier = player.careerTier;
@@ -985,6 +1018,30 @@ export default function App() {
     setVerdictCase(activeCaseData);
     setVerdictResult(resultRecord);
     setPromotedTierAnnouncement(promotionAnnouncement);
+
+    applyRelationshipInteraction(player, {
+      entityId: 'npc:ROBERTO',
+      entityType: 'NPC',
+      name: 'Dr. Roberto Ramos',
+      role: 'Sócio responsável • Ramos & Associados',
+      gameDate: completedDate,
+      kind: decision.success ? 'CASE_SUCCESS' : 'CASE_REVIEW',
+      title: decision.success
+        ? `Bom resultado — ${activeCaseData.title}`
+        : `Revisão necessária — ${activeCaseData.title}`,
+      description: decision.success
+        ? 'O resultado do caso fortaleceu a confiança profissional construída com o supervisor.'
+        : 'O resultado exigiu revisão do trabalho e passou a fazer parte da memória profissional com o supervisor.',
+      scope: 'WORKPLACE',
+      intensity: supervisorReview?.severity === 'GRAVE' ? 55 : decision.success ? 38 : 30,
+      dimensions: {
+        professionalRespect: decision.success ? 4 : supervisorReview?.severity === 'GRAVE' ? -8 : -3,
+        professionalTrust: decision.success ? 5 : supervisorReview?.severity === 'GRAVE' ? -10 : -4,
+        trust: decision.success ? 2 : -2,
+        conflict: supervisorReview?.severity === 'GRAVE' ? 8 : supervisorReview?.severity === 'ADVERTENCIA' ? 4 : 0,
+      },
+      bond: 'PROFESSIONAL',
+    });
 
     setPlayer((prev) => ({
       ...prev,
