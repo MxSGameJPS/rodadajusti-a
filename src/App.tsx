@@ -2138,6 +2138,10 @@ export default function App() {
           onOpenCityWorldMap={() => setIsCityWorldMapOpen(true)}
           onOpenPlayerHome={handleRequestGoHome}
           onCompleteOfficeTask={handleCompleteOfficeTask}
+          onRegisterArrival={handleRegisterInternArrival}
+          onRegisterDeparture={handleRegisterInternDeparture}
+          onHandleOfficeEvent={handleOfficeRoutineEvent}
+          onOpenReview={handlePeriodicInternReview}
           onToggleSound={handleToggleSound}
           onEnableMobileFrame={() => setIsMobileFrame(true)}
         />
