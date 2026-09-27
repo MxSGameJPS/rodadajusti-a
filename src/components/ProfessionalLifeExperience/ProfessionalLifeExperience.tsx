@@ -28,7 +28,7 @@ import {
   completeSocialEvent,
   declineSocialEvent,
   gameDateKey,
-  getRelationshipLabel,
+  getRelationshipLabelForContact,
   isCommittedRelationship,
   readSocialLifeState,
   registerSocialOpportunity,
@@ -44,6 +44,7 @@ import {
   requestIncomingProfessionalCall,
 } from '../../lib/professionalPhoneBridge';
 import { readCurrentPlayerSnapshot } from '../../lib/professionalRpg';
+import { readRelationshipEngine } from '../../lib/relationshipEngine';
 import { applyLifeTimePassage } from '../../lib/lifeSimulation';
 import {
   appendPersonalFinanceTransaction,
@@ -539,8 +540,8 @@ export const ProfessionalLifeExperience: React.FC = () => {
                 ...(hasPartner ? [['PARTNER', social.profile.partnerName || 'Parceiro(a)']] : []),
               ] as Array<[keyof typeof social.relationships, string]>).map(([contactId, name]) => (
                 <div key={contactId} className={styles.historyRow}>
-                  <div><strong>{name}</strong><span>{getRelationshipLabel(social.relationships[contactId])}</span></div>
-                  <small>{social.relationships[contactId]}/100</small>
+                  <div><strong>{name}</strong><span>{getRelationshipLabelForContact(player, contactId)}</span></div>
+                  <small>{readRelationshipEngine(player).records[`npc:${contactId}`]?.dimensions.affinity ?? 20}/100</small>
                 </div>
               ))}
             </section>
