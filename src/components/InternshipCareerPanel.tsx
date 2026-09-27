@@ -26,14 +26,14 @@ import { getEarlyCareerSnapshot } from '../lib/earlyCareerEngine';
 import { InternOfficeTaskModal } from './InternOfficeTaskModal';
 import { NpcGuidanceDialog, type NpcGuidanceStep } from './NpcGuidanceDialog';
 import { InternshipRoutinePanel } from './InternshipRoutinePanel';
-import { getDailyTaskIds } from '../lib/internshipRoutine';
+import { getDailyTaskIds, type OfficeEventChoiceId } from '../lib/internshipRoutine';
 
 interface InternshipCareerPanelProps {
   player: PlayerProfile;
   onCompleteTask: (taskId: string) => void;
   onRegisterArrival: () => void;
   onRegisterDeparture: () => void;
-  onHandleOfficeEvent: () => void;
+  onHandleOfficeEvent: (choiceId: OfficeEventChoiceId) => void;
   onOpenReview: () => void;
 }
 
