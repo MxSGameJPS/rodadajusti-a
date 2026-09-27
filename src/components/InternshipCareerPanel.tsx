@@ -65,7 +65,7 @@ function buildMarianaTaskGuidance(task: OfficeStageTask, isSenior: boolean): Npc
   ];
 }
 
-export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview }) => {
+export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview, onRequestAbsenceJustification }) => {
   const [selectedTask, setSelectedTask] = useState<OfficeStageTask | null>(null);
   const [pendingTask, setPendingTask] = useState<OfficeStageTask | null>(null);
   const [isTaskGuidanceOpen, setIsTaskGuidanceOpen] = useState(false);
