@@ -39,6 +39,10 @@ interface CityWorldMapModalProps {
   onOpenHome: () => void;
   onGoToOffice: () => void;
   onStudyAtUniversity: () => void;
+  onGoToEstablishment: (
+    establishment: WorldEstablishment,
+    point: { lat: number; lng: number },
+  ) => void;
   onPurchaseOffer: (
     establishment: WorldEstablishment,
     offer: WorldEstablishmentOffer,
@@ -123,6 +127,7 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
   onOpenHome,
   onGoToOffice,
   onStudyAtUniversity,
+  onGoToEstablishment,
   onPurchaseOffer,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -160,6 +165,9 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
       const items = await loadWorldEstablishments(resolved);
       if (!active) return;
       setEstablishments(items);
+      if (player.worldLocation.kind === 'ESTABLISHMENT' && player.worldLocation.refId) {
+        setSelected(items.find((item) => item.id === player.worldLocation.refId) || null);
+      }
       setLoading(false);
     };
 
@@ -281,8 +289,16 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
             const element = buildEstablishmentMarker(establishment);
             element.addEventListener('click', () => {
               setSelectedLifeLocation(null);
-              setSelected(establishment);
               setPurchaseMessage('');
+              if (
+                player.worldLocation.kind === 'ESTABLISHMENT'
+                && player.worldLocation.refId === establishment.id
+              ) {
+                setSelected(establishment);
+                return;
+              }
+              setSelected(null);
+              onGoToEstablishment(establishment, point);
             });
             markersRef.current.push(
               new maplibre.Marker({ element, anchor: 'bottom' })
@@ -324,6 +340,8 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
     player.careerTier,
     player.household.residence.latitude,
     player.household.residence.longitude,
+    player.worldLocation.kind,
+    player.worldLocation.refId,
   ]);
 
   if (!isOpen) return null;
@@ -439,7 +457,7 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
         )}
 
         {selected && (
-          <div className="absolute bottom-5 left-5 right-5 z-20 ml-auto max-h-[55vh] w-[min(720px,calc(100%-40px))] overflow-y-auto rounded-2xl border border-[#C5A059]/30 bg-[#090C0F]/95 p-4 shadow-2xl backdrop-blur-xl">
+          <div className="absolute left-1/2 top-1/2 z-30 max-h-[72vh] w-[min(900px,calc(100%-32px))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-[#C5A059]/30 bg-[#090C0F]/95 p-4 shadow-2xl backdrop-blur-xl">
             <div className="grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)]">
               <div className="overflow-hidden rounded-xl border border-[#C5A059]/25 bg-[#111418]">
                 {selected.bannerUrl ? (
@@ -454,7 +472,13 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
                   {selected.presenceScope === 'UNIVERSAL' && <span className="rounded-full border border-[#60A5FA]/25 bg-[#60A5FA]/10 px-2 py-1 text-[#A9CCFF]">Universal</span>}
                   {selected.isSponsored && <span className="rounded-full border border-[#34D399]/25 bg-[#34D399]/10 px-2 py-1 text-[#8BE0BD]">Patrocinado</span>}
                 </div>
-                <h3 className="font-serif text-xl font-black text-[#F1EEE8]">{selected.name}</h3>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <span className="text-[8px] font-black uppercase tracking-[0.16em] text-[#8C929A]">Você chegou ao estabelecimento</span>
+                    <h3 className="font-serif text-2xl font-black text-[#F1EEE8]">{selected.name}</h3>
+                  </div>
+                  <button type="button" onClick={() => setSelected(null)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#343941] text-[#949BA4]" aria-label="Fechar estabelecimento"><X size={16} /></button>
+                </div>
                 <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#9A9FA7]">{selected.description}</p>
                 {selected.offers.length > 0 && (
                   <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -485,7 +509,15 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
                             }}
                             className="mt-2 rounded-lg border border-[#C5A059]/30 bg-[#C5A059]/10 px-2.5 py-1.5 text-[8px] font-black uppercase text-[#D9BF7D] disabled:cursor-not-allowed disabled:opacity-40"
                           >
-                            {String(offer.gameplayEffects?.kind || '').toUpperCase() === 'MEAL' ? 'Comprar e comer' : 'Comprar'}
+                            {String(offer.gameplayEffects?.kind || '').toUpperCase() === 'MEAL'
+                              ? 'Pedir refeição'
+                              : offer.offerType === 'HOSPEDAGEM'
+                                ? 'Reservar quarto'
+                                : offer.offerType === 'LOCACAO_VEICULO'
+                                  ? 'Alugar veículo'
+                                  : offer.offerType === 'ALUGUEL'
+                                    ? 'Alugar'
+                                    : 'Comprar'}
                           </button>
                         </div>
                       </article>

@@ -19,8 +19,12 @@ import {
   getUniversityName,
   getUniversityPoint,
 } from './lifeSimulation';
+import {
+  loadWorldEstablishments,
+  resolveWorldPointForEstablishment,
+} from './worldEstablishments';
 
-export type LifeTravelPlaceId = 'OFFICE' | 'HOME' | 'UNIVERSITY';
+export type LifeTravelPlaceId = 'OFFICE' | 'HOME' | 'UNIVERSITY' | 'ESTABLISHMENT';
 export type LifeTravelOriginId = LifeTravelPlaceId | 'CURRENT';
 
 export interface LifeTravelPlace {
@@ -48,7 +52,11 @@ export interface LifeTravelRequest {
     | 'GO_HOME'
     | 'GO_OFFICE'
     | 'GO_UNIVERSITY'
-    | 'RETURN_HOME_AFTER_STUDY';
+    | 'RETURN_HOME_AFTER_STUDY'
+    | 'GO_ESTABLISHMENT';
+  destinationPoint?: WorldGeoPoint;
+  destinationLabel?: string;
+  destinationRefId?: string;
 }
 
 export function lifeTravelPlace(
@@ -63,6 +71,14 @@ export function lifeTravelPlace(
       subtitle: player.household.residence.street
         ? player.household.residence.street + ' • ' + (player.homeCity || profile?.city || '')
         : 'Residência do personagem',
+    };
+  }
+
+  if (id === 'ESTABLISHMENT') {
+    return {
+      id,
+      label: 'Estabelecimento',
+      subtitle: profile ? profile.city + '/' + profile.state : 'Local comercial',
     };
   }
 
@@ -92,6 +108,13 @@ export function lifePlaceFromWorldLocation(
 function currentPlaceLabel(player: PlayerProfile, profile: WorldMapProfile) {
   if (player.worldLocation.kind === 'HOME') return lifeTravelPlace(player, profile, 'HOME');
   if (player.worldLocation.kind === 'UNIVERSITY') return lifeTravelPlace(player, profile, 'UNIVERSITY');
+  if (player.worldLocation.kind === 'ESTABLISHMENT') {
+    return {
+      id: 'ESTABLISHMENT' as const,
+      label: player.worldLocation.label || 'Estabelecimento',
+      subtitle: profile.city + '/' + profile.state,
+    };
+  }
   if (player.worldLocation.kind === 'CASE_LOCATION') {
     const caseItem = player.activeCase
       ? GAME_CASES.find((item) => item.id === player.activeCase?.caseId)
@@ -118,6 +141,17 @@ async function resolvePlacePoint(
     if (player.worldLocation.kind === 'HOME') return getHomePoint(player, profile);
     if (player.worldLocation.kind === 'UNIVERSITY') {
       return resolvePlacePoint(player, profile, 'UNIVERSITY');
+    }
+    if (player.worldLocation.kind === 'ESTABLISHMENT' && player.worldLocation.refId) {
+      const establishments = await loadWorldEstablishments(profile);
+      const establishment = establishments.find((item) => item.id === player.worldLocation.refId);
+      if (establishment) {
+        return resolveStableRoadPoint(
+          [profile.city, profile.state, 'establishment:' + establishment.id].join(':'),
+          await resolveWorldPointForEstablishment(profile, establishment),
+          profile.center,
+        );
+      }
     }
     if (player.worldLocation.kind === 'CASE_LOCATION' && player.activeCase) {
       const caseItem = GAME_CASES.find((item) => item.id === player.activeCase?.caseId);
@@ -165,14 +199,18 @@ export async function buildLifeTravelResult(
   player: PlayerProfile,
   originId: LifeTravelOriginId,
   destinationId: LifeTravelPlaceId,
+  requestDestinationPoint?: WorldGeoPoint,
+  requestDestinationLabel?: string,
 ): Promise<LifeTravelResult> {
   const profile = await resolveWorldMapProfile(player);
   if (!profile) throw new Error('A cidade-base do personagem ainda não foi localizada.');
 
-  const [originPoint, destinationPoint] = await Promise.all([
-    resolvePlacePoint(player, profile, originId),
-    resolvePlacePoint(player, profile, destinationId),
-  ]);
+  const originPoint = await resolvePlacePoint(player, profile, originId);
+  const destinationPoint = destinationId === 'ESTABLISHMENT'
+    ? requestDestinationPoint
+    : await resolvePlacePoint(player, profile, destinationId);
+
+  if (!destinationPoint) throw new Error('O ponto do estabelecimento não foi localizado.');
 
   const route = await fetchRoadRoute(originPoint, destinationPoint);
   const distanceKm = Math.max(0, route.distanceMeters / 1000);
@@ -191,7 +229,13 @@ export async function buildLifeTravelResult(
     origin: originId === 'CURRENT'
       ? currentPlaceLabel(player, profile)
       : lifeTravelPlace(player, profile, originId),
-    destination: lifeTravelPlace(player, profile, destinationId),
+    destination: destinationId === 'ESTABLISHMENT'
+      ? {
+          id: 'ESTABLISHMENT',
+          label: requestDestinationLabel || 'Estabelecimento',
+          subtitle: profile.city + '/' + profile.state,
+        }
+      : lifeTravelPlace(player, profile, destinationId),
     travelMinutes: roundTravelMinutes(route.durationSeconds),
     distanceKm,
     transport,
