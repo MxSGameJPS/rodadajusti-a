@@ -35,6 +35,7 @@ interface InternshipCareerPanelProps {
   onRegisterDeparture: () => void;
   onHandleOfficeEvent: (choiceId: OfficeEventChoiceId) => void;
   onOpenReview: () => void;
+  onRequestAbsenceJustification: () => void;
 }
 
 const METRICS = [
@@ -209,6 +210,7 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
         onRegisterDeparture={onRegisterDeparture}
         onHandleOfficeEvent={onHandleOfficeEvent}
         onOpenReview={onOpenReview}
+        onRequestAbsenceJustification={onRequestAbsenceJustification}
       />
 
       <section className="mb-6 overflow-hidden rounded-2xl border border-[#2A2A2E] bg-[#111113] shadow-xl">
