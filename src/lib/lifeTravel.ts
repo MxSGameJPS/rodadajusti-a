@@ -19,6 +19,10 @@ import {
   getUniversityName,
   getUniversityPoint,
 } from './lifeSimulation';
+import {
+  loadWorldEstablishments,
+  resolveWorldPointForEstablishment,
+} from './worldEstablishments';
 
 export type LifeTravelPlaceId = 'OFFICE' | 'HOME' | 'UNIVERSITY' | 'ESTABLISHMENT';
 export type LifeTravelOriginId = LifeTravelPlaceId | 'CURRENT';
@@ -104,6 +108,13 @@ export function lifePlaceFromWorldLocation(
 function currentPlaceLabel(player: PlayerProfile, profile: WorldMapProfile) {
   if (player.worldLocation.kind === 'HOME') return lifeTravelPlace(player, profile, 'HOME');
   if (player.worldLocation.kind === 'UNIVERSITY') return lifeTravelPlace(player, profile, 'UNIVERSITY');
+  if (player.worldLocation.kind === 'ESTABLISHMENT') {
+    return {
+      id: 'ESTABLISHMENT' as const,
+      label: player.worldLocation.label || 'Estabelecimento',
+      subtitle: profile.city + '/' + profile.state,
+    };
+  }
   if (player.worldLocation.kind === 'CASE_LOCATION') {
     const caseItem = player.activeCase
       ? GAME_CASES.find((item) => item.id === player.activeCase?.caseId)
@@ -130,6 +141,17 @@ async function resolvePlacePoint(
     if (player.worldLocation.kind === 'HOME') return getHomePoint(player, profile);
     if (player.worldLocation.kind === 'UNIVERSITY') {
       return resolvePlacePoint(player, profile, 'UNIVERSITY');
+    }
+    if (player.worldLocation.kind === 'ESTABLISHMENT' && player.worldLocation.refId) {
+      const establishments = await loadWorldEstablishments(profile);
+      const establishment = establishments.find((item) => item.id === player.worldLocation.refId);
+      if (establishment) {
+        return resolveStableRoadPoint(
+          [profile.city, profile.state, 'establishment:' + establishment.id].join(':'),
+          await resolveWorldPointForEstablishment(profile, establishment),
+          profile.center,
+        );
+      }
     }
     if (player.worldLocation.kind === 'CASE_LOCATION' && player.activeCase) {
       const caseItem = GAME_CASES.find((item) => item.id === player.activeCase?.caseId);
