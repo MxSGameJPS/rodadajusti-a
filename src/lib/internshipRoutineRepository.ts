@@ -1,6 +1,7 @@
 import type { PlayerProfile } from '../types/game';
 import { supabase } from './supabase';
 import { readInternshipRoutine, saveInternshipRoutine, type InternshipRoutineState } from './internshipRoutine';
+import { createInitialSeniorPortfolio, type SeniorPortfolioDecision, type SeniorPortfolioMatter } from './seniorPortfolio';
 
 function eligible(player: PlayerProfile) {
   return Boolean(supabase && player.cloudCareerId);
@@ -10,9 +11,11 @@ function emptyState(): InternshipRoutineState {
   return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [] };
 }
 
-function fromRow(row: any): InternshipRoutineState {
+export interface InternshipCloudState { routine: InternshipRoutineState; seniorPortfolio: SeniorPortfolioMatter[]; seniorDecisions: SeniorPortfolioDecision[]; }
+
+function fromRow(row: any): InternshipCloudState {
   const base = emptyState();
-  return {
+  const routine = {
     ...base,
     attendance: Array.isArray(row.attendance) ? row.attendance : [],
     meetings: Array.isArray(row.meetings) ? row.meetings : [],
@@ -22,9 +25,10 @@ function fromRow(row: any): InternshipRoutineState {
     excusedAbsenceKeys: Array.isArray(row.excused_absence_keys) ? row.excused_absence_keys : [],
     lastTaskDeliveryKey: row.senior_state?.lastTaskDeliveryKey || null,
   };
+  return { routine, seniorPortfolio: Array.isArray(row.senior_portfolio) ? row.senior_portfolio : [], seniorDecisions: Array.isArray(row.senior_decisions) ? row.senior_decisions : [] };
 }
 
-function row(player: PlayerProfile, userId: string, state: InternshipRoutineState) {
+function row(player: PlayerProfile, userId: string, state: InternshipRoutineState, seniorPortfolio: SeniorPortfolioMatter[] = [], seniorDecisions: SeniorPortfolioDecision[] = []) {
   return {
     career_id: player.cloudCareerId!,
     user_id: userId,
@@ -35,6 +39,8 @@ function row(player: PlayerProfile, userId: string, state: InternshipRoutineStat
     greeted_workdays: state.greetedWorkdays,
     excused_absence_keys: state.excusedAbsenceKeys,
     senior_state: { lastTaskDeliveryKey: state.lastTaskDeliveryKey },
+    senior_portfolio: seniorPortfolio,
+    senior_decisions: seniorDecisions,
     updated_at: new Date().toISOString(),
   };
 }
@@ -51,8 +57,8 @@ export async function hydrateInternshipRoutine(player: PlayerProfile) {
     return local;
   }
   const cloud = fromRow(data);
-  saveInternshipRoutine(player, cloud);
-  return cloud;
+  saveInternshipRoutine(player, cloud.routine);
+  return cloud.routine;
 }
 
 export async function persistInternshipRoutine(player: PlayerProfile, state = readInternshipRoutine(player)) {
@@ -61,4 +67,21 @@ export async function persistInternshipRoutine(player: PlayerProfile, state = re
   if (!user) return;
   const { error } = await supabase.from('internship_routines').upsert(row(player, user.id, state), { onConflict: 'career_id' });
   if (error) console.warn('[internship] persist', error.message);
+}
+
+
+export async function loadSeniorPortfolio(player: PlayerProfile) {
+  if (!eligible(player) || !supabase) return { portfolio: [] as SeniorPortfolioMatter[], decisions: [] as SeniorPortfolioDecision[] };
+  const { data, error } = await supabase.from('internship_routines').select('senior_portfolio,senior_decisions').eq('career_id', player.cloudCareerId!).maybeSingle();
+  if (error) { console.warn('[internship] senior portfolio load', error.message); return { portfolio: [], decisions: [] }; }
+  const portfolio = Array.isArray(data?.senior_portfolio) && data.senior_portfolio.length ? data.senior_portfolio : createInitialSeniorPortfolio();
+  return { portfolio, decisions: Array.isArray(data?.senior_decisions) ? data.senior_decisions : [] };
+}
+
+export async function persistSeniorPortfolio(player: PlayerProfile, portfolio: SeniorPortfolioMatter[], decisions: SeniorPortfolioDecision[]) {
+  if (!eligible(player) || !supabase) return false;
+  const { data: { user } } = await supabase.auth.getUser(); if (!user) return false;
+  const { error } = await supabase.from('internship_routines').update({ senior_portfolio: portfolio, senior_decisions: decisions, updated_at: new Date().toISOString() }).eq('career_id', player.cloudCareerId!).eq('user_id', user.id);
+  if (error) { console.warn('[internship] senior portfolio persist', error.message); return false; }
+  return true;
 }
