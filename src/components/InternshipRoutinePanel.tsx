@@ -9,9 +9,10 @@ interface Props {
   onRegisterDeparture: () => void;
   onHandleOfficeEvent: (choiceId: OfficeEventChoiceId) => void;
   onOpenReview: () => void;
+  onRequestAbsenceJustification: () => void;
 }
 
-export const InternshipRoutinePanel: React.FC<Props> = ({ player, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview }) => {
+export const InternshipRoutinePanel: React.FC<Props> = ({ player, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview, onRequestAbsenceJustification }) => {
   const schedule = getWorkSchedule(player);
   const attendance = getTodayAttendance(player);
   const state = readInternshipRoutine(player);
@@ -47,6 +48,11 @@ export const InternshipRoutinePanel: React.FC<Props> = ({ player, onRegisterArri
                   {attendance.status === 'PRESENT' ? 'Presença regular' : attendance.status === 'LATE' ? `Atraso de ${attendance.lateMinutes} min` : 'Falta registrada'}
                 </strong>
                 <p className="mt-1 font-mono text-[10px] text-[#77777F]">Entrada {minuteLabel(attendance.arrivalMinute)} • Saída {minuteLabel(attendance.departureMinute)}</p>
+                {attendance.status === 'ABSENT' && (
+                  <button type="button" onClick={onRequestAbsenceJustification} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[#6C83A7]/35 bg-[#6C83A7]/10 px-3 py-2 text-[10px] font-bold text-[#AFC0DA] hover:bg-[#6C83A7]/20">
+                    <MessageSquareText size={14} /> Solicitar justificativa
+                  </button>
+                )}
                 {!attendance.departureMinute && (
                   <button type="button" onClick={onRegisterDeparture} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[#34343A] px-3 py-2 text-[10px] font-bold text-[#BDB9B0] hover:bg-[#19191D]">
                     <DoorOpen size={14} /> Registrar saída
