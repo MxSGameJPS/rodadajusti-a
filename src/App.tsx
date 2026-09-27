@@ -64,6 +64,7 @@ import {
   applyCasePerformance,
   completeOfficeTask,
   getInternPromotionStatus,
+  getTasksForTier,
   normalizeOfficePerformance,
 } from './lib/internCareerEngine';
 import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
@@ -109,6 +110,10 @@ import {
   buildSupervisorReviewDialogues,
   getOfficeEventChoices,
   type OfficeEventChoiceId,
+  buildMarianaArrivalDialogues,
+  hasReceivedDailyBriefing,
+  markDailyBriefingReceived,
+  getDailyTaskIds,
 } from './lib/internshipRoutine';
 import {
   DEFAULT_HOUSEHOLD_STATE,
@@ -416,6 +421,7 @@ export default function App() {
   const [officeClosedArrivalMinute, setOfficeClosedArrivalMinute] = useState<number | null>(null);
   const [supervisorReviewDialogues, setSupervisorReviewDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
   const [periodicSupervisorReview, setPeriodicSupervisorReview] = useState<ReturnType<typeof getPeriodicReview>>(null);
+  const [marianaArrivalDialogues, setMarianaArrivalDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
 
   const openOfficeManagement = () => {
     if (!canManageOwnOffice(player)) {
@@ -926,6 +932,12 @@ export default function App() {
       scope: 'WORKPLACE', intensity: result.record.status === 'LATE' ? 24 : 10,
       dimensions: { professionalTrust: result.record.status === 'LATE' ? -2 : 1, affinity: result.record.status === 'LATE' ? -1 : 0 }, bond: 'PROFESSIONAL',
     });
+    if (!hasReceivedDailyBriefing(player)) {
+      const tasks = getTasksForTier(player.careerTier);
+      const assignedIds = getDailyTaskIds(player, tasks.map((task) => task.id));
+      const titles = tasks.filter((task) => assignedIds.includes(task.id)).map((task) => task.title);
+      setMarianaArrivalDialogues(buildMarianaArrivalDialogues(player, titles));
+    }
   };
 
   const handleRegisterInternDeparture = () => {
@@ -2432,6 +2444,23 @@ export default function App() {
         onGoToEstablishment={handleRequestEstablishment}
         onPurchaseOffer={handlePurchaseWorldOffer}
       />
+
+      {marianaArrivalDialogues && (
+        <NpcGuidanceDialog
+          isOpen
+          npcName="Mariana Duarte"
+          npcRole="Secretária • Ramos & Associados"
+          portraitSrc="/personagens/mariana-duarte.png"
+          portraitAlt="Mariana Duarte, secretária do escritório"
+          contextLabel="Prioridades do expediente"
+          dialogues={marianaArrivalDialogues}
+          finalActionLabel="Começar expediente"
+          onComplete={() => {
+            markDailyBriefingReceived(player);
+            setMarianaArrivalDialogues(null);
+          }}
+        />
+      )}
 
       {supervisorReviewDialogues && periodicSupervisorReview && (
         <NpcGuidanceDialog
