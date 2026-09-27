@@ -42,6 +42,8 @@ interface InternshipCareerPanelProps {
   onChooseSeniorPriority?: (id: string) => void;
   seniorPortfolio?: SeniorPortfolioMatter[];
   onSeniorPortfolioAction?: (matterId: string, action: SeniorPortfolioMatter['pending'][number]) => void;
+  onSeniorPortfolioReview?: (matterId: string) => void;
+  onSeniorPortfolioDecision?: (matterId: string) => void;
 }
 
 const METRICS = [
@@ -71,7 +73,7 @@ function buildMarianaTaskGuidance(task: OfficeStageTask, isSenior: boolean): Npc
   ];
 }
 
-export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview, onRequestAbsenceJustification, onChooseSeniorPriority, seniorPortfolio = [], onSeniorPortfolioAction }) => {
+export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview, onRequestAbsenceJustification, onChooseSeniorPriority, seniorPortfolio = [], onSeniorPortfolioAction, onSeniorPortfolioReview, onSeniorPortfolioDecision }) => {
   const [selectedTask, setSelectedTask] = useState<OfficeStageTask | null>(null);
   const [pendingTask, setPendingTask] = useState<OfficeStageTask | null>(null);
   const [isTaskGuidanceOpen, setIsTaskGuidanceOpen] = useState(false);
@@ -134,7 +136,7 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
 
       {isSenior && onChooseSeniorPriority && <SeniorInternDesk player={player} onChoosePriority={onChooseSeniorPriority} />}
 
-      {isSenior && onSeniorPortfolioAction && <SeniorPortfolioPanel portfolio={seniorPortfolio} onAction={onSeniorPortfolioAction} />}
+      {isSenior && onSeniorPortfolioAction && <SeniorPortfolioPanel portfolio={seniorPortfolio} onAction={onSeniorPortfolioAction} onReview={onSeniorPortfolioReview} onDecision={onSeniorPortfolioDecision} />}
 
             <InternOfficeTaskModal
         isOpen={!!selectedTask}
