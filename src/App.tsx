@@ -2468,6 +2468,11 @@ export default function App() {
   };
 
   const handleBackToOfficeFromCase = () => {
+    if (!isInternCareer(player)) {
+      setPlayer((prev) => ({ ...prev, worldLocation: { kind: 'OFFICE', refId: null, label: 'Ramos & Associados' } }));
+      setCurrentView('HUB');
+      return;
+    }
     const access = getOfficeAccessDecision(player);
     if (!access.allowed) {
       setLifeWarning(access.reason === 'TOO_EARLY' ? 'O Ramos & Associados ainda está fechado.' : 'O expediente do Ramos & Associados já terminou. Retorne no próximo dia útil.');
