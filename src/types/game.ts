@@ -512,8 +512,12 @@ export interface OabRegistration {
   isSimulated: true;
 }
 
+export type PlayerRelationshipStatus = 'SINGLE' | 'DATING' | 'MARRIED';
+
 export interface PlayerProfile {
   name: string;
+  relationshipStatus?: PlayerRelationshipStatus;
+  partnerName?: string | null;
   avatarSeed: string;
   careerTier: CareerTierId;
   academicDegree: AcademicDegreeId;
