@@ -101,13 +101,13 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
     performance,
     discipline: player.officeDiscipline,
   });
-  const oabPreparation = getOabPreparationStatus({
+  const legacyOabPreparation = getOabPreparationStatus({
     casesSolved: player.casesSolved,
     performance,
     discipline: player.officeDiscipline,
   });
   const currentTier = CAREER_TIERS[player.careerTier];
-  const progress = isSenior ? oabPreparation : internPromotion;
+  const progress = isSenior ? legacyOabPreparation : internPromotion;
   const actOne = getEarlyCareerSnapshot(player);
 
   const openTask = (task: OfficeStageTask) => {
