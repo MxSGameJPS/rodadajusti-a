@@ -28,6 +28,8 @@ import { NpcGuidanceDialog, type NpcGuidanceStep } from './NpcGuidanceDialog';
 import { InternshipRoutinePanel } from './InternshipRoutinePanel';
 import { SeniorInternDesk } from './SeniorInternDesk';
 import { SeniorPortfolioPanel } from './SeniorPortfolioPanel';
+import { OabIntensivePreparationPanel } from './OabIntensivePreparationPanel';
+import type { OabPreparationState, OabStudyArea } from '../lib/oabIntensivePreparation';
 import type { SeniorPortfolioMatter } from '../lib/seniorPortfolio';
 import { getDailyTaskIds, type OfficeEventChoiceId } from '../lib/internshipRoutine';
 
@@ -46,6 +48,9 @@ interface InternshipCareerPanelProps {
   onSeniorPortfolioDecision?: (matterId: string) => void;
   onSeniorOabReadinessReview?: () => void;
   seniorCareerRecall?: string;
+  oabPreparation?: OabPreparationState;
+  onOabStudy?: (area: OabStudyArea) => void;
+  onOabQuickMock?: () => void;
 }
 
 const METRICS = [
@@ -75,7 +80,7 @@ function buildMarianaTaskGuidance(task: OfficeStageTask, isSenior: boolean): Npc
   ];
 }
 
-export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview, onRequestAbsenceJustification, onChooseSeniorPriority, seniorPortfolio = [], onSeniorPortfolioAction, onSeniorPortfolioReview, onSeniorPortfolioDecision, onSeniorOabReadinessReview, seniorCareerRecall }) => {
+export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview, onRequestAbsenceJustification, onChooseSeniorPriority, seniorPortfolio = [], onSeniorPortfolioAction, onSeniorPortfolioReview, onSeniorPortfolioDecision, onSeniorOabReadinessReview, seniorCareerRecall, oabPreparation, onOabStudy, onOabQuickMock }) => {
   const [selectedTask, setSelectedTask] = useState<OfficeStageTask | null>(null);
   const [pendingTask, setPendingTask] = useState<OfficeStageTask | null>(null);
   const [isTaskGuidanceOpen, setIsTaskGuidanceOpen] = useState(false);
@@ -140,6 +145,7 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
 
       {isSenior && onSeniorPortfolioAction && <SeniorPortfolioPanel portfolio={seniorPortfolio} onAction={onSeniorPortfolioAction} onReview={onSeniorPortfolioReview} onDecision={onSeniorPortfolioDecision} />}
       {isSenior && onSeniorOabReadinessReview && <section className="mt-4 rounded-xl border border-[#C5A059]/20 bg-[#C5A059]/[.04] p-4"><span className="text-[9px] font-black uppercase tracking-wider text-[#C5A059]">Leitura do supervisor</span><p className="mt-2 text-[10px] leading-relaxed text-[#9D9990]">{seniorCareerRecall}</p><button type="button" onClick={onSeniorOabReadinessReview} className="mt-3 rounded-lg border border-[#C5A059]/30 px-3 py-2 text-[10px] font-bold text-[#D8BC7B] hover:bg-[#C5A059]/10">Conversar com Roberto sobre minha preparação para a OAB</button></section>}
+      {isSenior && oabPreparation && onOabStudy && onOabQuickMock && <OabIntensivePreparationPanel player={player} state={oabPreparation} onStudy={onOabStudy} onQuickMock={onOabQuickMock} />}
 
             <InternOfficeTaskModal
         isOpen={!!selectedTask}
