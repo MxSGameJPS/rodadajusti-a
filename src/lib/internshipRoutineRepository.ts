@@ -28,7 +28,7 @@ function fromRow(row: any): InternshipCloudState {
   return { routine, seniorPortfolio: Array.isArray(row.senior_portfolio) ? row.senior_portfolio : [], seniorDecisions: Array.isArray(row.senior_decisions) ? row.senior_decisions : [] };
 }
 
-function row(player: PlayerProfile, userId: string, state: InternshipRoutineState, seniorPortfolio: SeniorPortfolioMatter[] = [], seniorDecisions: SeniorPortfolioDecision[] = []) {
+function row(player: PlayerProfile, userId: string, state: InternshipRoutineState) {
   return {
     career_id: player.cloudCareerId!,
     user_id: userId,
@@ -39,8 +39,6 @@ function row(player: PlayerProfile, userId: string, state: InternshipRoutineStat
     greeted_workdays: state.greetedWorkdays,
     excused_absence_keys: state.excusedAbsenceKeys,
     senior_state: { lastTaskDeliveryKey: state.lastTaskDeliveryKey },
-    senior_portfolio: seniorPortfolio,
-    senior_decisions: seniorDecisions,
     updated_at: new Date().toISOString(),
   };
 }
