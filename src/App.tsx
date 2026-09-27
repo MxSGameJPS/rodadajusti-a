@@ -2919,6 +2919,8 @@ export default function App() {
         isOpen={isOabExamOpen}
         onClose={() => setIsOabExamOpen(false)}
         player={player}
+        officialOnly={player.careerTier === 'ESTAGIARIO_SENIOR' && oabPreparation.unlocked}
+        contextLabel={player.careerTier === 'ESTAGIARIO_SENIOR' && oabPreparation.unlocked ? 'Exame da Ordem • encerramento do Ato 1' : undefined}
         onComplete={handleOabExamComplete}
       />
 
