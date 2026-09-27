@@ -426,6 +426,7 @@ export default function App() {
   const [isOabExamOpen, setIsOabExamOpen] = useState<boolean>(false);
   const [isOabPreparationMockOpen, setIsOabPreparationMockOpen] = useState<boolean>(false);
   const [actOneFinaleDialogues, setActOneFinaleDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
+  const [actOneClosingDialogues, setActOneClosingDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
   const [isCityRelocationOpen, setIsCityRelocationOpen] = useState<boolean>(false);
   const [isCityWorldMapOpen, setIsCityWorldMapOpen] = useState<boolean>(false);
   const [isPlayerHomeOpen, setIsPlayerHomeOpen] = useState<boolean>(false);
@@ -1535,7 +1536,17 @@ export default function App() {
 
   const handleOabExamComplete = (result: ProfessionalExamResult, exam: ProfessionalExam) => {
     const completedDate = formatGameDate(getPlayerGameDate(player));
-    if(player.careerTier==='ESTAGIARIO_SENIOR'&&oabPreparation.unlocked){const next=recordFinalOabExam(oabPreparation,result.passed,portfolioDate(player));setOabPreparation(next);void persistOabPreparation(player,next);}
+    if(player.careerTier==='ESTAGIARIO_SENIOR'&&oabPreparation.unlocked){
+      const next=recordFinalOabExam(oabPreparation,result.passed,portfolioDate(player));
+      setOabPreparation(next); void persistOabPreparation(player,next);
+      if(result.passed){
+        setActOneClosingDialogues([
+          {eyebrow:'Dr. Roberto Ramos',text:'A aprovação confirma o que o estágio vinha mostrando: você está pronto para assumir uma nova responsabilidade profissional.'},
+          {eyebrow:'Mariana Duarte',text:'Seu primeiro dia parece distante agora. Os prazos, atendimentos, diligências e decisões construíram a história que você leva daqui para frente.'},
+          {eyebrow:'Ato 1 concluído',text:'O estágio no Ramos & Associados termina como etapa de formação. Suas relações, histórico profissional e consequências permanecem na carreira.'},
+        ]);
+      }
+    }
 
     setPlayer((prev) => {
       const attemptExists = prev.professionalExamAttempts.some(
@@ -2975,6 +2986,8 @@ export default function App() {
       />
 
       {actOneFinaleDialogues && <NpcGuidanceDialog isOpen npcName="Dr. Roberto Ramos" npcRole="Sócio responsável • Ramos & Associados" portraitSrc="/personagens/dr-roberto-ramos.png" portraitAlt="Dr. Roberto Ramos" contextLabel="Final do Ato 1 • Exame da Ordem" dialogues={actOneFinaleDialogues} finalActionLabel="Realizar Exame da Ordem" onComplete={beginFinalOabExam} />}
+
+      {actOneClosingDialogues && <NpcGuidanceDialog isOpen npcName="Dr. Roberto Ramos" npcRole="Sócio responsável • Ramos & Associados" portraitSrc="/personagens/dr-roberto-ramos.png" portraitAlt="Dr. Roberto Ramos" contextLabel="Encerramento do Ato 1" dialogues={actOneClosingDialogues} finalActionLabel="Iniciar minha carreira como advogado" onComplete={() => setActOneClosingDialogues(null)} />}
 
       <OabExamModal
         isOpen={isOabPreparationMockOpen}
