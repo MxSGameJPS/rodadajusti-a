@@ -1435,15 +1435,26 @@ export default function App() {
       newTier = 'ADVOGADO_SENIOR';
       promotionAnnouncement = 'ADVOGADO_SENIOR';
     } else if (player.careerTier === 'ESTAGIARIO') {
-      const promotion = getInternPromotionStatus({
+      const projectedPlayer = {
+        ...player,
         casesSolved: newSolvedCount,
         xp: nextXp,
-        performance: nextOfficePerformance,
-        discipline: nextDiscipline,
-      });
-      if (promotion.eligible) {
+        officePerformance: nextOfficePerformance,
+        officeDiscipline: nextDiscipline,
+      };
+      const promotionNarrative = buildInternPromotionNarrative(projectedPlayer);
+      if (promotionNarrative.eligible) {
         newTier = 'ESTAGIARIO_SENIOR';
         promotionAnnouncement = 'ESTAGIARIO_SENIOR';
+        setInternPromotionNarrative(promotionNarrative);
+      } else {
+        const status = getInternPromotionStatus({
+          casesSolved: newSolvedCount,
+          xp: nextXp,
+          performance: nextOfficePerformance,
+          discipline: nextDiscipline,
+        });
+        if (status.progressPercent >= 67) setPromotionReviewDialogues(promotionNarrative.dialogues);
       }
     }
 
