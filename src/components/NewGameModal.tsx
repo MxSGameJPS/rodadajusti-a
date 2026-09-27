@@ -6,6 +6,7 @@ import { getSuggestedPlayerName } from '../lib/authProfile';
 import { CelebrationBurst } from './CelebrationBurst/CelebrationBurst';
 import { geocodeBrazilianAddress, type WorldAddressProfile } from '../lib/worldMap';
 import { OfficeWelcomeDialog } from './OfficeWelcomeDialog';
+import { ActOneIntroSequence } from './ActOneIntroSequence';
 
 export interface NewGameSetup {
   name: string;
@@ -26,6 +27,7 @@ interface NewGameModalProps {
 type InitialFocus = 'civil' | 'consumidor' | 'empresarial';
 
 const OFFICE_WELCOME_PENDING_KEY = 'rota_office_welcome_pending_v1';
+const ACT_ONE_INTRO_SEEN_KEY = 'rota_act_one_intro_seen_v1';
 
 const FOCUS_OPTIONS: Array<{
   id: InitialFocus;
@@ -85,6 +87,10 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
   const [selectedFocus, setSelectedFocus] = useState<InitialFocus>('civil');
   const [isAcceptingOffer, setIsAcceptingOffer] = useState(false);
   const [isOfficeWelcomeOpen, setIsOfficeWelcomeOpen] = useState(Boolean(pendingWelcomeName));
+  const [isActOneIntroOpen, setIsActOneIntroOpen] = useState(() => {
+    if (pendingWelcomeName) return false;
+    try { return localStorage.getItem(ACT_ONE_INTRO_SEEN_KEY) !== '1'; } catch { return true; }
+  });
   const startTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -205,6 +211,20 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
       partnerName: relationshipStatus === 'SINGLE' ? null : partnerName.trim(),
     });
   };
+
+  if (isActOneIntroOpen) {
+    return (
+      <ActOneIntroSequence
+        isOpen
+        playerName={normalizedPlayerName}
+        city={city.trim()}
+        onComplete={() => {
+          try { localStorage.setItem(ACT_ONE_INTRO_SEEN_KEY, '1'); } catch { /* onboarding continua */ }
+          setIsActOneIntroOpen(false);
+        }}
+      />
+    );
+  }
 
   if (isOfficeWelcomeOpen) {
     return (
