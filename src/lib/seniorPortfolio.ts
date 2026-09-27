@@ -5,6 +5,9 @@ export interface SeniorPortfolioMatter {
   id: string; title: string; client: string; responsibility: string; supervisor: string;
   dueInDays: number; progress: number; status: SeniorPortfolioStatus;
   pending: Array<'DOCUMENTS'|'CLIENT_RETURN'|'RESEARCH'|'DRAFT'|'HEARING_PREP'>;
+  decisionCompleted?: boolean;
+  consequence?: string;
+  lastDeadlineDate?: string;
 }
 export interface SeniorPortfolioDecision {
   id: string; matterId: string; gameDate: string; action: string; outcome: string;
@@ -102,4 +105,33 @@ export function getSeniorProfessionalScene(matter:SeniorPortfolioMatter):SeniorP
   participants:['Dr. Roberto Ramos',matter.client],
   minutes:30,choices:getSeniorLegalDecisions(matter),
  };
+}
+
+
+function serialDay(player: Pick<PlayerProfile,'gameCurrentDay'|'gameCurrentMonth'|'gameCurrentYear'>) {
+ return Math.floor(new Date(player.gameCurrentYear,player.gameCurrentMonth-1,player.gameCurrentDay).getTime()/86400000);
+}
+function parsePortfolioDate(value?:string) {
+ if(!value)return null; const [d,m,y]=value.split('/').map(Number); if(!d||!m||!y)return null;
+ return Math.floor(new Date(y,m-1,d).getTime()/86400000);
+}
+export function advanceSeniorPortfolioDeadlines(player:PlayerProfile, portfolio:SeniorPortfolioMatter[]) {
+ const today=serialDay(player); let changed=false;
+ const next=portfolio.map(m=>{
+  if(m.status==='COMPLETED'&&m.decisionCompleted)return m;
+  const last=parsePortfolioDate(m.lastDeadlineDate);
+  if(last===today)return m;
+  const elapsed=last===null?0:Math.max(0,today-last);
+  const dueInDays=Math.max(0,m.dueInDays-elapsed);
+  const consequence=dueInDays===0&&m.status!=='COMPLETED'?'Prazo crítico: o processo chegou ao limite sem conclusão da sua etapa supervisionada.':m.consequence;
+  if(dueInDays!==m.dueInDays||m.lastDeadlineDate!==portfolioDate(player)||consequence!==m.consequence)changed=true;
+  return {...m,dueInDays,lastDeadlineDate:portfolioDate(player),consequence};
+ });
+ return {portfolio:next,changed};
+}
+export function applySeniorDecisionConsequence(matter:SeniorPortfolioMatter, decision:SeniorLegalDecision) {
+ const negative=decision.ethics<0||decision.trust<0||decision.technique<0;
+ return {...matter,decisionCompleted:true,consequence:negative
+  ? 'Sua decisão gerou repercussão. O episódio será considerado por Roberto nas próximas avaliações.'
+  : 'A condução foi registrada positivamente no histórico supervisionado.'};
 }
