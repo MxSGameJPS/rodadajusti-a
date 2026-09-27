@@ -6,6 +6,7 @@ export interface OabMockResult{ id:string; gameDate:string; mode:'QUICK'|'FULL';
 export interface OabPreparationState{
  unlocked:boolean; unlockedGameDate?:string; studyPoints:Record<OabStudyArea,number>;
  sessions:OabStudySession[]; mocks:OabMockResult[]; intensiveDays:number;
+ finalExamUnlocked?:boolean; finalExamAttempts?:number; actOneCompleted?:boolean; actOneCompletedGameDate?:string;
 }
 export const OAB_AREAS:Record<OabStudyArea,{label:string;minutes:number}>={
  ETHICS:{label:'Etica Profissional',minutes:45},CONSTITUTIONAL:{label:'Direito Constitucional',minutes:55},
@@ -27,4 +28,9 @@ export function oabReadiness(state:OabPreparationState,player:PlayerProfile){
  const discipline=Math.min(100,state.sessions.length*7);
  const readiness=Math.round(knowledge*.5+mock*.35+discipline*.15);
  return {readiness,knowledge:Math.round(knowledge),mock,discipline,ready:state.unlocked&&readiness>=65&&state.sessions.length>=6&&Boolean(latest)};
+}
+
+export function unlockFinalOabExam(state:OabPreparationState){return oabReadiness(state,{} as PlayerProfile).ready?{...state,finalExamUnlocked:true}:state}
+export function recordFinalOabExam(state:OabPreparationState,passed:boolean,gameDate:string){
+ return {...state,finalExamAttempts:(state.finalExamAttempts||0)+1,actOneCompleted:passed?true:state.actOneCompleted,actOneCompletedGameDate:passed?gameDate:state.actOneCompletedGameDate};
 }
