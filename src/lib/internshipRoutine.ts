@@ -40,6 +40,7 @@ export interface InternshipRoutineState {
   dailyTaskKeys: Record<string, string[]>;
   greetedWorkdays: string[];
   excusedAbsenceKeys: string[];
+  handledSeniorPriorityKeys: string[];
 }
 
 export interface WorkSchedule {
@@ -78,7 +79,7 @@ function hash(value: string) {
 export function readInternshipRoutine(player: PlayerProfile): InternshipRoutineState {
   try {
     const raw = localStorage.getItem(storageKey(player));
-    if (!raw) return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [] };
+    if (!raw) return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [], handledSeniorPriorityKeys: [] };
     const parsed = JSON.parse(raw);
     return {
       attendance: Array.isArray(parsed.attendance) ? parsed.attendance.slice(-90) : [],
@@ -88,6 +89,7 @@ export function readInternshipRoutine(player: PlayerProfile): InternshipRoutineS
       dailyTaskKeys: parsed.dailyTaskKeys && typeof parsed.dailyTaskKeys === 'object' ? parsed.dailyTaskKeys : {},
       greetedWorkdays: Array.isArray(parsed.greetedWorkdays) ? parsed.greetedWorkdays.slice(-60) : [],
       excusedAbsenceKeys: Array.isArray(parsed.excusedAbsenceKeys) ? parsed.excusedAbsenceKeys.slice(-60) : [],
+      handledSeniorPriorityKeys: Array.isArray(parsed.handledSeniorPriorityKeys) ? parsed.handledSeniorPriorityKeys.slice(-120) : [],
     };
   } catch {
     return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [] };
@@ -541,4 +543,16 @@ export function buildInternPromotionNarrative(player: PlayerProfile): InternProm
         { eyebrow: 'Próxima avaliação', text: 'A promoção não foi perdida. Corrija esses pontos e eu farei uma nova avaliação quando os requisitos forem alcançados.' },
       ];
   return { eligible, headline: eligible ? 'Promoção para Estagiário Sênior' : 'Promoção adiada', dialogues, blockers };
+}
+
+export function seniorPriorityKey(player: PlayerProfile, priorityId: string) {
+  return `senior-priority:${dateKey(player)}:${priorityId}`;
+}
+export function hasHandledSeniorPriority(player: PlayerProfile, priorityId: string) {
+  return readInternshipRoutine(player).handledSeniorPriorityKeys.includes(seniorPriorityKey(player, priorityId));
+}
+export function markSeniorPriorityHandled(player: PlayerProfile, priorityId: string) {
+  const state=readInternshipRoutine(player); const key=seniorPriorityKey(player,priorityId);
+  if(!state.handledSeniorPriorityKeys.includes(key)) state.handledSeniorPriorityKeys.push(key);
+  state.handledSeniorPriorityKeys=state.handledSeniorPriorityKeys.slice(-120); saveInternshipRoutine(player,state); return state;
 }
