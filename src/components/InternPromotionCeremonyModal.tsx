@@ -2,16 +2,19 @@ import React from 'react';
 import { Award, BriefcaseBusiness, CheckCircle2, Scale, ShieldCheck, X } from 'lucide-react';
 import { CelebrationBurst } from './CelebrationBurst/CelebrationBurst';
 import { sound } from '../utils/sound';
+import type { InternPromotionNarrative } from '../lib/internshipRoutine';
 
 interface InternPromotionCeremonyModalProps {
   isOpen: boolean;
   playerName: string;
+  narrative?: InternPromotionNarrative | null;
   onClose: () => void;
 }
 
 export const InternPromotionCeremonyModal: React.FC<InternPromotionCeremonyModalProps> = ({
   isOpen,
   playerName,
+  narrative,
   onClose,
 }) => {
   if (!isOpen) return null;
@@ -59,15 +62,13 @@ export const InternPromotionCeremonyModal: React.FC<InternPromotionCeremonyModal
             </h2>
 
             <div className="mt-5 space-y-3 text-sm leading-relaxed text-[#C9C4B8]">
-              <p>
-                “{playerName}, eu acompanhei sua evolução de perto. Você já não precisa ser tratado como alguém que apenas executa tarefas. Você demonstrou capacidade para assumir responsabilidade maior dentro do escritório.”
-              </p>
-              <p>
-                “A partir de agora, você será cobrado por algo diferente: <strong className="text-[#E6CF97]">consistência</strong>. Quero ver análise antes da pressa, prova antes da conclusão e responsabilidade antes do protocolo.”
-              </p>
-              <p>
-                “Você ainda está em formação, mas conquistou minha confiança para atuar como <strong className="text-[#E6CF97]">Estagiário Sênior</strong>. Faça jus a ela.”
-              </p>
+              {(narrative?.dialogues || []).map((step, index) => (
+                <div key={`${step.eyebrow}-${index}`} className="rounded-xl border border-[#2A2A2E] bg-[#0B0B0D] p-3">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-[#C5A059]">{step.eyebrow}</span>
+                  <p className="mt-1">“{step.text}”</p>
+                </div>
+              ))}
+              {!narrative && <p>“{playerName}, sua evolução foi reconhecida. A partir de agora, você assume responsabilidades de Estagiário Sênior.”</p>}
             </div>
 
             <div className="mt-6 grid gap-2 sm:grid-cols-3">
