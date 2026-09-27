@@ -39,6 +39,7 @@ export interface InternshipRoutineState {
   lastTaskDeliveryKey: string | null;
   dailyTaskKeys: Record<string, string[]>;
   greetedWorkdays: string[];
+  excusedAbsenceKeys: string[];
 }
 
 export interface WorkSchedule {
@@ -77,7 +78,7 @@ function hash(value: string) {
 export function readInternshipRoutine(player: PlayerProfile): InternshipRoutineState {
   try {
     const raw = localStorage.getItem(storageKey(player));
-    if (!raw) return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [] };
+    if (!raw) return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [] };
     const parsed = JSON.parse(raw);
     return {
       attendance: Array.isArray(parsed.attendance) ? parsed.attendance.slice(-90) : [],
@@ -86,9 +87,10 @@ export function readInternshipRoutine(player: PlayerProfile): InternshipRoutineS
       lastTaskDeliveryKey: typeof parsed.lastTaskDeliveryKey === 'string' ? parsed.lastTaskDeliveryKey : null,
       dailyTaskKeys: parsed.dailyTaskKeys && typeof parsed.dailyTaskKeys === 'object' ? parsed.dailyTaskKeys : {},
       greetedWorkdays: Array.isArray(parsed.greetedWorkdays) ? parsed.greetedWorkdays.slice(-60) : [],
+      excusedAbsenceKeys: Array.isArray(parsed.excusedAbsenceKeys) ? parsed.excusedAbsenceKeys.slice(-60) : [],
     };
   } catch {
-    return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [] };
+    return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [] };
   }
 }
 
@@ -468,4 +470,27 @@ export function assessEarlyDeparture(player: PlayerProfile, departureMinute: num
     return { level: 'WARNING', title: 'Saída antecipada', message: `Você encerrou o expediente ${minutesEarly} minutos antes do horário sem uma atividade externa registrada. A ocorrência gera advertência formal.`, warningDelta: 1, trustDelta: -5, diligenceDelta: -4 };
   }
   return { level: 'NOTE', title: 'Saída antes do horário', message: `Você deixou o escritório ${minutesEarly} minutos antes do fim do expediente. A saída foi registrada e afeta sua avaliação de rotina.`, warningDelta: 0, trustDelta: -2, diligenceDelta: -2 };
+}
+
+export function excuseTodayAbsence(player: PlayerProfile) {
+  const state = readInternshipRoutine(player);
+  const key = dateKey(player);
+  if (!state.excusedAbsenceKeys.includes(key)) state.excusedAbsenceKeys.push(key);
+  state.excusedAbsenceKeys = state.excusedAbsenceKeys.slice(-60);
+  const record = state.attendance.find((item) => item.date === key);
+  if (record?.status === 'ABSENT') {
+    record.status = 'OFF_DAY';
+    record.lateMinutes = 0;
+  }
+  saveInternshipRoutine(player, state);
+  return state;
+}
+
+export function isAbsenceExcused(player: PlayerProfile, key = dateKey(player)) {
+  return readInternshipRoutine(player).excusedAbsenceKeys.includes(key);
+}
+
+export function registerAuthorizedOfficeDeparture(player: PlayerProfile) {
+  const result = registerOfficeDeparture(player);
+  return { ...result, authorized: true as const };
 }
