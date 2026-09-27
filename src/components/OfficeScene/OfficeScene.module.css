@@ -218,7 +218,7 @@
   cursor: pointer;
 }
 
-.sidebar {
+ .sidebar {
   position: absolute;
   z-index: 18;
   top: 94px;
@@ -227,14 +227,41 @@
   width: 108px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  overflow: hidden;
   border-right: 1px solid rgba(206, 168, 91, 0.22);
   background: rgba(5, 8, 10, 0.92);
   backdrop-filter: blur(16px);
 }
 
 .sidebarItems {
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
+  grid-auto-rows: max-content;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(216, 174, 89, 0.55) transparent;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+.sidebarItems::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebarItems::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebarItems::-webkit-scrollbar-thumb {
+  border-radius: 99px;
+  background: rgba(216, 174, 89, 0.48);
+}
+
+.sidebarItems::-webkit-scrollbar-thumb:hover {
+  background: rgba(216, 174, 89, 0.72);
 }
 
 .navItem,
@@ -279,7 +306,8 @@
 }
 
 .sidebarSlogan {
-  padding: 0 18px 18px;
+  flex: 0 0 auto;
+  padding: 12px 18px 18px;
   color: #9a958d;
   font-size: 9px;
   line-height: 1.65;
