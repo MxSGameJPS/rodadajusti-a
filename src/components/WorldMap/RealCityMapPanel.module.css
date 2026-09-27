@@ -760,156 +760,41 @@
     0 0 20px rgba(52, 211, 153, 0.22);
 }
 
+.establishmentDetailOverlay {
+  position: absolute; inset: 0; z-index: 12; display: grid; place-items: center;
+  padding: 24px; background: rgba(2, 6, 9, .52); backdrop-filter: blur(3px);
+}
 .establishmentDetailCard {
-  align-items: center;
-  width: min(760px, calc(100% - 32px));
-  margin-left: auto;
-  padding: 16px;
-  gap: 16px;
-  border-color: rgba(197, 160, 89, 0.42);
-  border-radius: 16px;
-  background: rgba(8, 11, 14, 0.97);
-  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.55);
+  width: min(720px, 100%); display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center; gap: 20px; padding: 20px; border: 1px solid rgba(197,160,89,.42);
+  border-radius: 20px; background: rgba(8,11,14,.98); color: #e7e3db;
+  box-shadow: 0 28px 80px rgba(0,0,0,.68);
 }
-
-.establishmentDetailBody {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: 190px minmax(0, 1fr);
-  gap: 12px;
-  align-items: center;
+.establishmentDetailBody { min-width:0; display:grid; grid-template-columns:210px minmax(0,1fr); gap:18px; align-items:center; }
+.establishmentDetailBanner { width:210px; height:128px; object-fit:cover; border:1px solid rgba(197,160,89,.34); border-radius:13px; background:#111418; }
+.establishmentDetailCopy { min-width:0; }
+.establishmentDetailCopy > strong { display:block; color:#f1eee8; font:800 19px/1.15 Georgia,serif; }
+.establishmentDetailCopy > span { display:block; margin-top:5px; color:#a6a199; font-size:10px; }
+.establishmentDetailBadges { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:9px; }
+.establishmentDetailBadges span { width:auto; margin:0; padding:4px 8px; border:1px solid rgba(197,160,89,.25); border-radius:999px; background:rgba(197,160,89,.08); color:#d7b86e; font-size:7px; font-weight:900; text-transform:uppercase; }
+.establishmentDetailCopy small { display:-webkit-box; max-width:100%; overflow:hidden; margin-top:7px; -webkit-box-orient:vertical; -webkit-line-clamp:2; color:#aaa49a; font-size:9px; line-height:1.5; }
+.establishmentOffers { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.establishmentOffer { width:auto !important; margin:0 !important; padding:5px 8px; border:1px solid rgba(96,165,250,.18); border-radius:7px; background:rgba(96,165,250,.07); color:#b9d4f5 !important; font-size:8px !important; line-height:1.35; font-weight:800; }
+.establishmentDetailActions { min-width:170px; display:flex; flex-direction:column; gap:8px; }
+.establishmentDetailActions .routeButton, .establishmentDetailActions .detailCloseButton { width:100%; min-height:44px; }
+.detailCloseButton { min-height:42px; padding:0 16px; border:1px solid #3a3d42; border-radius:10px; background:#17191d; color:#b8b4ad; font-size:9px; font-weight:900; text-transform:uppercase; cursor:pointer; }
+@media (max-width:760px) {
+  .establishmentDetailOverlay { padding:12px; }
+  .establishmentDetailCard { grid-template-columns:1fr; gap:14px; padding:14px; }
+  .establishmentDetailBody { grid-template-columns:120px minmax(0,1fr); gap:12px; }
+  .establishmentDetailBanner { width:120px; height:100px; }
+  .establishmentDetailActions { min-width:0; display:grid; grid-template-columns:1fr 1fr; }
 }
-
-.establishmentDetailBanner {
-  width: 190px;
-  height: 104px;
-  object-fit: cover;
-  border: 1px solid rgba(197, 160, 89, 0.34);
-  border-radius: 8px;
-  background: #111418;
+@media (max-width:480px) {
+  .establishmentDetailBody { grid-template-columns:1fr; }
+  .establishmentDetailBanner { width:100%; height:130px; }
+  .establishmentDetailActions { grid-template-columns:1fr; }
 }
-
-.establishmentDetailCopy {
-  min-width: 0;
-}
-
-.establishmentDetailBadges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-bottom: 5px;
-}
-
-.establishmentDetailBadges span {
-  width: auto;
-  margin: 0;
-  padding: 2px 6px;
-  border: 1px solid rgba(197, 160, 89, 0.25);
-  border-radius: 999px;
-  background: rgba(197, 160, 89, 0.08);
-  color: #d7b86e;
-  font-size: 7px;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.establishmentDetailCopy small {
-  display: -webkit-box;
-  max-width: 100%;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  color: #aaa49a;
-  line-height: 1.35;
-}
-
-.establishmentOffers {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 7px;
-}
-
-.establishmentOffer {
-  width: auto !important;
-  margin: 0 !important;
-  padding: 3px 6px;
-  border: 1px solid rgba(96, 165, 250, 0.18);
-  border-radius: 5px;
-  background: rgba(96, 165, 250, 0.07);
-  color: #b9d4f5 !important;
-  font-size: 8px !important;
-  line-height: 1.35;
-  font-weight: 800;
-}
-
-.detailCloseButton {
-  align-self: center;
-  min-height: 42px;
-  padding: 0 16px;
-  border: 1px solid #3a3d42;
-  border-radius: 8px;
-  background: #17191d;
-  color: #b8b4ad;
-  font-size: 9px;
-  font-weight: 900;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-@media (max-width: 640px) {
-  .cityLockedNote {
-    display: none;
-  }
-
-  .establishmentMarker {
-    width: 94px;
-  }
-
-  .establishmentMarkerVisual {
-    width: 90px;
-    height: 36px;
-  }
-
-  .establishmentMarkerCaption {
-    max-width: 90px;
-    font-size: 7px;
-  }
-
-  .establishmentDetailBody {
-    grid-template-columns: 1fr;
-  }
-
-  .establishmentDetailBanner {
-    width: 100%;
-    height: 84px;
-  }
-
-  .detailCloseButton {
-    width: 100%;
-  }
-}
-
-@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
-  .establishmentMarker {
-    width: 88px;
-  }
-
-  .establishmentMarkerVisual {
-    width: 84px;
-    height: 32px;
-  }
-
-  .establishmentMarkerCaption {
-    max-width: 84px;
-    font-size: 6px;
-  }
-
-  .establishmentMarkerBadge {
-    font-size: 5px;
-  }
-}
-
 
 .lifeMarker {
   width: 96px;
