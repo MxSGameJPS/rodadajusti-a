@@ -92,7 +92,7 @@ export function readInternshipRoutine(player: PlayerProfile): InternshipRoutineS
       handledSeniorPriorityKeys: Array.isArray(parsed.handledSeniorPriorityKeys) ? parsed.handledSeniorPriorityKeys.slice(-120) : [],
     };
   } catch {
-    return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [] };
+    return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [], handledSeniorPriorityKeys: [] };
   }
 }
 
