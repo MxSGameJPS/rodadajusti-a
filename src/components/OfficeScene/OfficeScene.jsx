@@ -105,6 +105,8 @@ export function OfficeScene({
   onOpenReview,
   onRequestAbsenceJustification,
   onChooseSeniorPriority,
+  seniorPortfolio,
+  onSeniorPortfolioAction,
   onToggleSound,
   onEnableMobileFrame,
 }) {
@@ -506,6 +508,8 @@ export function OfficeScene({
                   onOpenReview={onOpenReview}
                   onRequestAbsenceJustification={onRequestAbsenceJustification}
             onChooseSeniorPriority={onChooseSeniorPriority}
+            seniorPortfolio={seniorPortfolio}
+            onSeniorPortfolioAction={onSeniorPortfolioAction}
                 />
               )}
 
