@@ -28,6 +28,10 @@ export type EstablishmentGameplayAction =
   | 'BUY_VEHICLE'
   | 'BUY_GROCERIES'
   | 'BUY_FURNITURE'
+  | 'ACADEMIC_CLASS'
+  | 'ACADEMIC_REVIEW'
+  | 'ACADEMIC_QUESTIONS'
+  | 'ACADEMIC_SIMULATION'
   | 'BUY'
   | 'SERVICE';
 
@@ -37,7 +41,7 @@ export function establishmentGameplayAction(
 ): EstablishmentGameplayAction {
   const effects = offer.gameplayEffects || {};
   const explicit = String(effects.action || effects.actionType || '').toUpperCase();
-  if (['EAT_HERE','TAKEAWAY','SLEEP','SHOWER','RENT_VEHICLE','BUY_VEHICLE','BUY_GROCERIES','BUY_FURNITURE','BUY','SERVICE'].includes(explicit)) {
+  if (['EAT_HERE','TAKEAWAY','SLEEP','SHOWER','RENT_VEHICLE','BUY_VEHICLE','BUY_GROCERIES','BUY_FURNITURE','ACADEMIC_CLASS','ACADEMIC_REVIEW','ACADEMIC_QUESTIONS','ACADEMIC_SIMULATION','BUY','SERVICE'].includes(explicit)) {
     return explicit as EstablishmentGameplayAction;
   }
 
@@ -50,6 +54,12 @@ export function establishmentGameplayAction(
   if (kind === 'FOOD') return 'BUY_GROCERIES';
   if (kind === 'VEHICLE') return offerType.includes('LOCAC') || business.includes('LOCADOR') ? 'RENT_VEHICLE' : 'BUY_VEHICLE';
   if (['BED','FURNITURE','STUDY_FURNITURE','APPLIANCE'].includes(kind)) return 'BUY_FURNITURE';
+  if (business.includes('CURSINHO')) {
+    if (/SIMULADO/.test(title)) return 'ACADEMIC_SIMULATION';
+    if (/QUEST|EXERC/.test(title)) return 'ACADEMIC_QUESTIONS';
+    if (/REVIS/.test(title)) return 'ACADEMIC_REVIEW';
+    return 'ACADEMIC_CLASS';
+  }
   if (offerType === 'HOSPEDAGEM' || business.includes('HOTEL') || business.includes('POUSADA')) {
     if (/BANHO|CHUVEIRO/.test(title)) return 'SHOWER';
     return 'SLEEP';
