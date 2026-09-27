@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Building2, GraduationCap, Home, Loader2, MapPin, ShoppingCart, X } from 'lucide-react';
+import { Building2, CheckCircle2, Clock3, GraduationCap, Home, Loader2, MapPin, ShoppingCart, Sparkles, UtensilsCrossed, WalletCards, X } from 'lucide-react';
 import type { PlayerProfile } from '../../types/game';
 import {
   applyRotaJusticeMapTheme,
@@ -138,6 +138,8 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
   const [selected, setSelected] = useState<WorldEstablishment | null>(null);
   const [selectedLifeLocation, setSelectedLifeLocation] = useState<'HOME' | 'UNIVERSITY' | 'OFFICE' | null>(null);
   const [purchaseMessage, setPurchaseMessage] = useState('');
+  const [activeOffer, setActiveOffer] = useState<WorldEstablishmentOffer | null>(null);
+  const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mapError, setMapError] = useState('');
 
@@ -149,6 +151,8 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
     setSelected(null);
     setSelectedLifeLocation(null);
     setPurchaseMessage('');
+    setActiveOffer(null);
+    setPurchaseSuccess(false);
 
     const hydrate = async () => {
       const resolved = readWorldMapProfile(player) || await resolveWorldMapProfile(player);
@@ -457,79 +461,96 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
         )}
 
         {selected && (
-          <div className="absolute left-1/2 top-1/2 z-30 max-h-[72vh] w-[min(900px,calc(100%-32px))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-[#C5A059]/30 bg-[#090C0F]/95 p-4 shadow-2xl backdrop-blur-xl">
-            <div className="grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)]">
-              <div className="overflow-hidden rounded-xl border border-[#C5A059]/25 bg-[#111418]">
-                {selected.bannerUrl ? (
-                  <img src={selected.bannerUrl} alt={selected.name} className="h-24 w-full object-cover sm:h-full" />
-                ) : (
-                  <div className="grid h-24 place-items-center text-[#C5A059] sm:h-full"><Building2 size={30} /></div>
-                )}
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/55 p-3 backdrop-blur-sm sm:p-6">
+            <div className="relative max-h-[88vh] w-full max-w-5xl overflow-hidden rounded-[28px] border border-[#C5A059]/30 bg-[#090C0F]/98 shadow-2xl">
+              <button type="button" onClick={() => { setSelected(null); setActiveOffer(null); setPurchaseMessage(''); }} className="absolute right-4 top-4 z-20 grid h-10 w-10 place-items-center rounded-xl border border-[#343941] bg-[#101419] text-[#AAB0B7] transition hover:border-[#C5A059]/50 hover:text-white" aria-label="Fechar estabelecimento"><X size={18} /></button>
+              <div className="grid max-h-[88vh] overflow-y-auto lg:grid-cols-[300px_minmax(0,1fr)]">
+                <aside className="relative min-h-[220px] overflow-hidden border-b border-[#2B3036] lg:min-h-[650px] lg:border-b-0 lg:border-r">
+                  {selected.coverImageUrl || selected.bannerUrl ? (
+                    <img src={selected.coverImageUrl || selected.bannerUrl || ''} alt={selected.name} className="absolute inset-0 h-full w-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 grid place-items-center bg-[#111418] text-[#C5A059]"><Building2 size={44} /></div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#080A0C] via-[#080A0C]/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-5">
+                    <div className="mb-2 flex flex-wrap gap-1.5 text-[8px] font-black uppercase tracking-wider">
+                      <span className="rounded-full border border-[#C5A059]/30 bg-black/60 px-2.5 py-1 text-[#E1C57F]">{establishmentTypeLabel(selected.businessType)}</span>
+                      {selected.presenceScope === 'UNIVERSAL' && <span className="rounded-full border border-[#60A5FA]/30 bg-black/60 px-2.5 py-1 text-[#A9CCFF]">Universal</span>}
+                    </div>
+                    <h3 className="font-serif text-2xl font-black text-white">{selected.name}</h3>
+                    <p className="mt-1 text-xs text-[#C1C5CA]">{selected.district ? selected.district + ' • ' : ''}{profile?.city}/{profile?.state}</p>
+                    {selected.slogan && <p className="mt-3 border-l-2 border-[#C5A059] pl-3 text-xs italic leading-5 text-[#D8D2C5]">{selected.slogan}</p>}
+                  </div>
+                </aside>
+                <main className="min-w-0 p-5 sm:p-7">
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#A58B58]">Você chegou ao estabelecimento</span>
+                  <h2 className="mt-1 pr-12 font-serif text-3xl font-black text-[#F4F0E8]">O que deseja fazer?</h2>
+                  <p className="mt-2 max-w-2xl text-xs leading-5 text-[#9298A1]">{selected.description}</p>
+
+                  <div className="mt-5 flex items-center gap-3 rounded-xl border border-[#2A3036] bg-[#0D1115] px-4 py-3">
+                    <WalletCards size={17} className="text-[#CDB16C]" />
+                    <div><span className="block text-[8px] font-black uppercase tracking-wider text-[#737B85]">Saldo disponível</span><strong className="text-sm text-[#E9E2D2]">JR$ {player.money.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div>
+                  </div>
+
+                  {selected.offers.length > 0 ? (
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                      {selected.offers.slice(0, 10).map((offer) => {
+                        const kind = String(offer.gameplayEffects?.kind || '').toUpperCase();
+                        const isMeal = kind === 'MEAL';
+                        const insufficient = offer.price == null || player.money < (offer.price || 0);
+                        return (
+                          <article key={offer.id} className="group rounded-2xl border border-[#2B3036] bg-[#11151A] p-3 transition hover:-translate-y-0.5 hover:border-[#C5A059]/35 hover:bg-[#14191F]">
+                            <div className="flex gap-3">
+                              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-[#343A42] bg-[#0B0E12]">
+                                {offer.imageUrl ? <img src={offer.imageUrl} alt={offer.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" /> : <div className="grid h-full place-items-center text-[#68717B]">{isMeal ? <UtensilsCrossed size={21} /> : <ShoppingCart size={21} />}</div>}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <strong className="block text-sm text-[#ECEDEF]">{offer.title}</strong>
+                                <span className="mt-1 block text-xs font-black text-[#D4B86F]">{formatEstablishmentPrice(offer.price)}</span>
+                                {offer.description && <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[#818892]">{offer.description}</p>}
+                              </div>
+                            </div>
+                            {isMeal && <div className="mt-3 flex flex-wrap gap-2 text-[9px]"><span className="rounded-lg bg-[#16231A] px-2 py-1 text-[#9FD1AA]">Saciedade +{Math.max(25, Number(offer.gameplayEffects?.hungerRestore) || 45)}</span><span className="rounded-lg bg-[#171E29] px-2 py-1 text-[#A9C8EC]">Energia +{Number(offer.gameplayEffects?.energyRestore) || 0}</span><span className="rounded-lg bg-[#211D16] px-2 py-1 text-[#D7C28B]"><Clock3 size={10} className="mr-1 inline" />45 min</span></div>}
+                            <button type="button" disabled={insufficient} onClick={() => { setActiveOffer(offer); setPurchaseMessage(''); setPurchaseSuccess(false); }} className="mt-3 w-full rounded-xl border border-[#C5A059]/35 bg-[#C5A059]/10 px-3 py-2.5 text-[9px] font-black uppercase tracking-wider text-[#DFC47F] transition hover:bg-[#C5A059] hover:text-[#11100D] disabled:cursor-not-allowed disabled:opacity-35">
+                              {insufficient ? 'Saldo insuficiente' : isMeal ? 'Escolher refeição' : offer.offerType === 'HOSPEDAGEM' ? 'Ver hospedagem' : offer.offerType === 'LOCACAO_VEICULO' ? 'Ver locação' : 'Selecionar'}
+                            </button>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  ) : <div className="mt-6 rounded-2xl border border-[#30353B] bg-[#101419] p-6 text-center text-xs text-[#8D949D]">Este estabelecimento ainda não possui serviços disponíveis.</div>}
+                </main>
               </div>
-              <div className="min-w-0">
-                <div className="mb-2 flex flex-wrap gap-1.5 text-[8px] font-black uppercase tracking-wider">
-                  <span className="rounded-full border border-[#C5A059]/25 bg-[#C5A059]/10 px-2 py-1 text-[#D8BB76]">{establishmentTypeLabel(selected.businessType)}</span>
-                  {selected.presenceScope === 'UNIVERSAL' && <span className="rounded-full border border-[#60A5FA]/25 bg-[#60A5FA]/10 px-2 py-1 text-[#A9CCFF]">Universal</span>}
-                  {selected.isSponsored && <span className="rounded-full border border-[#34D399]/25 bg-[#34D399]/10 px-2 py-1 text-[#8BE0BD]">Patrocinado</span>}
+            </div>
+          </div>
+        )}
+
+        {activeOffer && selected && (
+          <div className="absolute inset-0 z-40 grid place-items-center bg-black/75 p-4 backdrop-blur-md">
+            <div className="w-full max-w-md rounded-[26px] border border-[#C5A059]/35 bg-[#0B0E11] p-5 shadow-2xl sm:p-6">
+              {purchaseSuccess ? (
+                <div className="py-4 text-center">
+                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-[#55C98A]/30 bg-[#55C98A]/10 text-[#70D99D]"><CheckCircle2 size={31} /></div>
+                  <h3 className="mt-4 font-serif text-2xl font-black text-[#F3EFE7]">Ação concluída</h3>
+                  <p className="mt-2 text-sm leading-6 text-[#A8AFB7]">{purchaseMessage}</p>
+                  <div className="mt-4 flex justify-center gap-2 text-[10px] text-[#8E969F]"><Sparkles size={14} className="text-[#CDB16C]" /> Seus atributos, tempo e finanças foram atualizados.</div>
+                  <button type="button" onClick={() => { setActiveOffer(null); setPurchaseSuccess(false); setPurchaseMessage(''); }} className="mt-6 w-full rounded-xl bg-[#C5A059] px-4 py-3 text-xs font-black uppercase text-[#11100D]">Continuar no estabelecimento</button>
                 </div>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <span className="text-[8px] font-black uppercase tracking-[0.16em] text-[#8C929A]">Você chegou ao estabelecimento</span>
-                    <h3 className="font-serif text-2xl font-black text-[#F1EEE8]">{selected.name}</h3>
+              ) : (
+                <>
+                  <div className="flex gap-4">
+                    <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-[#343A42] bg-[#101419]">{activeOffer.imageUrl ? <img src={activeOffer.imageUrl} alt={activeOffer.title} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-[#C5A059]"><ShoppingCart size={22} /></div>}</div>
+                    <div className="min-w-0"><span className="text-[8px] font-black uppercase tracking-widest text-[#A58B58]">Confirmar ação</span><h3 className="mt-1 font-serif text-xl font-black text-[#F3EFE7]">{activeOffer.title}</h3><strong className="mt-1 block text-sm text-[#D5B96F]">{formatEstablishmentPrice(activeOffer.price)}</strong></div>
                   </div>
-                  <button type="button" onClick={() => setSelected(null)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#343941] text-[#949BA4]" aria-label="Fechar estabelecimento"><X size={16} /></button>
-                </div>
-                <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#9A9FA7]">{selected.description}</p>
-                {selected.offers.length > 0 && (
-                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                    {selected.offers.slice(0, 8).map((offer) => (
-                      <article key={offer.id} className="flex gap-3 rounded-xl border border-[#2B3036] bg-[#11151A] p-2.5">
-                        <div className="h-14 w-16 shrink-0 overflow-hidden rounded-lg border border-[#30363D] bg-[#0B0E12]">
-                          {offer.imageUrl ? (
-                            <img src={offer.imageUrl} alt={offer.title} className="h-full w-full object-cover" />
-                          ) : (
-                            <div className="grid h-full place-items-center text-[#68717B]"><ShoppingCart size={18} /></div>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <strong className="block truncate text-[10px] text-[#E7E8EA]">{offer.title}</strong>
-                          <span className="mt-0.5 block text-[9px] font-black text-[#CDB16C]">{formatEstablishmentPrice(offer.price)}</span>
-                          {String(offer.gameplayEffects?.kind || '').toUpperCase() === 'MEAL' && (
-                            <span className="mt-1 block text-[8px] text-[#9FC7A8]">
-                              Refeição • Saciedade +{Math.max(25, Number(offer.gameplayEffects?.hungerRestore) || 45)}
-                              {(Number(offer.gameplayEffects?.energyRestore) || 0) > 0 ? ` • Energia +${Number(offer.gameplayEffects?.energyRestore)}` : ''}
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            disabled={offer.price == null || player.money < (offer.price || 0)}
-                            onClick={() => {
-                              const result = onPurchaseOffer(selected, offer);
-                              setPurchaseMessage(result.message);
-                            }}
-                            className="mt-2 rounded-lg border border-[#C5A059]/30 bg-[#C5A059]/10 px-2.5 py-1.5 text-[8px] font-black uppercase text-[#D9BF7D] disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            {String(offer.gameplayEffects?.kind || '').toUpperCase() === 'MEAL'
-                              ? 'Pedir refeição'
-                              : offer.offerType === 'HOSPEDAGEM'
-                                ? 'Reservar quarto'
-                                : offer.offerType === 'LOCACAO_VEICULO'
-                                  ? 'Alugar veículo'
-                                  : offer.offerType === 'ALUGUEL'
-                                    ? 'Alugar'
-                                    : 'Comprar'}
-                          </button>
-                        </div>
-                      </article>
-                    ))}
+                  <p className="mt-4 text-xs leading-5 text-[#939AA3]">{activeOffer.description || 'Confirme para realizar esta ação no estabelecimento.'}</p>
+                  {String(activeOffer.gameplayEffects?.kind || '').toUpperCase() === 'MEAL' && <div className="mt-4 rounded-xl border border-[#2C4433] bg-[#101A13] p-3 text-xs text-[#A9D5B2]"><UtensilsCrossed size={15} className="mr-2 inline" />Ao confirmar, o personagem fará a refeição. O relógio avançará 45 minutos e fome/energia serão atualizados.</div>}
+                  <div className="mt-5 grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => setActiveOffer(null)} className="rounded-xl border border-[#343A42] px-4 py-3 text-xs font-black text-[#AEB4BB]">Cancelar</button>
+                    <button type="button" onClick={() => { const result = onPurchaseOffer(selected, activeOffer); setPurchaseMessage(result.message); if (result.ok) setPurchaseSuccess(true); }} className="rounded-xl bg-[#C5A059] px-4 py-3 text-xs font-black text-[#11100D]">Confirmar</button>
                   </div>
-                )}
-                {purchaseMessage && (
-                  <div className="mt-3 rounded-lg border border-[#60A5FA]/20 bg-[#60A5FA]/8 px-3 py-2 text-[10px] text-[#A8C8EC]">
-                    {purchaseMessage}
-                  </div>
-                )}
-              </div>
+                  {purchaseMessage && <p className="mt-3 rounded-lg border border-[#F87171]/20 bg-[#F87171]/5 px-3 py-2 text-[10px] text-[#F3A3A3]">{purchaseMessage}</p>}
+                </>
+              )}
             </div>
           </div>
         )}
