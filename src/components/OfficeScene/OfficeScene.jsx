@@ -103,6 +103,7 @@ export function OfficeScene({
   onRegisterDeparture,
   onHandleOfficeEvent,
   onOpenReview,
+  onRequestAbsenceJustification,
   onToggleSound,
   onEnableMobileFrame,
 }) {
@@ -502,6 +503,7 @@ export function OfficeScene({
                   onRegisterDeparture={onRegisterDeparture}
                   onHandleOfficeEvent={onHandleOfficeEvent}
                   onOpenReview={onOpenReview}
+                  onRequestAbsenceJustification={onRequestAbsenceJustification}
                 />
               )}
 
