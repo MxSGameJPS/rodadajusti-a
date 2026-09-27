@@ -2,6 +2,7 @@ import type { PlayerProfile } from '../types/game';
 import { supabase } from './supabase';
 import { readInternshipRoutine, saveInternshipRoutine, type InternshipRoutineState } from './internshipRoutine';
 import { createInitialSeniorPortfolio, type SeniorPortfolioDecision, type SeniorPortfolioMatter } from './seniorPortfolio';
+import { emptyOabPreparation, type OabPreparationState } from './oabIntensivePreparation';
 
 function eligible(player: PlayerProfile) {
   return Boolean(supabase && player.cloudCareerId);
@@ -82,4 +83,17 @@ export async function persistSeniorPortfolio(player: PlayerProfile, portfolio: S
   const { error } = await supabase.from('internship_routines').update({ senior_portfolio: portfolio, senior_decisions: decisions, updated_at: new Date().toISOString() }).eq('career_id', player.cloudCareerId!).eq('user_id', user.id);
   if (error) { console.warn('[internship] senior portfolio persist', error.message); return false; }
   return true;
+}
+
+
+export async function loadOabPreparation(player:PlayerProfile):Promise<OabPreparationState>{
+ if(!eligible(player)||!supabase)return emptyOabPreparation();
+ const {data,error}=await supabase.from('internship_routines').select('oab_preparation').eq('career_id',player.cloudCareerId!).maybeSingle();
+ if(error){console.warn('[internship] OAB preparation load',error.message);return emptyOabPreparation()}
+ return data?.oab_preparation&&typeof data.oab_preparation==='object'?{...emptyOabPreparation(),...data.oab_preparation}:emptyOabPreparation();
+}
+export async function persistOabPreparation(player:PlayerProfile,state:OabPreparationState){
+ if(!eligible(player)||!supabase)return false;const {data:{user}}=await supabase.auth.getUser();if(!user)return false;
+ const {error}=await supabase.from('internship_routines').update({oab_preparation:state,updated_at:new Date().toISOString()}).eq('career_id',player.cloudCareerId!).eq('user_id',user.id);
+ if(error){console.warn('[internship] OAB preparation persist',error.message);return false}return true;
 }
