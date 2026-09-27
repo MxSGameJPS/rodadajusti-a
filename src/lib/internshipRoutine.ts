@@ -278,3 +278,24 @@ export function isAuthorizedExternalCaseActivity(player: PlayerProfile) {
     && Boolean(player.activeCase)
     && (player.worldLocation.kind === 'CASE_LOCATION' || player.worldLocation.kind === 'OFFICE');
 }
+
+export function getWorkTimeConflict(player: PlayerProfile, durationMinutes: number, context: 'OFFICE' | 'UNIVERSITY' | 'CASE') {
+  if (!isInternCareer(player) || player.officeDiscipline.employmentStatus !== 'ACTIVE') return null;
+  const schedule = getWorkSchedule(player);
+  const start = Math.max(0, player.gameCurrentMinutes || 0);
+  const end = start + Math.max(0, durationMinutes);
+
+  if (context === 'UNIVERSITY' && schedule.workday && start < schedule.endMinute && end > schedule.startMinute) {
+    return 'Esta atividade acadêmica conflita com seu expediente no Ramos & Associados. Vá à faculdade fora do horário de estágio ou após encerrar o expediente.';
+  }
+  if (context === 'OFFICE' && end > schedule.endMinute) {
+    return `Não há tempo suficiente no expediente para concluir esta atividade hoje. O escritório encerra o estágio às ${schedule.endLabel}.`;
+  }
+  return null;
+}
+
+export function shouldCloseInternWorkday(player: PlayerProfile) {
+  if (!isInternCareer(player)) return false;
+  const schedule = getWorkSchedule(player);
+  return schedule.workday && player.gameCurrentMinutes >= schedule.endMinute;
+}
