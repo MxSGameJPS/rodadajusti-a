@@ -18,6 +18,7 @@ import {
   formatEstablishmentPrice,
   loadWorldEstablishments,
   resolveWorldPointForEstablishment,
+  establishmentGameplayAction,
   type WorldEstablishment,
   type WorldEstablishmentOffer,
 } from '../../lib/worldEstablishments';
@@ -496,7 +497,12 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
                     <div className="mt-5 grid gap-3 sm:grid-cols-2">
                       {selected.offers.slice(0, 10).map((offer) => {
                         const kind = String(offer.gameplayEffects?.kind || '').toUpperCase();
-                        const isMeal = kind === 'MEAL';
+                        const action = establishmentGameplayAction(selected, offer);
+                        const isMeal = action === 'EAT_HERE';
+                        const isTakeaway = action === 'TAKEAWAY';
+                        const isSleep = action === 'SLEEP';
+                        const isShower = action === 'SHOWER';
+                        const isRental = action === 'RENT_VEHICLE';
                         const insufficient = offer.price == null || player.money < (offer.price || 0);
                         return (
                           <article key={offer.id} className="group rounded-2xl border border-[#2B3036] bg-[#11151A] p-3 transition hover:-translate-y-0.5 hover:border-[#C5A059]/35 hover:bg-[#14191F]">
@@ -510,9 +516,15 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
                                 {offer.description && <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[#818892]">{offer.description}</p>}
                               </div>
                             </div>
-                            {isMeal && <div className="mt-3 flex flex-wrap gap-2 text-[9px]"><span className="rounded-lg bg-[#16231A] px-2 py-1 text-[#9FD1AA]">Saciedade +{Math.max(25, Number(offer.gameplayEffects?.hungerRestore) || 45)}</span><span className="rounded-lg bg-[#171E29] px-2 py-1 text-[#A9C8EC]">Energia +{Number(offer.gameplayEffects?.energyRestore) || 0}</span><span className="rounded-lg bg-[#211D16] px-2 py-1 text-[#D7C28B]"><Clock3 size={10} className="mr-1 inline" />45 min</span></div>}
+                            {(isMeal || isTakeaway || isSleep || isShower || isRental) && <div className="mt-3 flex flex-wrap gap-2 text-[9px]">
+                              {isMeal && <><span className="rounded-lg bg-[#16231A] px-2 py-1 text-[#9FD1AA]">Comer aqui</span><span className="rounded-lg bg-[#16231A] px-2 py-1 text-[#9FD1AA]">Saciedade +{Math.max(25, Number(offer.gameplayEffects?.hungerRestore) || 45)}</span><span className="rounded-lg bg-[#211D16] px-2 py-1 text-[#D7C28B]"><Clock3 size={10} className="mr-1 inline" />45 min</span></>}
+                              {isTakeaway && <span className="rounded-lg bg-[#182333] px-2 py-1 text-[#AFCBF0]">Levar • vai para a despensa</span>}
+                              {isSleep && <span className="rounded-lg bg-[#201B2D] px-2 py-1 text-[#C7B6F1]">Dormir • recupera energia</span>}
+                              {isShower && <span className="rounded-lg bg-[#15262B] px-2 py-1 text-[#9BD7E1]">Banho • recupera higiene</span>}
+                              {isRental && <span className="rounded-lg bg-[#282218] px-2 py-1 text-[#DFC889]">Veículo temporário</span>}
+                            </div>}
                             <button type="button" disabled={insufficient} onClick={() => { setActiveOffer(offer); setPurchaseMessage(''); setPurchaseSuccess(false); }} className="mt-3 w-full rounded-xl border border-[#C5A059]/35 bg-[#C5A059]/10 px-3 py-2.5 text-[9px] font-black uppercase tracking-wider text-[#DFC47F] transition hover:bg-[#C5A059] hover:text-[#11100D] disabled:cursor-not-allowed disabled:opacity-35">
-                              {insufficient ? 'Saldo insuficiente' : isMeal ? 'Escolher refeição' : offer.offerType === 'HOSPEDAGEM' ? 'Ver hospedagem' : offer.offerType === 'LOCACAO_VEICULO' ? 'Ver locação' : 'Selecionar'}
+                              {insufficient ? 'Saldo insuficiente' : isMeal ? 'Comer no local' : isTakeaway ? 'Pedir para viagem' : isSleep ? 'Hospedar e dormir' : isShower ? 'Tomar banho' : isRental ? 'Alugar veículo' : 'Selecionar'}
                             </button>
                           </article>
                         );
@@ -543,7 +555,21 @@ export const CityWorldMapModal: React.FC<CityWorldMapModalProps> = ({
                     <div className="min-w-0"><span className="text-[8px] font-black uppercase tracking-widest text-[#A58B58]">Confirmar ação</span><h3 className="mt-1 font-serif text-xl font-black text-[#F3EFE7]">{activeOffer.title}</h3><strong className="mt-1 block text-sm text-[#D5B96F]">{formatEstablishmentPrice(activeOffer.price)}</strong></div>
                   </div>
                   <p className="mt-4 text-xs leading-5 text-[#939AA3]">{activeOffer.description || 'Confirme para realizar esta ação no estabelecimento.'}</p>
-                  {String(activeOffer.gameplayEffects?.kind || '').toUpperCase() === 'MEAL' && <div className="mt-4 rounded-xl border border-[#2C4433] bg-[#101A13] p-3 text-xs text-[#A9D5B2]"><UtensilsCrossed size={15} className="mr-2 inline" />Ao confirmar, o personagem fará a refeição. O relógio avançará 45 minutos e fome/energia serão atualizados.</div>}
+                  {(() => {
+                    const action = establishmentGameplayAction(selected, activeOffer);
+                    const info = action === 'EAT_HERE'
+                      ? 'O personagem vai sentar e fazer a refeição. O relógio avança 45 minutos e fome/energia são atualizados.'
+                      : action === 'TAKEAWAY'
+                        ? 'O pedido será embalado e irá para a despensa. A fome não muda agora; o personagem poderá comer depois.'
+                        : action === 'SLEEP'
+                          ? 'O personagem fará check-in e dormirá no hotel. O relógio avança e a energia é recuperada.'
+                          : action === 'SHOWER'
+                            ? 'O personagem usará o banho do estabelecimento. O relógio avança e a higiene é recuperada.'
+                            : action === 'RENT_VEHICLE'
+                              ? 'O veículo será alugado e ficará disponível para os deslocamentos do personagem.'
+                              : 'A ação será registrada nas finanças e o tempo do jogo avançará.';
+                    return <div className="mt-4 rounded-xl border border-[#2C4433] bg-[#101A13] p-3 text-xs leading-5 text-[#A9D5B2]"><Sparkles size={15} className="mr-2 inline" />{info}</div>;
+                  })()}
                   <div className="mt-5 grid grid-cols-2 gap-2">
                     <button type="button" onClick={() => setActiveOffer(null)} className="rounded-xl border border-[#343A42] px-4 py-3 text-xs font-black text-[#AEB4BB]">Cancelar</button>
                     <button type="button" onClick={() => { const result = onPurchaseOffer(selected, activeOffer); setPurchaseMessage(result.message); if (result.ok) setPurchaseSuccess(true); }} className="rounded-xl bg-[#C5A059] px-4 py-3 text-xs font-black text-[#11100D]">Confirmar</button>
