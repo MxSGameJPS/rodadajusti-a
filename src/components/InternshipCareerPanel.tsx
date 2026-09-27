@@ -22,6 +22,7 @@ import {
   type OfficeStageTask,
 } from '../lib/internCareerEngine';
 import { sound } from '../utils/sound';
+import { getEarlyCareerSnapshot } from '../lib/earlyCareerEngine';
 import { InternOfficeTaskModal } from './InternOfficeTaskModal';
 import { NpcGuidanceDialog, type NpcGuidanceStep } from './NpcGuidanceDialog';
 
@@ -82,6 +83,7 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
   });
   const currentTier = CAREER_TIERS[player.careerTier];
   const progress = isSenior ? oabPreparation : internPromotion;
+  const actOne = getEarlyCareerSnapshot(player);
 
   const openTask = (task: OfficeStageTask) => {
     sound.playPaper();
@@ -120,6 +122,67 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
         onClose={() => setSelectedTask(null)}
         onComplete={onCompleteTask}
       />
+
+      <section className="mb-5 overflow-hidden rounded-2xl border border-[#C5A059]/30 bg-[#0D0D0F] shadow-xl">
+        <div className="border-b border-[#2A2A2E] bg-gradient-to-r from-[#1A1712] via-[#111113] to-[#0D0D0F] p-5 sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#C5A059]">Ato 1 • Formação</span>
+              <h3 className="mt-1 font-serif text-xl font-black text-[#F1EFE9] sm:text-2xl">{actOne.title}</h3>
+              <p className="mt-2 max-w-3xl text-xs leading-relaxed text-[#AAA59B]">{actOne.objective}</p>
+            </div>
+            <div className="min-w-[210px] rounded-xl border border-[#C5A059]/20 bg-[#09090B] px-4 py-3">
+              <span className="block text-[9px] uppercase tracking-wider text-[#77736B]">Perfil em formação</span>
+              <strong className="mt-1 block font-serif text-sm text-[#E9D6A4]">{actOne.professionalIdentity}</strong>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#1D1D21]">
+                <div className="h-full rounded-full bg-[#C5A059]" style={{ width: `${actOne.progressPercent}%` }} />
+              </div>
+              <span className="mt-1.5 block text-right font-mono text-[9px] text-[#817B70]">{actOne.progressPercent}% do Ato 1</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 sm:p-6">
+          <div className="grid gap-2 md:grid-cols-7">
+            {actOne.milestones.map((milestone, index) => (
+              <div
+                key={milestone.id}
+                className={`relative rounded-xl border p-3 ${milestone.current
+                  ? 'border-[#C5A059]/55 bg-[#C5A059]/10'
+                  : milestone.completed
+                    ? 'border-[#34D399]/20 bg-[#34D399]/[0.035]'
+                    : 'border-[#25252A] bg-[#111114]'}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`font-mono text-[9px] ${milestone.current ? 'text-[#D8BC7B]' : 'text-[#66666D]'}`}>
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  {milestone.completed && <CheckCircle2 size={13} className="text-[#34D399]" />}
+                </div>
+                <strong className={`mt-2 block text-[10px] ${milestone.current ? 'text-[#E9D6A4]' : 'text-[#B6B2AA]'}`}>{milestone.title}</strong>
+                <span className="mt-1 block text-[9px] leading-relaxed text-[#77777F]">{milestone.description}</span>
+              </div>
+            ))}
+          </div>
+
+          {(actOne.strengths.length > 0 || actOne.risks.length > 0) && (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-[#34D399]/15 bg-[#34D399]/[0.025] p-3">
+                <span className="text-[9px] font-black uppercase tracking-wider text-[#70CDA8]">Pontos que o escritório reconhece</span>
+                <p className="mt-1.5 text-[10px] leading-relaxed text-[#9FAEA7]">
+                  {actOne.strengths.length ? actOne.strengths.join(' • ') : 'Seu perfil ainda está sendo formado pelas primeiras entregas.'}
+                </p>
+              </div>
+              <div className="rounded-xl border border-[#D0A85D]/15 bg-[#D0A85D]/[0.025] p-3">
+                <span className="text-[9px] font-black uppercase tracking-wider text-[#D0B478]">Pontos de atenção</span>
+                <p className="mt-1.5 text-[10px] leading-relaxed text-[#AAA08B]">
+                  {actOne.risks.length ? actOne.risks.join(' • ') : 'Nenhum risco relevante identificado neste momento.'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
 
       <section className="mb-6 overflow-hidden rounded-2xl border border-[#2A2A2E] bg-[#111113] shadow-xl">
         <div className="border-b border-[#2A2A2E] bg-gradient-to-r from-[#171513] to-[#111113] p-5 sm:p-6">
