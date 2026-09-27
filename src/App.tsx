@@ -114,6 +114,9 @@ import {
   hasReceivedDailyBriefing,
   markDailyBriefingReceived,
   getDailyTaskIds,
+  assessArrivalDiscipline,
+  assessEarlyDeparture,
+  type RoutineDisciplineAssessment,
 } from './lib/internshipRoutine';
 import {
   DEFAULT_HOUSEHOLD_STATE,
@@ -422,6 +425,7 @@ export default function App() {
   const [supervisorReviewDialogues, setSupervisorReviewDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
   const [periodicSupervisorReview, setPeriodicSupervisorReview] = useState<ReturnType<typeof getPeriodicReview>>(null);
   const [marianaArrivalDialogues, setMarianaArrivalDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
+  const [routineDisciplineDialogues, setRoutineDisciplineDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
 
   const openOfficeManagement = () => {
     if (!canManageOwnOffice(player)) {
@@ -919,12 +923,41 @@ export default function App() {
     return false;
   };
 
+  const applyRoutineDiscipline = (assessment: RoutineDisciplineAssessment) => {
+    setPlayer((prev) => {
+      const nextWarningCount = prev.officeDiscipline.warningCount + assessment.warningDelta;
+      const terminated = assessment.level === 'TERMINATION' || nextWarningCount >= 2;
+      return {
+        ...prev,
+        officePerformance: applyRoutinePerformance(prev.officePerformance, {
+          supervisorTrust: assessment.trustDelta,
+          diligence: assessment.diligenceDelta,
+        }),
+        officeDiscipline: {
+          ...prev.officeDiscipline,
+          warningCount: Math.min(2, nextWarningCount),
+          employmentStatus: terminated ? 'TERMINATED' : prev.officeDiscipline.employmentStatus,
+        },
+      };
+    });
+    setRoutineDisciplineDialogues([
+      { eyebrow: assessment.level === 'NOTE' ? 'Registro de rotina' : 'Conversa com o supervisor', text: assessment.message },
+      { eyebrow: assessment.level === 'TERMINATION' ? 'Encerramento do vínculo' : assessment.level === 'WARNING' ? 'Advertência formal' : 'Próximos expedientes', text: assessment.level === 'TERMINATION'
+        ? 'Seu vínculo de estágio com o Ramos & Associados foi encerrado. Isso não encerra sua carreira: você poderá buscar uma nova oportunidade e seguir sua formação em outro escritório.'
+        : assessment.level === 'WARNING'
+          ? 'A advertência passa a fazer parte do seu histórico interno. Uma nova ocorrência grave pode levar ao encerramento do contrato.'
+          : 'Corrija o horário nos próximos dias. Pontualidade, diligência e confiança são avaliadas em conjunto.' },
+    ]);
+  };
+
   const handleRegisterInternArrival = () => {
     if (player.careerTier !== 'ESTAGIARIO' && player.careerTier !== 'ESTAGIARIO_SENIOR') return;
     const result = registerOfficeArrival(player);
     if (!result.created) return;
     const delta = attendancePerformanceDelta(result.record);
     setPlayer((prev) => ({ ...prev, officePerformance: applyRoutinePerformance(prev.officePerformance, delta) }));
+    const disciplineAssessment = assessArrivalDiscipline(player, result.record);
+    if (disciplineAssessment) applyRoutineDiscipline(disciplineAssessment);
     applyRelationshipInteraction(player, {
       entityId: 'npc:MARIANA', entityType: 'NPC', name: 'Mariana Duarte', role: 'Secretária • Ramos & Associados',
       gameDate: result.record.date, kind: 'ATTENDANCE', title: result.record.status === 'LATE' ? 'Chegada com atraso' : 'Presença no expediente',
@@ -941,7 +974,11 @@ export default function App() {
   };
 
   const handleRegisterInternDeparture = () => {
-    registerOfficeDeparture(player);
+    const result = registerOfficeDeparture(player);
+    if (result.record?.departureMinute != null) {
+      const assessment = assessEarlyDeparture(player, result.record.departureMinute);
+      if (assessment) applyRoutineDiscipline(assessment);
+    }
     setPlayer((prev) => ({ ...prev }));
   };
 
@@ -2444,6 +2481,20 @@ export default function App() {
         onGoToEstablishment={handleRequestEstablishment}
         onPurchaseOffer={handlePurchaseWorldOffer}
       />
+
+      {routineDisciplineDialogues && (
+        <NpcGuidanceDialog
+          isOpen
+          npcName="Dr. Roberto Ramos"
+          npcRole="Sócio responsável • Ramos & Associados"
+          portraitSrc="/personagens/dr-roberto-ramos.png"
+          portraitAlt="Dr. Roberto Ramos, supervisor do estágio"
+          contextLabel="Disciplina profissional"
+          dialogues={routineDisciplineDialogues}
+          finalActionLabel="Entendido"
+          onComplete={() => setRoutineDisciplineDialogues(null)}
+        />
+      )}
 
       {marianaArrivalDialogues && (
         <NpcGuidanceDialog
