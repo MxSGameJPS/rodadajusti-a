@@ -1037,9 +1037,12 @@ export default function App() {
 
   const handleRegisterInternDeparture = () => {
     const result = registerOfficeDeparture(player);
-    if (result.record?.departureMinute != null) {
-      const assessment = assessEarlyDeparture(player, result.record.departureMinute);
-      if (assessment) applyRoutineDiscipline(assessment);
+    if (result.record?.departureMinute != null && result.record.departureMinute !== null) {
+      const previousDeparture = getTodayAttendance(player)?.departureMinute;
+      if (previousDeparture == null) {
+        const assessment = assessEarlyDeparture(player, result.record.departureMinute);
+        if (assessment) applyRoutineDiscipline(assessment);
+      }
     }
     setPlayer((prev) => ({ ...prev }));
   };
