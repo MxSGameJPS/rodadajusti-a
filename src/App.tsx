@@ -422,6 +422,7 @@ export default function App() {
   const [isConcursoModalOpen, setIsConcursoModalOpen] = useState<boolean>(false);
   const [isOfficeModalOpen, setIsOfficeModalOpen] = useState<boolean>(false);
   const [isOabExamOpen, setIsOabExamOpen] = useState<boolean>(false);
+  const [isOabPreparationMockOpen, setIsOabPreparationMockOpen] = useState<boolean>(false);
   const [isCityRelocationOpen, setIsCityRelocationOpen] = useState<boolean>(false);
   const [isCityWorldMapOpen, setIsCityWorldMapOpen] = useState<boolean>(false);
   const [isPlayerHomeOpen, setIsPlayerHomeOpen] = useState<boolean>(false);
@@ -1152,14 +1153,19 @@ export default function App() {
     await persistOabPreparation(player,next);
   };
 
-  const handleOabQuickMock = async () => {
+  const handleOabQuickMock = () => {
     if(!oabPreparation.unlocked||!ensureOfficeGameplayAvailable())return;
-    const minutes=75,conflict=getWorkTimeConflict(player,minutes,'OFFICE');if(conflict){setLifeWarning(conflict);return}
-    const readiness=oabReadiness(oabPreparation,player);
-    const correct=Math.max(4,Math.min(20,Math.round(6+readiness.knowledge*.12+oabPreparation.sessions.length*.18)));
-    const next=recordOabMock(oabPreparation,{gameDate:portfolioDate(player),mode:'QUICK',questions:20,correct,score:Math.round(correct/20*100)});
-    setOabPreparation(next);setPlayer(prev=>({...prev,...gameClockFields(prev,minutes),energy:Math.max(0,prev.energy-8)}));
-    await persistOabPreparation(player,next);
+    const conflict=getWorkTimeConflict(player,75,'OFFICE');if(conflict){setLifeWarning(conflict);return}
+    setIsOabPreparationMockOpen(true);
+  };
+
+  const handleOabPreparationMockComplete = (result:ProfessionalExamResult) => {
+    const score=Math.round(result.score/result.totalQuestions*100);
+    const next=recordOabMock(oabPreparation,{gameDate:portfolioDate(player),mode:'QUICK',questions:result.totalQuestions,correct:result.score,score});
+    setOabPreparation(next);
+    setPlayer(prev=>({...prev,...gameClockFields(prev,75),energy:Math.max(0,prev.energy-8)}));
+    void persistOabPreparation(player,next);
+    setIsOabPreparationMockOpen(false);
   };
 
   const handleSeniorOabReadinessReview = () => {
@@ -2881,6 +2887,15 @@ export default function App() {
         isOpen={isCityRelocationOpen}
         onClose={() => setIsCityRelocationOpen(false)}
         onConfirm={handleRelocateCity}
+      />
+
+      <OabExamModal
+        isOpen={isOabPreparationMockOpen}
+        onClose={() => setIsOabPreparationMockOpen(false)}
+        player={player}
+        allowedModes={['quick']}
+        contextLabel="Simulado da preparação intensiva"
+        onComplete={(result) => handleOabPreparationMockComplete(result)}
       />
 
       <OabExamModal
