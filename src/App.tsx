@@ -1520,6 +1520,21 @@ export default function App() {
     }));
   };
 
+  const handleOpenOabExam = () => {
+    if (player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR') {
+      if (player.careerTier !== 'ESTAGIARIO_SENIOR' || !oabPreparation.unlocked) {
+        setLifeWarning('O Exame da Ordem oficial será liberado pelo Dr. Roberto após a etapa de preparação do estágio.');
+        return;
+      }
+      const readiness=oabReadiness(oabPreparation,player);
+      if(!readiness.ready){
+        setLifeWarning('Conclua a preparação intensiva e alcance a prontidão necessária antes da prova oficial.');
+        return;
+      }
+    }
+    setIsOabExamOpen(true);
+  };
+
   const handleOabExamComplete = (result: ProfessionalExamResult, exam: ProfessionalExam) => {
     const completedDate = formatGameDate(getPlayerGameDate(player));
     if(player.careerTier==='ESTAGIARIO_SENIOR'&&oabPreparation.unlocked){const next=recordFinalOabExam(oabPreparation,result.passed,portfolioDate(player));setOabPreparation(next);void persistOabPreparation(player,next);}
@@ -2497,7 +2512,7 @@ export default function App() {
           onOpenAcademicModal={() => setIsAcademicModalOpen(true)}
           onOpenConcursoModal={() => setIsConcursoModalOpen(true)}
           onOpenOfficeModal={openOfficeManagement}
-          onOpenOabExam={() => setIsOabExamOpen(true)}
+          onOpenOabExam={handleOpenOabExam}
           onOpenCityRelocation={() => setIsCityRelocationOpen(true)}
           onOpenCityWorldMap={() => setIsCityWorldMapOpen(true)}
           onOpenPlayerHome={handleRequestGoHome}
@@ -2564,7 +2579,7 @@ export default function App() {
                   onOpenAcademicModal={() => setIsAcademicModalOpen(true)}
                   onOpenConcursoModal={() => setIsConcursoModalOpen(true)}
                   onOpenOfficeModal={openOfficeManagement}
-                  onOpenOabExam={() => setIsOabExamOpen(true)}
+                  onOpenOabExam={handleOpenOabExam}
                 />
               </>
             )}
