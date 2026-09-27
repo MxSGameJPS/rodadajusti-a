@@ -100,6 +100,8 @@ import {
   getWorkSchedule,
   minuteLabel,
   OFFICE_CANTEEN_COFFEE_PRICE,
+  canUseOfficeGameplay,
+  isInternCareer,
 } from './lib/internshipRoutine';
 import {
   DEFAULT_HOUSEHOLD_STATE,
@@ -645,6 +647,7 @@ export default function App() {
 
   const handleAcceptCase = (caseItem: LegalCase) => {
     if (!ensureLifeReady()) return;
+    if (isInternCareer(player) && !ensureOfficeGameplayAvailable()) return;
     const initialState: ActiveCaseState = {
       caseId: caseItem.id,
       hoursSpent: 0,
@@ -865,6 +868,13 @@ export default function App() {
     });
   };
 
+  const ensureOfficeGameplayAvailable = () => {
+    const permission = canUseOfficeGameplay(player);
+    if (permission.allowed) return true;
+    setLifeWarning(permission.reason);
+    return false;
+  };
+
   const handleRegisterInternArrival = () => {
     if (player.careerTier !== 'ESTAGIARIO' && player.careerTier !== 'ESTAGIARIO_SENIOR') return;
     const result = registerOfficeArrival(player);
@@ -886,6 +896,7 @@ export default function App() {
   };
 
   const handleOfficeRoutineEvent = () => {
+    if (!ensureOfficeGameplayAvailable()) return;
     const event = getDailyOfficeEvent(player);
     if (!event) return;
     markOfficeEventHandled(player, event.key);
@@ -898,6 +909,7 @@ export default function App() {
   };
 
   const handlePeriodicInternReview = () => {
+    if (!ensureOfficeGameplayAvailable()) return;
     const review = getPeriodicReview(player);
     if (!review) return;
     recordPeriodicReview(player, review);
@@ -916,6 +928,7 @@ export default function App() {
 
   const handleCompleteOfficeTask = (taskId: string) => {
     if (player.activeCase) return;
+    if (!ensureOfficeGameplayAvailable()) return;
     if (!ensureLifeReady()) return;
     if (
       (player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR')
