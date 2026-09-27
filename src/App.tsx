@@ -1526,11 +1526,13 @@ export default function App() {
     setPlayer((prev) => {
       if (prev.money < price) return prev;
 
-      const actionMinutes = action === 'EAT_HERE' ? 45
+      const configuredMinutes = Math.max(0, numberEffect('durationMinutes', 0));
+      const actionMinutes = configuredMinutes || (action === 'EAT_HERE' ? 45
         : action === 'SLEEP' ? Math.max(60, numberEffect('durationMinutes', 480))
         : action === 'SHOWER' ? Math.max(10, numberEffect('durationMinutes', 20))
         : action === 'RENT_VEHICLE' ? 15
-        : 20;
+        : action.startsWith('ACADEMIC_') ? 90
+        : 20);
       const clock = gameClockFields(prev, actionMinutes);
       let household = clock.household;
       let category: Parameters<typeof createPersonalExpense>[1]['category'] = 'OUTROS';
@@ -1657,6 +1659,34 @@ export default function App() {
         };
         category = 'VEICULO';
         message = `${offer.title} agora faz parte do patrimônio do personagem.`;
+      } else if (action.startsWith('ACADEMIC_')) {
+        const gain = Math.max(1, numberEffect('knowledgeGain', action === 'ACADEMIC_SIMULATION' ? 4 : 2));
+        const academicGains = action === 'ACADEMIC_QUESTIONS'
+          ? { PROCESSO_CIVIL: gain, PROCESSO_PENAL: gain, ETICA: gain }
+          : action === 'ACADEMIC_SIMULATION'
+            ? { CIVIL: gain, PENAL: gain, CONSTITUCIONAL: gain, ETICA: gain }
+            : action === 'ACADEMIC_REVIEW'
+              ? { CIVIL: gain, PENAL: gain, TRABALHO: gain }
+              : { CIVIL: gain, PROCESSO_CIVIL: gain, CONSTITUCIONAL: gain };
+        category = 'EDUCACAO';
+        message = `${offer.title} concluído. +${gain} de conhecimento nas áreas trabalhadas e ${actionMinutes} min de estudo.`;
+        household = {
+          ...household,
+          needs: {
+            ...household.needs,
+            study: Math.min(100, household.needs.study + Math.max(8, Math.round(actionMinutes / 8))),
+            energy: Math.max(0, household.needs.energy - Math.max(3, Math.round(actionMinutes / 30))),
+            hunger: Math.max(0, household.needs.hunger - Math.max(2, Math.round(actionMinutes / 45))),
+          },
+          lastStudiedGameDate: currentGameDateLabel(prev),
+        };
+        return {
+          ...prev,
+          ...clock,
+          money: prev.money - price,
+          legalKnowledge: addLegalKnowledge(prev.legalKnowledge, academicGains),
+          household,
+        };
       } else if (action === 'SLEEP') {
         household = restoreAfterSleep(
           household,
