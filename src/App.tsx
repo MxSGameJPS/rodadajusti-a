@@ -118,6 +118,7 @@ import {
   assessEarlyDeparture,
   type RoutineDisciplineAssessment,
   registerAuthorizedOfficeDeparture,
+  excuseTodayAbsence,
 } from './lib/internshipRoutine';
 import {
   DEFAULT_HOUSEHOLD_STATE,
@@ -427,6 +428,7 @@ export default function App() {
   const [periodicSupervisorReview, setPeriodicSupervisorReview] = useState<ReturnType<typeof getPeriodicReview>>(null);
   const [marianaArrivalDialogues, setMarianaArrivalDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
   const [routineDisciplineDialogues, setRoutineDisciplineDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
+  const [absenceJustificationDialogues, setAbsenceJustificationDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
 
   const openOfficeManagement = () => {
     if (!canManageOwnOffice(player)) {
@@ -991,6 +993,30 @@ export default function App() {
       if (assessment) applyRoutineDiscipline(assessment);
     }
     setPlayer((prev) => ({ ...prev }));
+  };
+
+  const handleRequestAbsenceJustification = () => {
+    const attendance = getTodayAttendance(player);
+    if (!attendance || attendance.status !== 'ABSENT') return;
+    setAbsenceJustificationDialogues([
+      { eyebrow: 'Conversa com Mariana', text: 'Você explica que a ausência ocorreu por uma situação excepcional e pede que o registro seja encaminhado para análise interna.' },
+      { eyebrow: 'Justificativa aceita', text: 'Mariana registra a justificativa desta ausência. O dia deixa de contar como falta disciplinar, mas justificativas não servem para apagar atrasos ou problemas de desempenho já ocorridos em outros expedientes.' },
+    ]);
+  };
+
+  const handleCompleteAbsenceJustification = () => {
+    excuseTodayAbsence(player);
+    setPlayer((prev) => ({
+      ...prev,
+      officePerformance: applyRoutinePerformance(prev.officePerformance, { diligence: 5, deadlineManagement: 4, supervisorTrust: 5 }),
+    }));
+    applyRelationshipInteraction(player, {
+      entityId: 'npc:MARIANA', entityType: 'NPC', name: 'Mariana Duarte', role: 'Secretária • Ramos & Associados',
+      gameDate: currentGameDateLabel(player), kind: 'EXCUSED_ABSENCE', title: 'Ausência justificada',
+      description: 'Mariana recebeu a justificativa e atualizou o registro interno da ausência.',
+      scope: 'WORKPLACE', intensity: 12, dimensions: { professionalTrust: 1 }, bond: 'PROFESSIONAL',
+    });
+    setAbsenceJustificationDialogues(null);
   };
 
   const handleOfficeRoutineEvent = (choiceId: OfficeEventChoiceId) => {
@@ -2249,6 +2275,7 @@ export default function App() {
           onRegisterDeparture={handleRegisterInternDeparture}
           onHandleOfficeEvent={handleOfficeRoutineEvent}
           onOpenReview={handlePeriodicInternReview}
+          onRequestAbsenceJustification={handleRequestAbsenceJustification}
           onToggleSound={handleToggleSound}
           onEnableMobileFrame={() => setIsMobileFrame(true)}
         />
@@ -2284,6 +2311,7 @@ export default function App() {
                   onRegisterDeparture={handleRegisterInternDeparture}
                   onHandleOfficeEvent={handleOfficeRoutineEvent}
                   onOpenReview={handlePeriodicInternReview}
+          onRequestAbsenceJustification={handleRequestAbsenceJustification}
                 />
                 <OfficeHub
                   player={player}
@@ -2501,6 +2529,20 @@ export default function App() {
         onGoToEstablishment={handleRequestEstablishment}
         onPurchaseOffer={handlePurchaseWorldOffer}
       />
+
+      {absenceJustificationDialogues && (
+        <NpcGuidanceDialog
+          isOpen
+          npcName="Mariana Duarte"
+          npcRole="Secretária • Ramos & Associados"
+          portraitSrc="/personagens/mariana-duarte.png"
+          portraitAlt="Mariana Duarte, secretária do escritório"
+          contextLabel="Justificativa de ausência"
+          dialogues={absenceJustificationDialogues}
+          finalActionLabel="Registrar justificativa"
+          onComplete={handleCompleteAbsenceJustification}
+        />
+      )}
 
       {routineDisciplineDialogues && (
         <NpcGuidanceDialog
