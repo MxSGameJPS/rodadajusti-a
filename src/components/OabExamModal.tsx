@@ -418,7 +418,7 @@ export const OabExamModal: React.FC<OabExamModalProps> = ({
                       Qual simulado você quer realizar?
                     </h3>
                     <p className="text-sm text-[#D6C59C] mt-3 leading-relaxed">
-                      Os dois formatos permitem avançar para Advogado Contratado. O completo exige mais dedicação e oferece uma recompensa muito maior em Jures Reais.
+                      {allowedModes.length === 1 && allowedModes[0] === 'quick' ? 'Este simulado faz parte da preparação intensiva. O resultado será incorporado ao seu histórico de estudos.' : 'Os dois formatos permitem avançar para Advogado Contratado. O completo exige mais dedicação e oferece uma recompensa muito maior em Jures Reais.'}
                     </p>
                   </div>
                 </div>
