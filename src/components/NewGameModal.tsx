@@ -14,6 +14,8 @@ export interface NewGameSetup {
   city: string;
   state: string;
   addressProfile: WorldAddressProfile;
+  relationshipStatus: 'SINGLE' | 'DATING' | 'MARRIED';
+  partnerName: string | null;
 }
 
 interface NewGameModalProps {
@@ -70,6 +72,8 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
   const pendingWelcome = readPendingWelcome();
   const pendingWelcomeName = typeof pendingWelcome.playerName === 'string' ? pendingWelcome.playerName.trim() : '';
   const [playerName, setPlayerName] = useState(pendingWelcomeName || 'Novo Personagem');
+  const [relationshipStatus, setRelationshipStatus] = useState<'SINGLE' | 'DATING' | 'MARRIED'>('SINGLE');
+  const [partnerName, setPartnerName] = useState('');
   const [street, setStreet] = useState(pendingWelcome.street || '');
   const [number, setNumber] = useState(pendingWelcome.number || '');
   const [city, setCity] = useState(pendingWelcome.city || '');
@@ -197,6 +201,8 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
       city: city.trim() || addressProfile.city,
       state: state.trim().toUpperCase() || addressProfile.state,
       addressProfile,
+      relationshipStatus,
+      partnerName: relationshipStatus === 'SINGLE' ? null : partnerName.trim(),
     });
   };
 
@@ -359,6 +365,15 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
                       );
                     })}
                   </div>
+                </section>
+
+                <section className="mt-7 rounded-xl border border-[#9D845A]/35 bg-[#F5EFE5]/70 p-4 sm:p-5">
+                  <h2 className="font-serif text-base font-semibold text-[#30291F]">Vida afetiva no início da história</h2>
+                  <p className="mt-1 text-[11px] leading-5 text-[#746754]">O jogo não presume que o personagem possua parceiro. Escolha a situação inicial.</p>
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    {([['SINGLE','Solteiro(a)'],['DATING','Namorando'],['MARRIED','Casado(a)']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setRelationshipStatus(value)} className={`rounded-lg border px-3 py-3 text-[10px] font-bold ${relationshipStatus===value?'border-[#9C7638] bg-[#E8D7B8] text-[#4B3518]':'border-[#B8A98F]/55 bg-[#FBF8F2] text-[#746956]'}`}>{label}</button>)}
+                  </div>
+                  {relationshipStatus !== 'SINGLE' && <label className="mt-4 block"><span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-[#796A54]">Nome do(a) {relationshipStatus==='MARRIED'?'cônjuge':'namorado(a)'}</span><input value={partnerName} onChange={e=>setPartnerName(e.target.value)} required placeholder="Nome do parceiro ou parceira" className="w-full rounded-lg border border-[#AF9C7D]/60 bg-[#FBF8F2] px-3 py-2.5 text-sm text-[#302A22] outline-none focus:border-[#8E6B35]" /></label>}
                 </section>
 
                 <section className="mt-7 rounded-xl border border-[#9D845A]/35 bg-[#F5EFE5]/70 p-4 sm:p-5">
