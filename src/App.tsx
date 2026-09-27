@@ -30,6 +30,7 @@ import { VerdictModal } from './components/VerdictModal';
 import { SupervisorReviewModal } from './components/SupervisorReviewModal';
 import { CareerModal } from './components/CareerModal';
 import { AcademicModal } from './components/AcademicModal';
+import { UniversityCampusModal } from './components/UniversityCampus/UniversityCampusModal';
 import { ConcursoModal } from './components/ConcursoModal';
 import { OfficeManagementModal } from './components/OfficeManagementModal';
 import { OabExamModal } from './components/OabExamModal';
@@ -82,6 +83,7 @@ import {
 } from './lib/lifeTravel';
 import { supabase } from './lib/supabase';
 import { canManageOwnOffice } from './lib/independentPractice';
+import { addLegalKnowledge, CAMPUS_ACTIVITIES, type CampusActivityId } from './lib/academicLife';
 import {
   DEFAULT_HOUSEHOLD_STATE,
   applyLifeTimePassage,
