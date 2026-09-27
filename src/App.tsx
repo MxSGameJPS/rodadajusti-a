@@ -1716,7 +1716,7 @@ export default function App() {
             },
           ].slice(-40),
         };
-        category = 'TRANSPORTE';
+        category = 'VEICULO';
         message = `${offer.title} alugado. O veículo está disponível para os deslocamentos do personagem.`;
       } else if (kind === 'VEHICLE') {
         household = {
@@ -1744,7 +1744,7 @@ export default function App() {
             : action === 'ACADEMIC_REVIEW'
               ? { CIVIL: gain, PENAL: gain, TRABALHO: gain }
               : { CIVIL: gain, PROCESSO_CIVIL: gain, CONSTITUCIONAL: gain };
-        category = 'EDUCACAO';
+        category = 'ESTUDOS';
         message = `${offer.title} concluído. +${gain} de conhecimento nas áreas trabalhadas e ${actionMinutes} min de estudo.`;
         household = {
           ...household,
@@ -1761,9 +1761,9 @@ export default function App() {
           createPersonalExpense(prev, {
             category,
             amount: price,
+            title: offer.title,
             description: `${establishment.name} • ${offer.title}`,
-            establishmentId: establishment.id,
-            offerId: offer.id,
+            source: `ESTABLISHMENT:${establishment.id}:OFFER:${offer.id}`,
           }),
         );
         return {
