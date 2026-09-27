@@ -57,6 +57,7 @@ import {
 } from './components/ResidenceSetup/ResidenceSetupModal';
 import { OfficeScene } from './components/OfficeScene/OfficeScene';
 import { InternPromotionCeremonyModal } from './components/InternPromotionCeremonyModal';
+import { getSeniorDailyDesk, buildSeniorFirstDayDialogues } from './lib/seniorInternEngine';
 import { evaluatePetition } from './lib/judicialDecisionEngine';
 import { buildSupervisorReview } from './lib/officeDisciplineEngine';
 import {
@@ -466,6 +467,7 @@ export default function App() {
   const [isInternPromotionCeremonyOpen, setIsInternPromotionCeremonyOpen] = useState(false);
   const [internPromotionNarrative, setInternPromotionNarrative] = useState<InternPromotionNarrative | null>(null);
   const [promotionReviewDialogues, setPromotionReviewDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
+  const [seniorGuidanceDialogues, setSeniorGuidanceDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
 
   useEffect(() => {
     try {
@@ -1084,6 +1086,29 @@ export default function App() {
     });
     setPeriodicSupervisorReview(null);
     setSupervisorReviewDialogues(null);
+  };
+
+  const handleChooseSeniorPriority = (priorityId: string) => {
+    if (player.careerTier !== 'ESTAGIARIO_SENIOR') return;
+    if (!ensureOfficeGameplayAvailable()) return;
+    const priority = getSeniorDailyDesk(player).find((item) => item.id === priorityId);
+    if (!priority) return;
+    const conflict = getWorkTimeConflict(player, priority.minutes, 'OFFICE');
+    if (conflict) { setLifeWarning(conflict); return; }
+    const diligenceDelta = priority.recommended ? 2 : 0;
+    const trustDelta = priority.recommended ? 2 : -1;
+    setPlayer((prev) => ({
+      ...prev,
+      ...gameClockFields(prev, priority.minutes),
+      officePerformance: applyRoutinePerformance(prev.officePerformance, {
+        diligence: diligenceDelta,
+        deadlineManagement: priority.recommended ? 2 : 0,
+        supervisorTrust: trustDelta,
+      }),
+    }));
+    setLifeWarning(priority.recommended
+      ? `Boa priorização: ${priority.title}. Você protegeu uma demanda de maior risco.`
+      : `Você escolheu ${priority.title}. A demanda foi tratada, mas Roberto observará se prioridades mais urgentes ficaram para trás.`);
   };
 
   const handleCompleteOfficeTask = (taskId: string) => {
@@ -2287,6 +2312,7 @@ export default function App() {
           onHandleOfficeEvent={handleOfficeRoutineEvent}
           onOpenReview={handlePeriodicInternReview}
           onRequestAbsenceJustification={handleRequestAbsenceJustification}
+                  onChooseSeniorPriority={handleChooseSeniorPriority}
           onToggleSound={handleToggleSound}
           onEnableMobileFrame={() => setIsMobileFrame(true)}
         />
@@ -2323,6 +2349,7 @@ export default function App() {
                   onHandleOfficeEvent={handleOfficeRoutineEvent}
                   onOpenReview={handlePeriodicInternReview}
           onRequestAbsenceJustification={handleRequestAbsenceJustification}
+                  onChooseSeniorPriority={handleChooseSeniorPriority}
                 />
                 <OfficeHub
                   player={player}
@@ -2441,7 +2468,7 @@ export default function App() {
         isOpen={isInternPromotionCeremonyOpen}
         playerName={player.name || 'Colega'}
         narrative={internPromotionNarrative}
-        onClose={() => { setIsInternPromotionCeremonyOpen(false); setInternPromotionNarrative(null); }}
+        onClose={() => { setIsInternPromotionCeremonyOpen(false); setInternPromotionNarrative(null); setSeniorGuidanceDialogues(buildSeniorFirstDayDialogues(player)); }}
       />
 
       <CareerModal
@@ -2541,6 +2568,20 @@ export default function App() {
         onGoToEstablishment={handleRequestEstablishment}
         onPurchaseOffer={handlePurchaseWorldOffer}
       />
+
+      {seniorGuidanceDialogues && (
+        <NpcGuidanceDialog
+          isOpen
+          npcName="Mariana Duarte"
+          npcRole="Secretária • Ramos & Associados"
+          portraitSrc="/personagens/mariana-duarte.png"
+          portraitAlt="Mariana Duarte"
+          contextLabel="Primeiro expediente como Estagiário Sênior"
+          dialogues={seniorGuidanceDialogues}
+          finalActionLabel="Assumir minha mesa"
+          onComplete={() => setSeniorGuidanceDialogues(null)}
+        />
+      )}
 
       {promotionReviewDialogues && (
         <NpcGuidanceDialog
