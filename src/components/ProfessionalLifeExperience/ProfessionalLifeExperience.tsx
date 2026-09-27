@@ -44,7 +44,8 @@ import {
   requestIncomingProfessionalCall,
 } from '../../lib/professionalPhoneBridge';
 import { readCurrentPlayerSnapshot } from '../../lib/professionalRpg';
-import { readRelationshipEngine } from '../../lib/relationshipEngine';
+import { readRelationshipEngine, seedCoreRelationships } from '../../lib/relationshipEngine';
+import { persistPlayerRelationshipStatus, persistRelationshipEngine } from '../../lib/relationshipRepository';
 import { applyLifeTimePassage } from '../../lib/lifeSimulation';
 import {
   appendPersonalFinanceTransaction,
@@ -341,6 +342,13 @@ export const ProfessionalLifeExperience: React.FC = () => {
       partnerName: draftPartner.trim(),
     });
     setSocial(next);
+    const relationshipStatus = draftStatus === 'STABLE_UNION' ? 'DATING' : draftStatus as 'SINGLE'|'DATING'|'MARRIED';
+    const updatedPlayer = { ...player, relationshipStatus, partnerName: relationshipStatus === 'SINGLE' ? null : draftPartner.trim() };
+    try { window.localStorage.setItem(PLAYER_SAVE_KEY, JSON.stringify(updatedPlayer)); } catch {}
+    seedCoreRelationships(updatedPlayer);
+    void persistPlayerRelationshipStatus(updatedPlayer);
+    void persistRelationshipEngine(updatedPlayer);
+    setPlayer(updatedPlayer);
     setSetupOpen(false);
     setIsOpen(true);
   };
