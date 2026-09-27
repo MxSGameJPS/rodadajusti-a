@@ -81,8 +81,8 @@ export async function loadSeniorPortfolio(player: PlayerProfile) {
 export async function persistSeniorPortfolio(player: PlayerProfile, portfolio: SeniorPortfolioMatter[], decisions: SeniorPortfolioDecision[]) {
   if (!eligible(player) || !supabase) return false;
   const { data: { user } } = await supabase.auth.getUser(); if (!user) return false;
-  const { error } = await supabase.from('internship_routines').update({ senior_portfolio: portfolio, senior_decisions: decisions, updated_at: new Date().toISOString() }).eq('career_id', player.cloudCareerId!).eq('user_id', user.id);
-  if (error) { console.warn('[internship] senior portfolio persist', error.message); return false; }
+  const { data, error } = await supabase.from('internship_routines').update({ senior_portfolio: portfolio, senior_decisions: decisions, updated_at: new Date().toISOString() }).eq('career_id', player.cloudCareerId!).eq('user_id', user.id).select('career_id').maybeSingle();
+  if (error || !data) { console.warn('[internship] senior portfolio persist', error?.message || 'nenhuma linha atualizada'); return false; }
   return true;
 }
 
@@ -95,6 +95,6 @@ export async function loadOabPreparation(player:PlayerProfile):Promise<OabPrepar
 }
 export async function persistOabPreparation(player:PlayerProfile,state:OabPreparationState){
  if(!eligible(player)||!supabase)return false;const {data:{user}}=await supabase.auth.getUser();if(!user)return false;
- const {error}=await supabase.from('internship_routines').update({oab_preparation:state,updated_at:new Date().toISOString()}).eq('career_id',player.cloudCareerId!).eq('user_id',user.id);
- if(error){console.warn('[internship] OAB preparation persist',error.message);return false}return true;
+ const {data,error}=await supabase.from('internship_routines').update({oab_preparation:state,updated_at:new Date().toISOString()}).eq('career_id',player.cloudCareerId!).eq('user_id',user.id).select('career_id').maybeSingle();
+ if(error||!data){console.warn('[internship] OAB preparation persist',error?.message||'nenhuma linha atualizada');return false}return true;
 }
