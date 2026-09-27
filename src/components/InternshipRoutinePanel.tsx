@@ -1,13 +1,13 @@
 import React from 'react';
 import { CalendarClock, CheckCircle2, Clock3, Coffee, DoorOpen, MessageSquareText, UserRoundCheck } from 'lucide-react';
 import type { PlayerProfile } from '../types/game';
-import { getDailyOfficeEvent, getPeriodicReview, getTodayAttendance, getWorkSchedule, minuteLabel, readInternshipRoutine } from '../lib/internshipRoutine';
+import { getDailyOfficeEvent, getOfficeEventChoices, getPeriodicReview, getTodayAttendance, getWorkSchedule, minuteLabel, readInternshipRoutine, type OfficeEventChoiceId } from '../lib/internshipRoutine';
 
 interface Props {
   player: PlayerProfile;
   onRegisterArrival: () => void;
   onRegisterDeparture: () => void;
-  onHandleOfficeEvent: () => void;
+  onHandleOfficeEvent: (choiceId: OfficeEventChoiceId) => void;
   onOpenReview: () => void;
 }
 
@@ -82,9 +82,14 @@ export const InternshipRoutinePanel: React.FC<Props> = ({ player, onRegisterArri
               <div className="flex items-center gap-2 text-[#CDB06F]"><Coffee size={16} /><span className="text-[9px] font-black uppercase tracking-[.15em]">Acontecimento no escritório</span></div>
               <h4 className="mt-2 text-sm font-bold text-[#E6E1D7]">{event.title}</h4>
               <p className="mt-1 text-[11px] leading-relaxed text-[#A8A39A]">{event.text}</p>
-              <button type="button" onClick={onHandleOfficeEvent} className="mt-3 rounded-lg border border-[#C5A059]/30 bg-[#0D0D0F] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-[#D7BC7A]">
-                Ajudar a equipe
-              </button>
+              <div className="mt-3 grid gap-2">
+                {getOfficeEventChoices(event.kind).map((choice) => (
+                  <button key={choice.id} type="button" onClick={() => onHandleOfficeEvent(choice.id)} className="rounded-lg border border-[#C5A059]/25 bg-[#0D0D0F] px-3 py-2.5 text-left transition hover:bg-[#C5A059]/10">
+                    <span className="block text-[10px] font-black uppercase tracking-wider text-[#D7BC7A]">{choice.label} • {choice.minutes} min</span>
+                    <span className="mt-1 block text-[10px] leading-relaxed text-[#88838A]">{choice.description}</span>
+                  </button>
+                ))}
+              </div>
             </article>
           )}
 
