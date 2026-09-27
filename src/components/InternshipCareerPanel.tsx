@@ -26,6 +26,7 @@ import { getEarlyCareerSnapshot } from '../lib/earlyCareerEngine';
 import { InternOfficeTaskModal } from './InternOfficeTaskModal';
 import { NpcGuidanceDialog, type NpcGuidanceStep } from './NpcGuidanceDialog';
 import { InternshipRoutinePanel } from './InternshipRoutinePanel';
+import { getDailyTaskIds } from '../lib/internshipRoutine';
 
 interface InternshipCareerPanelProps {
   player: PlayerProfile;
@@ -76,6 +77,8 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
 
   const performance = normalizeOfficePerformance(player.officePerformance);
   const tasks = getTasksForTier(player.careerTier);
+  const dailyTaskIds = getDailyTaskIds(player, tasks.map((task) => task.id));
+  const dailyTasks = tasks.filter((task) => dailyTaskIds.includes(task.id));
   const internPromotion = getInternPromotionStatus({
     casesSolved: player.casesSolved,
     xp: player.xp,
@@ -312,17 +315,17 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
               <div>
                 <span className="text-[9px] font-black uppercase tracking-[0.15em] text-[#C5A059]">Rotina supervisionada</span>
                 <h4 className="mt-1 text-sm font-bold text-[#E4E1DA]">
-                  {isSenior ? 'Responsabilidades de Estagiário Sênior' : 'Tarefas próprias do estágio'}
+                  {isSenior ? 'Responsabilidades de hoje • Estagiário Sênior' : 'Tarefas de hoje entregues pela Mariana'}
                 </h4>
                 <p className="mt-1 text-[11px] leading-relaxed text-[#8E8E95]">
-                  Abra a atividade, analise a situação e tome as decisões corretas. A recompensa só é registrada depois da entrega ao Dr. Roberto.
+                  Mariana organiza apenas as prioridades deste expediente. Analise cada atividade e entregue o resultado ao Dr. Roberto; novas prioridades surgem em outros dias.
                 </p>
               </div>
               <BookOpenCheck size={19} className="shrink-0 text-[#C5A059]" />
             </div>
 
             <div className="mt-4 space-y-3">
-              {tasks.map((task) => {
+              {dailyTasks.map((task) => {
                 const completed = performance.completedTaskIds.includes(task.id);
                 const unavailable = !!player.activeCase;
                 return (
