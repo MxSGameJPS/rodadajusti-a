@@ -2,6 +2,7 @@ import { GAME_CASES } from '../data/cases';
 import type { PlayerProfile } from '../types/game';
 import { getProfessionalOwnerKey } from './professionalRpg';
 import { shouldRunPlayableHearing } from './reactiveWorldStore';
+import { applyRelationshipInteraction } from './relationshipEngine';
 
 export type RelationshipStatus = 'UNDEFINED' | 'SINGLE' | 'DATING' | 'MARRIED' | 'STABLE_UNION';
 export type SocialContactId = 'MARIANA' | 'PARTNER' | 'ROBERTO' | 'LAWYER_FELIPE' | 'FRIEND_CARLOS';
@@ -599,6 +600,25 @@ function playerFromDateKey(value: string): Pick<PlayerProfile, 'gameCurrentDay' 
 export function completeSocialEvent(player: PlayerProfile, state: SocialLifeState, selectedOption: SocialPlanOption) {
   if (!state.pendingEvent) return state;
   const chosen = normalizeOption(selectedOption, selectedOption.id);
+  const sourceEvent = state.pendingEvent;
+  const professional = sourceEvent.sourceContactId === 'ROBERTO' || sourceEvent.sourceContactId === 'LAWYER_FELIPE';
+  applyRelationshipInteraction(player, {
+    entityId: `npc:${sourceEvent.sourceContactId}`,
+    entityType: 'NPC',
+    name: sourceEvent.contactName,
+    role: sourceEvent.contactRole,
+    gameDate: gameDateKey(player),
+    kind: sourceEvent.kind,
+    title: sourceEvent.title,
+    description: chosen.detail,
+    scope: professional ? 'PROFESSIONAL_COMMUNITY' : 'PRIVATE',
+    intensity: Math.max(10, Math.abs(chosen.relationshipDelta) * 4),
+    dimensions: professional
+      ? { affinity: chosen.relationshipDelta, trust: Math.max(1, Math.round(chosen.relationshipDelta / 2)), professionalRespect: chosen.capitalGain, professionalTrust: Math.max(1, Math.round(chosen.capitalGain / 2)) }
+      : { affinity: chosen.relationshipDelta, trust: Math.max(1, Math.round(chosen.relationshipDelta / 2)), intimacy: Math.max(0, chosen.relationshipDelta - 2) },
+    bond: professional ? 'PROFESSIONAL' : sourceEvent.sourceContactId === 'PARTNER' ? 'PARTNER' : 'FRIEND',
+    adultOnly: true,
+  });
   const spent = Math.max(0, chosen.cost);
   const nextEnergy = clamp(state.energy + chosen.energyDelta);
   const endKey = endDateKey(player, chosen.daysAdvance);
