@@ -1,5 +1,5 @@
 import type { PlayerProfile } from '../types/game';
-import { getProfessionalOwnerKey } from './professionalRpg';
+import { getProfessionalOwnerKey, loadProfessionalProfile, saveProfessionalProfile } from './professionalRpg';
 
 export type RelationshipEntityType = 'NPC' | 'ESTABLISHMENT' | 'ORGANIZATION';
 export type RelationshipBond = 'UNKNOWN'|'ACQUAINTANCE'|'FRIEND'|'CLOSE_FRIEND'|'CASUAL_ROMANTIC'|'CASUAL_INTIMATE'|'DATING'|'PARTNER'|'MARRIED'|'AFFAIR'|'SECRET_AFFAIR'|'EX_PARTNER'|'RIVAL'|'ENEMY'|'PROFESSIONAL'|'CLIENT'|'FREQUENT_CUSTOMER';
@@ -30,3 +30,21 @@ export function canAttemptRomanticInteraction(r:RelationshipRecord){return r.adu
 export function canAttemptIntimateInteraction(r:RelationshipRecord){return r.adultOnly&&r.entityType==='NPC'&&r.dimensions.attraction>=45&&r.dimensions.trust>=35&&r.dimensions.intimacy>=30}
 export function relationshipLabel(r:RelationshipRecord){if(r.bonds.includes('SECRET_AFFAIR'))return'Caso secreto';if(r.bonds.includes('AFFAIR'))return'Caso extraconjugal';if(r.bonds.includes('MARRIED'))return'Casamento';if(r.bonds.includes('PARTNER'))return'Relacionamento duradouro';if(r.bonds.includes('DATING'))return'Namoro';if(r.bonds.includes('CASUAL_INTIMATE'))return'Relação íntima casual';if(r.bonds.includes('CASUAL_ROMANTIC'))return'Encontros casuais';if(r.bonds.includes('RIVAL'))return'Rivalidade';if(r.dimensions.affinity>=70)return'Muito próximo';if(r.dimensions.affinity>=45)return'Boa relação';return r.entityType==='NPC'?'Conhecido':'Cliente'}
 export const RELATIONSHIP_BOND_LABELS:Record<RelationshipBond,string>={UNKNOWN:'Desconhecido',ACQUAINTANCE:'Conhecido',FRIEND:'Amizade',CLOSE_FRIEND:'Amizade próxima',CASUAL_ROMANTIC:'Encontros casuais',CASUAL_INTIMATE:'Relação íntima casual',DATING:'Namoro',PARTNER:'Relacionamento duradouro',MARRIED:'Casamento',AFFAIR:'Caso extraconjugal',SECRET_AFFAIR:'Caso secreto',EX_PARTNER:'Ex-parceiro(a)',RIVAL:'Rivalidade',ENEMY:'Inimizade',PROFESSIONAL:'Relação profissional',CLIENT:'Cliente',FREQUENT_CUSTOMER:'Cliente frequente'};
+
+export type RomanticAction='FLIRT'|'DATE'|'INTIMATE'|'COMMIT'|'BREAK_UP'|'CONFESS_AFFAIR';
+export interface RomanticActionResult{ok:boolean;message:string;bond?:RelationshipBond;ethicsDelta:number;characterDelta:number}
+export function performRomanticAction(player:PlayerProfile,entityId:string,action:RomanticAction,gameDate:string):RomanticActionResult{
+ const state=readRelationshipEngine(player),r=state.records[entityId];if(!r||r.entityType!=='NPC')return{ok:false,message:'Pessoa indisponível.',ethicsDelta:0,characterDelta:0};
+ if(!r.adultOnly)return{ok:false,message:'Interação romântica indisponível.',ethicsDelta:0,characterDelta:0};
+ let dims:Partial<RelationshipDimensions>={},bond:RelationshipBond|undefined,title='',description='',ethicsDelta=0,characterDelta=0;
+ if(action==='FLIRT'){if(r.dimensions.affinity<30)return{ok:false,message:'Ainda não existe afinidade suficiente.',ethicsDelta:0,characterDelta:0};dims={attraction:8,romance:5,affinity:2};title='Flertou';description='A conversa ganhou um tom romântico.'}
+ if(action==='DATE'){if(!canAttemptRomanticInteraction(r))return{ok:false,message:'Confiança ou afinidade insuficiente.',ethicsDelta:0,characterDelta:0};bond=classifyRomanticBond(player,false);dims={romance:10,intimacy:6,attraction:6,affinity:4};title='Encontro romântico';description='Vocês passaram um tempo juntos em um encontro.'}
+ if(action==='INTIMATE'){if(!canAttemptIntimateInteraction(r))return{ok:false,message:'A relação ainda não possui intimidade e confiança suficientes.',ethicsDelta:0,characterDelta:0};bond=classifyRomanticBond(player,true);dims={intimacy:12,romance:6,commitment:2};title='Momento íntimo';description='A relação avançou para maior intimidade.'}
+ if(action==='COMMIT'){if(r.dimensions.romance<55||r.dimensions.trust<45)return{ok:false,message:'A relação ainda não está pronta para compromisso.',ethicsDelta:0,characterDelta:0};if(hasCommittedPartner(player)&&entityId!=='npc:PARTNER')return{ok:false,message:'Encerre o relacionamento atual antes de assumir outro compromisso.',ethicsDelta:0,characterDelta:0};bond='DATING';dims={commitment:15,loyalty:8,romance:5};title='Início de namoro';description='Vocês decidiram assumir um relacionamento.'}
+ if(action==='BREAK_UP'){bond='EX_PARTNER';dims={commitment:-35,romance:-20,conflict:8};title='Término';description='O relacionamento foi encerrado.'}
+ if(action==='CONFESS_AFFAIR'){dims={trust:-30,loyalty:-35,conflict:35,romance:-15};title='Confissão de traição';description='A infidelidade foi revelada e abalou profundamente a confiança.'}
+ if(bond==='SECRET_AFFAIR'||bond==='AFFAIR'){ethicsDelta=-1;characterDelta=-2}
+ applyRelationshipInteraction(player,{entityId:r.entityId,entityType:'NPC',name:r.name,role:r.role,gameDate,kind:action,title,description,scope:bond==='SECRET_AFFAIR'?'PRIVATE':'SOCIAL_CIRCLE',intensity:bond==='SECRET_AFFAIR'?55:30,dimensions:dims,bond,adultOnly:true});
+ if(ethicsDelta||characterDelta){const p=loadProfessionalProfile(player);if(p)saveProfessionalProfile(player,{...p,ethics:clamp(p.ethics+ethicsDelta),character:clamp(p.character+characterDelta)})}
+ return{ok:true,message:description,bond,ethicsDelta,characterDelta};
+}
