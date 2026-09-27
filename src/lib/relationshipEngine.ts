@@ -1,72 +1,39 @@
 import type { PlayerProfile } from '../types/game';
 import { getProfessionalOwnerKey } from './professionalRpg';
+import { readSocialLifeState, SOCIAL_CONTACT_LABELS } from './socialLife';
 
 export type RelationshipEntityType = 'NPC' | 'ESTABLISHMENT' | 'ORGANIZATION';
-export type RelationshipBond =
-  | 'UNKNOWN' | 'ACQUAINTANCE' | 'FRIEND' | 'CLOSE_FRIEND'
-  | 'CASUAL_ROMANTIC' | 'CASUAL_INTIMATE' | 'DATING' | 'PARTNER'
-  | 'MARRIED' | 'EX_PARTNER' | 'RIVAL' | 'ENEMY'
-  | 'PROFESSIONAL' | 'CLIENT' | 'FREQUENT_CUSTOMER';
-
-export interface RelationshipDimensions {
-  affinity:number; trust:number; intimacy:number; attraction:number;
-  romance:number; commitment:number; conflict:number;
-  professionalRespect:number; professionalTrust:number; rivalry:number;
-  institutionalReputation:number; loyalty:number;
+export type RelationshipBond = 'UNKNOWN'|'ACQUAINTANCE'|'FRIEND'|'CLOSE_FRIEND'|'CASUAL_ROMANTIC'|'CASUAL_INTIMATE'|'DATING'|'PARTNER'|'MARRIED'|'EX_PARTNER'|'RIVAL'|'ENEMY'|'PROFESSIONAL'|'CLIENT'|'FREQUENT_CUSTOMER';
+export interface RelationshipDimensions { affinity:number;trust:number;intimacy:number;attraction:number;romance:number;commitment:number;conflict:number;professionalRespect:number;professionalTrust:number;rivalry:number;institutionalReputation:number;loyalty:number }
+export type RelationshipDimension=keyof RelationshipDimensions;
+export type RelationshipMemoryScope='PRIVATE'|'SOCIAL_CIRCLE'|'WORKPLACE'|'PROFESSIONAL_COMMUNITY'|'CITY'|'REGIONAL'|'NATIONAL';
+export interface RelationshipMemory{id:string;kind:string;title:string;description:string;gameDate:string;intensity:number;scope:RelationshipMemoryScope;dimensions:Partial<RelationshipDimensions>}
+export interface RelationshipRecord{entityId:string;entityType:RelationshipEntityType;name:string;role?:string;adultOnly:boolean;bonds:RelationshipBond[];dimensions:RelationshipDimensions;memories:RelationshipMemory[];interactionCount:number;lastInteractionDate?:string}
+export interface RelationshipEngineState{version:1;records:Record<string,RelationshipRecord>}
+const PREFIX='rota_relationship_engine_v1:'; const clamp=(n:number)=>Math.max(0,Math.min(100,Math.round(n)));
+export const DEFAULT_RELATIONSHIP_DIMENSIONS:RelationshipDimensions={affinity:20,trust:15,intimacy:0,attraction:0,romance:0,commitment:0,conflict:0,professionalRespect:10,professionalTrust:10,rivalry:0,institutionalReputation:10,loyalty:5};
+function key(player:Pick<PlayerProfile,'cloudCareerId'|'name'|'oabRegistration'>){return PREFIX+getProfessionalOwnerKey(player)}
+function baseRecord(input:{entityId:string;entityType:RelationshipEntityType;name:string;role?:string;adultOnly?:boolean},seed:Partial<RelationshipDimensions>={}):RelationshipRecord{return{entityId:input.entityId,entityType:input.entityType,name:input.name,role:input.role,adultOnly:input.adultOnly!==false,bonds:[input.entityType==='NPC'?'ACQUAINTANCE':'FREQUENT_CUSTOMER'],dimensions:{...DEFAULT_RELATIONSHIP_DIMENSIONS,...seed},memories:[],interactionCount:0}}
+function seedLegacyContacts(player:Pick<PlayerProfile,'cloudCareerId'|'name'|'oabRegistration'|'gameCurrentDay'|'gameCurrentMonth'|'gameCurrentYear'>,state:RelationshipEngineState){
+ const social=readSocialLifeState(player); const contacts:any={...SOCIAL_CONTACT_LABELS,PARTNER:{name:social.profile.partnerName||'Parceiro(a)',role:'Relacionamento pessoal'}};
+ for(const [id,score] of Object.entries(social.relationships)){
+  const contact=contacts[id]; if(!contact)continue; const entityId=`npc:${id}`; if(state.records[entityId])continue;
+  const professional=id==='ROBERTO'||id==='LAWYER_FELIPE'||id==='MARIANA'; const committed=id==='PARTNER'&&social.profile.relationshipStatus!=='SINGLE'&&social.profile.relationshipStatus!=='UNDEFINED';
+  const record=baseRecord({entityId,entityType:'NPC',name:contact.name,role:contact.role,adultOnly:true},{affinity:Number(score),trust:Math.max(15,Math.round(Number(score)*.7)),professionalRespect:professional?Math.max(20,Math.round(Number(score)*.65)):10,professionalTrust:professional?Math.max(15,Math.round(Number(score)*.5)):10,intimacy:committed?65:Math.max(0,Number(score)-35),romance:committed?70:0,commitment:committed?75:0});
+  record.bonds=committed?[social.profile.relationshipStatus==='MARRIED'?'MARRIED':'PARTNER']:[professional?'PROFESSIONAL':Number(score)>=40?'FRIEND':'ACQUAINTANCE'];
+  state.records[entityId]=record;
+ }
+ return state;
 }
-export type RelationshipDimension = keyof RelationshipDimensions;
-export type RelationshipMemoryScope = 'PRIVATE'|'SOCIAL_CIRCLE'|'WORKPLACE'|'PROFESSIONAL_COMMUNITY'|'CITY'|'REGIONAL'|'NATIONAL';
-export interface RelationshipMemory {
-  id:string; kind:string; title:string; description:string; gameDate:string;
-  intensity:number; scope:RelationshipMemoryScope; dimensions:Partial<RelationshipDimensions>;
+export function readRelationshipEngine(player:any):RelationshipEngineState{try{const raw=localStorage.getItem(key(player));const state:RelationshipEngineState=raw?{version:1,records:JSON.parse(raw)?.records||{}}:{version:1,records:{}};return seedLegacyContacts(player,state)}catch{return{version:1,records:{}}}}
+export function saveRelationshipEngine(player:any,state:RelationshipEngineState){try{localStorage.setItem(key(player),JSON.stringify(state));window.dispatchEvent(new CustomEvent('rota:relationships-updated',{detail:state}))}catch{}return state}
+export function relationshipRecord(state:RelationshipEngineState,input:{entityId:string;entityType:RelationshipEntityType;name:string;role?:string;adultOnly?:boolean}){return state.records[input.entityId]||baseRecord(input)}
+export function applyRelationshipInteraction(player:any,input:{entityId:string;entityType:RelationshipEntityType;name:string;role?:string;gameDate:string;kind:string;title:string;description:string;scope?:RelationshipMemoryScope;intensity?:number;dimensions:Partial<RelationshipDimensions>;bond?:RelationshipBond;adultOnly?:boolean}){
+ const state=readRelationshipEngine(player);const current=relationshipRecord(state,input);const dimensions={...current.dimensions};for(const [dimension,delta] of Object.entries(input.dimensions)){const d=dimension as RelationshipDimension;dimensions[d]=clamp(dimensions[d]+(Number(delta)||0))}
+ const bonds=[...current.bonds];if(input.bond&&!bonds.includes(input.bond))bonds.push(input.bond);const memory:RelationshipMemory={id:`rel-${input.entityId}-${Date.now()}`,kind:input.kind,title:input.title,description:input.description,gameDate:input.gameDate,intensity:Math.max(1,Math.min(100,input.intensity||20)),scope:input.scope||'PRIVATE',dimensions:input.dimensions};
+ state.records[input.entityId]={...current,name:input.name,role:input.role||current.role,adultOnly:input.adultOnly!==false,bonds,dimensions,memories:[memory,...current.memories].slice(0,60),interactionCount:current.interactionCount+1,lastInteractionDate:input.gameDate};return saveRelationshipEngine(player,state)
 }
-export interface RelationshipRecord {
-  entityId:string; entityType:RelationshipEntityType; name:string; role?:string;
-  adultOnly:boolean; bonds:RelationshipBond[]; dimensions:RelationshipDimensions;
-  memories:RelationshipMemory[]; interactionCount:number; lastInteractionDate?:string;
-}
-export interface RelationshipEngineState { version:1; records:Record<string,RelationshipRecord>; }
-
-const PREFIX='rota_relationship_engine_v1:';
-const clamp=(n:number)=>Math.max(0,Math.min(100,Math.round(n)));
-export const DEFAULT_RELATIONSHIP_DIMENSIONS:RelationshipDimensions={
-  affinity:20,trust:15,intimacy:0,attraction:0,romance:0,commitment:0,conflict:0,
-  professionalRespect:10,professionalTrust:10,rivalry:0,institutionalReputation:10,loyalty:5,
-};
-function key(player:Pick<PlayerProfile,'cloudCareerId'|'name'|'oabRegistration'>){return PREFIX+getProfessionalOwnerKey(player);}
-export function readRelationshipEngine(player:Pick<PlayerProfile,'cloudCareerId'|'name'|'oabRegistration'>):RelationshipEngineState{
-  try{const raw=localStorage.getItem(key(player)); if(!raw)return{version:1,records:{}}; const parsed=JSON.parse(raw); return{version:1,records:parsed?.records||{}};}catch{return{version:1,records:{}}}
-}
-export function saveRelationshipEngine(player:Pick<PlayerProfile,'cloudCareerId'|'name'|'oabRegistration'>,state:RelationshipEngineState){
-  try{localStorage.setItem(key(player),JSON.stringify(state)); window.dispatchEvent(new CustomEvent('rota:relationships-updated',{detail:state}));}catch{}
-  return state;
-}
-export function relationshipRecord(state:RelationshipEngineState,input:{entityId:string;entityType:RelationshipEntityType;name:string;role?:string;adultOnly?:boolean}){
-  return state.records[input.entityId]||{entityId:input.entityId,entityType:input.entityType,name:input.name,role:input.role,adultOnly:input.adultOnly!==false,bonds:[input.entityType==='NPC'?'ACQUAINTANCE':'FREQUENT_CUSTOMER'],dimensions:{...DEFAULT_RELATIONSHIP_DIMENSIONS},memories:[],interactionCount:0};
-}
-export function applyRelationshipInteraction(player:Pick<PlayerProfile,'cloudCareerId'|'name'|'oabRegistration'>,input:{
-  entityId:string;entityType:RelationshipEntityType;name:string;role?:string;gameDate:string;
-  kind:string;title:string;description:string;scope?:RelationshipMemoryScope;intensity?:number;
-  dimensions:Partial<RelationshipDimensions>;bond?:RelationshipBond;adultOnly?:boolean;
-}){
-  const state=readRelationshipEngine(player); const current=relationshipRecord(state,input);
-  const dimensions={...current.dimensions};
-  for(const [dimension,delta] of Object.entries(input.dimensions)){const d=dimension as RelationshipDimension; dimensions[d]=clamp(dimensions[d]+(Number(delta)||0));}
-  const bonds=[...current.bonds]; if(input.bond&&!bonds.includes(input.bond))bonds.push(input.bond);
-  const memory:RelationshipMemory={id:`rel-${input.entityId}-${Date.now()}`,kind:input.kind,title:input.title,description:input.description,gameDate:input.gameDate,intensity:Math.max(1,Math.min(100,input.intensity||20)),scope:input.scope||'PRIVATE',dimensions:input.dimensions};
-  state.records[input.entityId]={...current,name:input.name,role:input.role||current.role,adultOnly:input.adultOnly!==false,bonds,dimensions,memories:[memory,...current.memories].slice(0,60),interactionCount:current.interactionCount+1,lastInteractionDate:input.gameDate};
-  return saveRelationshipEngine(player,state);
-}
-export function canAttemptRomanticInteraction(record:RelationshipRecord){return record.adultOnly&&record.dimensions.affinity>=30&&record.dimensions.trust>=20;}
-export function canAttemptIntimateInteraction(record:RelationshipRecord){return record.adultOnly&&record.dimensions.attraction>=45&&record.dimensions.trust>=35&&record.dimensions.intimacy>=30;}
-export function relationshipLabel(record:RelationshipRecord){
-  if(record.bonds.includes('MARRIED'))return'Casamento';
-  if(record.bonds.includes('PARTNER'))return'Relacionamento duradouro';
-  if(record.bonds.includes('DATING'))return'Namoro';
-  if(record.bonds.includes('CASUAL_INTIMATE'))return'Relação íntima casual';
-  if(record.bonds.includes('CASUAL_ROMANTIC'))return'Encontros casuais';
-  if(record.bonds.includes('RIVAL'))return'Rivalidade';
-  if(record.dimensions.affinity>=70)return'Muito próximo';
-  if(record.dimensions.affinity>=45)return'Boa relação';
-  return record.entityType==='NPC'?'Conhecido':'Cliente';
-}
+export function canAttemptRomanticInteraction(r:RelationshipRecord){return r.adultOnly&&r.entityType==='NPC'&&r.dimensions.affinity>=30&&r.dimensions.trust>=20}
+export function canAttemptIntimateInteraction(r:RelationshipRecord){return r.adultOnly&&r.entityType==='NPC'&&r.dimensions.attraction>=45&&r.dimensions.trust>=35&&r.dimensions.intimacy>=30}
+export function relationshipLabel(r:RelationshipRecord){if(r.bonds.includes('MARRIED'))return'Casamento';if(r.bonds.includes('PARTNER'))return'Relacionamento duradouro';if(r.bonds.includes('DATING'))return'Namoro';if(r.bonds.includes('CASUAL_INTIMATE'))return'Relação íntima casual';if(r.bonds.includes('CASUAL_ROMANTIC'))return'Encontros casuais';if(r.bonds.includes('RIVAL'))return'Rivalidade';if(r.dimensions.affinity>=70)return'Muito próximo';if(r.dimensions.affinity>=45)return'Boa relação';return r.entityType==='NPC'?'Conhecido':'Cliente'}
+export const RELATIONSHIP_BOND_LABELS:Record<RelationshipBond,string>={UNKNOWN:'Desconhecido',ACQUAINTANCE:'Conhecido',FRIEND:'Amizade',CLOSE_FRIEND:'Amizade próxima',CASUAL_ROMANTIC:'Encontros casuais',CASUAL_INTIMATE:'Relação íntima casual',DATING:'Namoro',PARTNER:'Relacionamento duradouro',MARRIED:'Casamento',EX_PARTNER:'Ex-parceiro(a)',RIVAL:'Rivalidade',ENEMY:'Inimizade',PROFESSIONAL:'Relação profissional',CLIENT:'Cliente',FREQUENT_CUSTOMER:'Cliente frequente'};
