@@ -111,6 +111,9 @@ export function OfficeScene({
   onSeniorPortfolioDecision,
   onSeniorOabReadinessReview,
   seniorCareerRecall,
+  oabPreparation,
+  onOabStudy,
+  onOabQuickMock,
   onToggleSound,
   onEnableMobileFrame,
 }) {
@@ -518,6 +521,9 @@ export function OfficeScene({
             onSeniorPortfolioDecision={onSeniorPortfolioDecision}
             onSeniorOabReadinessReview={onSeniorOabReadinessReview}
             seniorCareerRecall={seniorCareerRecall}
+            oabPreparation={oabPreparation}
+            onOabStudy={onOabStudy}
+            onOabQuickMock={onOabQuickMock}
                 />
               )}
 
