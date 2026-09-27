@@ -1,8 +1,8 @@
 import React from 'react';
 import { Gavel, MessageSquareText, UsersRound, X } from 'lucide-react';
-import type { SeniorLegalDecision, SeniorProfessionalScene } from '../lib/seniorPortfolio';
+import type { SeniorLegalDecision, SeniorProfessionalScene as SeniorProfessionalSceneData } from '../lib/seniorPortfolio';
 
-interface Props { scene:SeniorProfessionalScene; onChoose:(decision:SeniorLegalDecision)=>void; onClose:()=>void; }
+interface Props { scene:SeniorProfessionalSceneData; onChoose:(decision:SeniorLegalDecision)=>void; onClose:()=>void; }
 export const SeniorProfessionalScene:React.FC<Props>=({scene,onChoose,onClose})=>(
  <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/85 p-4">
   <section className="w-full max-w-4xl overflow-hidden rounded-2xl border border-[#C5A059]/30 bg-[#0D0D0F] shadow-2xl">
