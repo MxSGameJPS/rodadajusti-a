@@ -390,7 +390,7 @@
   bottom: 84px;
   left: auto;
   width: min(430px, calc(100% - 48px));
-  border-radius: 8px;
+  border-radius: 12px;
   background: rgba(6, 9, 11, 0.91);
 }
 
@@ -761,22 +761,28 @@
 }
 
 .establishmentDetailCard {
-  align-items: stretch;
-  width: min(560px, calc(100% - 24px));
+  align-items: center;
+  width: min(760px, calc(100% - 32px));
   margin-left: auto;
+  padding: 16px;
+  gap: 16px;
+  border-color: rgba(197, 160, 89, 0.42);
+  border-radius: 16px;
+  background: rgba(8, 11, 14, 0.97);
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.55);
 }
 
 .establishmentDetailBody {
   min-width: 0;
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
+  grid-template-columns: 190px minmax(0, 1fr);
   gap: 12px;
   align-items: center;
 }
 
 .establishmentDetailBanner {
-  width: 150px;
-  height: 62px;
+  width: 190px;
+  height: 104px;
   object-fit: cover;
   border: 1px solid rgba(197, 160, 89, 0.34);
   border-radius: 8px;
@@ -832,14 +838,15 @@
   border-radius: 5px;
   background: rgba(96, 165, 250, 0.07);
   color: #b9d4f5 !important;
-  font-size: 7px !important;
+  font-size: 8px !important;
+  line-height: 1.35;
   font-weight: 800;
 }
 
 .detailCloseButton {
   align-self: center;
-  min-height: 38px;
-  padding: 0 13px;
+  min-height: 42px;
+  padding: 0 16px;
   border: 1px solid #3a3d42;
   border-radius: 8px;
   background: #17191d;
