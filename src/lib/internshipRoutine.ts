@@ -248,3 +248,33 @@ export function getOfficeAccessDecision(player: PlayerProfile, arrivalMinute = p
   if (arrivalMinute > schedule.endMinute + 60) return { allowed: false, reason: 'CLOSED', arrivalMinute };
   return { allowed: true, reason: 'OPEN', arrivalMinute };
 }
+
+export function isInternCareer(player: PlayerProfile) {
+  return player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR';
+}
+
+export function canUseOfficeGameplay(player: PlayerProfile) {
+  if (!isInternCareer(player)) return { allowed: true as const, reason: '' };
+  if (player.officeDiscipline.employmentStatus !== 'ACTIVE') {
+    return { allowed: false as const, reason: 'Seu vínculo com o Ramos & Associados não está ativo. As atividades internas do estágio estão indisponíveis.' };
+  }
+  if (player.worldLocation.kind !== 'OFFICE') {
+    return { allowed: false as const, reason: 'Esta atividade exige sua presença física no Ramos & Associados.' };
+  }
+  const access = getOfficeAccessDecision(player);
+  if (!access.allowed) {
+    return { allowed: false as const, reason: access.reason === 'TOO_EARLY' ? 'O expediente ainda não começou.' : 'O expediente do estágio já está encerrado.' };
+  }
+  const attendance = getTodayAttendance(player);
+  if (!attendance || attendance.status === 'ABSENT') {
+    return { allowed: false as const, reason: 'Sua entrada no expediente ainda não foi registrada.' };
+  }
+  return { allowed: true as const, reason: '' };
+}
+
+export function isAuthorizedExternalCaseActivity(player: PlayerProfile) {
+  return isInternCareer(player)
+    && player.officeDiscipline.employmentStatus === 'ACTIVE'
+    && Boolean(player.activeCase)
+    && (player.worldLocation.kind === 'CASE_LOCATION' || player.worldLocation.kind === 'OFFICE');
+}
