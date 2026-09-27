@@ -1,6 +1,7 @@
 import type { OfficePerformanceState, PlayerProfile } from '../types/game';
 
 export type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT' | 'OFF_DAY';
+export type RoutineDisciplineLevel = 'NOTE' | 'WARNING' | 'TERMINATION';
 export type OfficeEventKind = 'CLIENT_URGENT' | 'SYSTEM_DOWN' | 'COLLEAGUE_HELP' | 'DEADLINE_PRESSURE' | 'QUIET_DAY';
 export type OfficeEventChoiceId = 'HELP_NOW' | 'ASK_MARIANA' | 'PROTECT_PRIORITY';
 
@@ -423,4 +424,48 @@ export function buildMarianaArrivalDialogues(player: PlayerProfile, taskTitles: 
       ? 'Como Estagiário Sênior, você terá mais autonomia. Nem toda demanda virá com instruções detalhadas, então organização e iniciativa passam a pesar ainda mais.'
       : 'Se surgir uma urgência durante o expediente, eu aviso você. O escritório observa não só se a tarefa foi concluída, mas como você administra prioridades e imprevistos.' },
   ];
+}
+
+export interface RoutineDisciplineAssessment {
+  level: RoutineDisciplineLevel;
+  title: string;
+  message: string;
+  warningDelta: number;
+  trustDelta: number;
+  diligenceDelta: number;
+}
+
+export function assessArrivalDiscipline(player: PlayerProfile, record: InternshipAttendanceRecord): RoutineDisciplineAssessment | null {
+  if (record.status !== 'LATE' && record.status !== 'ABSENT') return null;
+  const state = readInternshipRoutine(player);
+  const recent = state.attendance.filter((item) => item.date !== record.date).slice(-10);
+  const priorLate = recent.filter((item) => item.status === 'LATE').length;
+  const priorAbsent = recent.filter((item) => item.status === 'ABSENT').length;
+
+  if (record.status === 'ABSENT') {
+    const termination = player.officeDiscipline.warningCount >= 1 || priorAbsent >= 1;
+    return termination
+      ? { level: 'TERMINATION', title: 'Reincidência de falta', message: 'A nova falta se soma a ocorrências anteriores. Roberto considera que o estágio perdeu a previsibilidade mínima exigida pelo escritório.', warningDelta: 1, trustDelta: -10, diligenceDelta: -8 }
+      : { level: 'WARNING', title: 'Falta sem justificativa', message: 'A ausência foi registrada como falta não justificada e gera advertência formal. Uma nova ocorrência grave pode encerrar o vínculo.', warningDelta: 1, trustDelta: -7, diligenceDelta: -6 };
+  }
+
+  if (record.lateMinutes >= 90 || priorLate >= 2) {
+    const termination = player.officeDiscipline.warningCount >= 1 && (priorLate >= 2 || record.lateMinutes >= 120);
+    return termination
+      ? { level: 'TERMINATION', title: 'Atrasos recorrentes', message: 'A recorrência de atrasos comprometeu a confiança do escritório na sua rotina profissional.', warningDelta: 1, trustDelta: -8, diligenceDelta: -6 }
+      : { level: 'WARNING', title: 'Advertência por pontualidade', message: 'Os atrasos deixaram de ser uma ocorrência isolada. Roberto registra uma advertência formal por pontualidade.', warningDelta: 1, trustDelta: -5, diligenceDelta: -4 };
+  }
+
+  return { level: 'NOTE', title: 'Observação de pontualidade', message: 'Mariana registrou o atraso. A ocorrência fica como observação; reincidências podem gerar advertência formal.', warningDelta: 0, trustDelta: -2, diligenceDelta: -2 };
+}
+
+export function assessEarlyDeparture(player: PlayerProfile, departureMinute: number): RoutineDisciplineAssessment | null {
+  const schedule = getWorkSchedule(player);
+  if (!schedule.workday || departureMinute >= schedule.endMinute) return null;
+  const minutesEarly = schedule.endMinute - departureMinute;
+  if (minutesEarly <= 15) return null;
+  if (minutesEarly >= 120) {
+    return { level: 'WARNING', title: 'Saída antecipada', message: `Você encerrou o expediente ${minutesEarly} minutos antes do horário sem uma atividade externa registrada. A ocorrência gera advertência formal.`, warningDelta: 1, trustDelta: -5, diligenceDelta: -4 };
+  }
+  return { level: 'NOTE', title: 'Saída antes do horário', message: `Você deixou o escritório ${minutesEarly} minutos antes do fim do expediente. A saída foi registrada e afeta sua avaliação de rotina.`, warningDelta: 0, trustDelta: -2, diligenceDelta: -2 };
 }
