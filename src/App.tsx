@@ -58,7 +58,7 @@ import {
 import { OfficeScene } from './components/OfficeScene/OfficeScene';
 import { InternPromotionCeremonyModal } from './components/InternPromotionCeremonyModal';
 import { getSeniorDailyDesk, buildSeniorFirstDayDialogues } from './lib/seniorInternEngine';
-import { hydrateInternshipRoutine, persistInternshipRoutine, loadSeniorPortfolio, persistSeniorPortfolio } from './lib/internshipRoutineRepository';
+import { hydrateInternshipRoutine, persistInternshipRoutine, loadSeniorPortfolio, persistSeniorPortfolio, loadOabPreparation, persistOabPreparation } from './lib/internshipRoutineRepository';
 import { advanceSeniorPortfolioDeadlines, applySeniorDecisionConsequence, buildRobertoCareerRecall, buildSeniorOabReadinessDialogues, buildSupervisorPortfolioReview, completeSeniorPortfolioAction, getSeniorProfessionalScene, portfolioDate, type SeniorLegalDecision, type SeniorPortfolioDecision, type SeniorPortfolioMatter } from './lib/seniorPortfolio';
 import { SeniorProfessionalScene } from './components/SeniorProfessionalScene';
 import { completeOabStudy, emptyOabPreparation, OAB_AREAS, oabReadiness, recordOabMock, unlockOabPreparation, type OabPreparationState, type OabStudyArea } from './lib/oabIntensivePreparation';
