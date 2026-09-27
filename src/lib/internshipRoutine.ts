@@ -24,6 +24,7 @@ export interface InternshipRoutineState {
   meetings: InternshipMeetingRecord[];
   handledEventKeys: string[];
   lastTaskDeliveryKey: string | null;
+  dailyTaskKeys: Record<string, string[]>;
 }
 
 export interface WorkSchedule {
@@ -62,16 +63,17 @@ function hash(value: string) {
 export function readInternshipRoutine(player: PlayerProfile): InternshipRoutineState {
   try {
     const raw = localStorage.getItem(storageKey(player));
-    if (!raw) return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null };
+    if (!raw) return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {} };
     const parsed = JSON.parse(raw);
     return {
       attendance: Array.isArray(parsed.attendance) ? parsed.attendance.slice(-90) : [],
       meetings: Array.isArray(parsed.meetings) ? parsed.meetings.slice(-30) : [],
       handledEventKeys: Array.isArray(parsed.handledEventKeys) ? parsed.handledEventKeys.slice(-120) : [],
       lastTaskDeliveryKey: typeof parsed.lastTaskDeliveryKey === 'string' ? parsed.lastTaskDeliveryKey : null,
+      dailyTaskKeys: parsed.dailyTaskKeys && typeof parsed.dailyTaskKeys === 'object' ? parsed.dailyTaskKeys : {},
     };
   } catch {
-    return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null };
+    return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {} };
   }
 }
 
@@ -298,4 +300,53 @@ export function shouldCloseInternWorkday(player: PlayerProfile) {
   if (!isInternCareer(player)) return false;
   const schedule = getWorkSchedule(player);
   return schedule.workday && player.gameCurrentMinutes >= schedule.endMinute;
+}
+
+export function getDailyTaskIds(player: PlayerProfile, availableTaskIds: string[]) {
+  const state = readInternshipRoutine(player);
+  const key = dateKey(player);
+  const existing = state.dailyTaskKeys[key];
+  if (Array.isArray(existing)) return existing.filter((id) => availableTaskIds.includes(id));
+
+  const completed = new Set(player.officePerformance.completedTaskIds || []);
+  const pending = availableTaskIds.filter((id) => !completed.has(id));
+  const pool = pending.length ? pending : availableTaskIds;
+  const count = player.careerTier === 'ESTAGIARIO_SENIOR' ? 3 : 2;
+  const selected = [...pool]
+    .sort((a, b) => (hash(`${key}:${player.avatarSeed}:${a}`) % 10000) - (hash(`${key}:${player.avatarSeed}:${b}`) % 10000))
+    .slice(0, Math.min(count, pool.length));
+  state.dailyTaskKeys[key] = selected;
+  const retainedKeys = Object.keys(state.dailyTaskKeys).sort().slice(-30);
+  state.dailyTaskKeys = Object.fromEntries(retainedKeys.map((entryKey) => [entryKey, state.dailyTaskKeys[entryKey]]));
+  saveInternshipRoutine(player, state);
+  return selected;
+}
+
+export function buildSupervisorReviewDialogues(player: PlayerProfile, meeting: InternshipMeetingRecord) {
+  const state = readInternshipRoutine(player);
+  const recent = state.attendance.filter((item) => item.status !== 'OFF_DAY').slice(-10);
+  const late = recent.filter((item) => item.status === 'LATE').length;
+  const absent = recent.filter((item) => item.status === 'ABSENT').length;
+  const p = player.officePerformance;
+  const strongest = [
+    ['técnica', p.technique],
+    ['diligência', p.diligence],
+    ['ética', p.ethics],
+    ['gestão de prazos', p.deadlineManagement],
+    ['confiança', p.supervisorTrust],
+  ].sort((a, b) => Number(b[1]) - Number(a[1]))[0][0];
+  const weakest = [
+    ['técnica', p.technique],
+    ['diligência', p.diligence],
+    ['ética', p.ethics],
+    ['gestão de prazos', p.deadlineManagement],
+    ['confiança', p.supervisorTrust],
+  ].sort((a, b) => Number(a[1]) - Number(b[1]))[0][0];
+
+  return [
+    { eyebrow: 'Avaliação periódica', text: `Quero conversar sobre seu estágio. Esta avaliação considera suas últimas jornadas, as entregas feitas e a forma como você vem se integrando ao escritório. Sua nota interna neste ciclo é ${meeting.score}/100.` },
+    { eyebrow: 'Frequência e responsabilidade', text: absent > 0 ? `Tivemos ${absent} falta(s) e ${late} atraso(s) no período. Isso pesa porque previsibilidade e responsabilidade são parte do trabalho jurídico.` : late > 0 ? `Você não teve faltas, mas registrou ${late} atraso(s). Quero que cuide melhor do horário para que isso não vire um padrão.` : 'Sua frequência foi consistente neste período. Pontualidade parece simples, mas é uma das formas mais objetivas de construir confiança profissional.' },
+    { eyebrow: 'Desempenho', text: `Seu ponto mais forte neste momento é ${strongest}. O aspecto que mais precisa de atenção é ${weakest}. Não espero perfeição de um estagiário; espero evolução e capacidade de corrigir o que ainda está fraco.` },
+    { eyebrow: meeting.score >= 75 ? 'Próximos passos' : meeting.score >= 60 ? 'Evolução esperada' : 'Alinhamento necessário', text: meeting.summary },
+  ];
 }
