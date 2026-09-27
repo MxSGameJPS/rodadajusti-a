@@ -413,7 +413,7 @@ export default function App() {
   const [pendingPantryItemId, setPendingPantryItemId] = useState<string | null>(null);
   const [officeClosedArrivalMinute, setOfficeClosedArrivalMinute] = useState<number | null>(null);
   const [supervisorReviewDialogues, setSupervisorReviewDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
-  const [pendingSupervisorReview, setPendingSupervisorReview] = useState<ReturnType<typeof getPeriodicReview>>(null);
+  const [periodicSupervisorReview, setPeriodicSupervisorReview] = useState<ReturnType<typeof getPeriodicReview>>(null);
 
   const openOfficeManagement = () => {
     if (!canManageOwnOffice(player)) {
@@ -948,12 +948,12 @@ export default function App() {
     if (!ensureOfficeGameplayAvailable()) return;
     const review = getPeriodicReview(player);
     if (!review) return;
-    setPendingSupervisorReview(review);
+    setPeriodicSupervisorReview(review);
     setSupervisorReviewDialogues(buildSupervisorReviewDialogues(player, review));
   };
 
   const handleCompleteSupervisorReview = () => {
-    const review = pendingSupervisorReview;
+    const review = periodicSupervisorReview;
     if (!review) return;
     recordPeriodicReview(player, review);
     const trustDelta = review.score >= 75 ? 3 : review.score >= 60 ? 1 : -4;
@@ -966,7 +966,7 @@ export default function App() {
       gameDate: review.date, kind: 'PERFORMANCE_REVIEW', title: review.title, description: review.summary,
       scope: 'WORKPLACE', intensity: 36, dimensions: { professionalTrust: trustDelta, professionalRespect: review.score >= 60 ? 2 : -2, conflict: review.score < 60 ? 3 : 0 }, bond: 'PROFESSIONAL',
     });
-    setPendingSupervisorReview(null);
+    setPeriodicSupervisorReview(null);
     setSupervisorReviewDialogues(null);
   };
 
@@ -2407,14 +2407,14 @@ export default function App() {
         onPurchaseOffer={handlePurchaseWorldOffer}
       />
 
-      {supervisorReviewDialogues && pendingSupervisorReview && (
+      {supervisorReviewDialogues && periodicSupervisorReview && (
         <NpcGuidanceDialog
           isOpen
           npcName="Dr. Roberto Ramos"
           npcRole="Sócio responsável • Ramos & Associados"
           portraitSrc="/personagens/dr-roberto-ramos.png"
           portraitAlt="Dr. Roberto Ramos, supervisor do estágio"
-          contextLabel={pendingSupervisorReview.title}
+          contextLabel={periodicSupervisorReview.title}
           dialogues={supervisorReviewDialogues}
           finalActionLabel="Encerrar reunião"
           onComplete={handleCompleteSupervisorReview}
