@@ -241,27 +241,15 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(216, 174, 89, 0.55) transparent;
+  scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
 }
 
 .sidebarItems::-webkit-scrollbar {
-  width: 4px;
-}
-
-.sidebarItems::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebarItems::-webkit-scrollbar-thumb {
-  border-radius: 99px;
-  background: rgba(216, 174, 89, 0.48);
-}
-
-.sidebarItems::-webkit-scrollbar-thumb:hover {
-  background: rgba(216, 174, 89, 0.72);
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .navItem,
