@@ -44,6 +44,8 @@ interface InternshipCareerPanelProps {
   onSeniorPortfolioAction?: (matterId: string, action: SeniorPortfolioMatter['pending'][number]) => void;
   onSeniorPortfolioReview?: (matterId: string) => void;
   onSeniorPortfolioDecision?: (matterId: string) => void;
+  onSeniorOabReadinessReview?: () => void;
+  seniorCareerRecall?: string;
 }
 
 const METRICS = [
@@ -73,7 +75,7 @@ function buildMarianaTaskGuidance(task: OfficeStageTask, isSenior: boolean): Npc
   ];
 }
 
-export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview, onRequestAbsenceJustification, onChooseSeniorPriority, seniorPortfolio = [], onSeniorPortfolioAction, onSeniorPortfolioReview, onSeniorPortfolioDecision }) => {
+export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview, onRequestAbsenceJustification, onChooseSeniorPriority, seniorPortfolio = [], onSeniorPortfolioAction, onSeniorPortfolioReview, onSeniorPortfolioDecision, onSeniorOabReadinessReview, seniorCareerRecall }) => {
   const [selectedTask, setSelectedTask] = useState<OfficeStageTask | null>(null);
   const [pendingTask, setPendingTask] = useState<OfficeStageTask | null>(null);
   const [isTaskGuidanceOpen, setIsTaskGuidanceOpen] = useState(false);
@@ -137,6 +139,7 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
       {isSenior && onChooseSeniorPriority && <SeniorInternDesk player={player} onChoosePriority={onChooseSeniorPriority} />}
 
       {isSenior && onSeniorPortfolioAction && <SeniorPortfolioPanel portfolio={seniorPortfolio} onAction={onSeniorPortfolioAction} onReview={onSeniorPortfolioReview} onDecision={onSeniorPortfolioDecision} />}
+      {isSenior && onSeniorOabReadinessReview && <section className="mt-4 rounded-xl border border-[#C5A059]/20 bg-[#C5A059]/[.04] p-4"><span className="text-[9px] font-black uppercase tracking-wider text-[#C5A059]">Leitura do supervisor</span><p className="mt-2 text-[10px] leading-relaxed text-[#9D9990]">{seniorCareerRecall}</p><button type="button" onClick={onSeniorOabReadinessReview} className="mt-3 rounded-lg border border-[#C5A059]/30 px-3 py-2 text-[10px] font-bold text-[#D8BC7B] hover:bg-[#C5A059]/10">Conversar com Roberto sobre minha preparação para a OAB</button></section>}
 
             <InternOfficeTaskModal
         isOpen={!!selectedTask}
