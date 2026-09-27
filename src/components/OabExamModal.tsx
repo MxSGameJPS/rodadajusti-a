@@ -36,6 +36,8 @@ interface OabExamModalProps {
   onClose: () => void;
   player: PlayerProfile;
   onComplete: (result: ProfessionalExamResult, exam: ProfessionalExam) => void;
+  allowedModes?: ProfessionalExamMode[];
+  contextLabel?: string;
 }
 
 type Phase = 'loading' | 'intro' | 'exam' | 'submitting' | 'result' | 'error';
@@ -126,6 +128,8 @@ export const OabExamModal: React.FC<OabExamModalProps> = ({
   onClose,
   player,
   onComplete,
+  allowedModes = ['full', 'quick'],
+  contextLabel,
 }) => {
   const storageKey = useMemo(() => attemptStorageKey(player), [player.cloudCareerId, player.name]);
   const [phase, setPhase] = useState<Phase>('loading');
@@ -408,7 +412,7 @@ export const OabExamModal: React.FC<OabExamModalProps> = ({
                   <BookOpenCheck className="text-[#C5A059] shrink-0 mt-0.5" size={24} />
                   <div>
                     <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#C5A059] font-mono">
-                      Escolha como viver este marco da carreira
+                      {contextLabel || 'Escolha como viver este marco da carreira'}
                     </div>
                     <h3 className="text-xl sm:text-2xl font-serif font-bold text-[#F1EFE9] mt-1">
                       Qual simulado você quer realizar?
@@ -447,7 +451,7 @@ export const OabExamModal: React.FC<OabExamModalProps> = ({
               )}
 
               <div className="grid lg:grid-cols-2 gap-4">
-                {(['full', 'quick'] as ProfessionalExamMode[]).map((examMode) => {
+                {allowedModes.map((examMode) => {
                   const item = MODE_CONFIG[examMode];
                   const isSavedMode = hasSavedAttempt && mode === examMode;
                   return (
