@@ -1310,6 +1310,20 @@ export default function App() {
     });
   };
 
+  const handleRequestEstablishment = (
+    establishment: WorldEstablishment,
+    point: { lat: number; lng: number },
+  ) => {
+    setLifeTravelConfirm({
+      origin: 'CURRENT',
+      destination: 'ESTABLISHMENT',
+      reason: 'GO_ESTABLISHMENT',
+      destinationPoint: point,
+      destinationLabel: establishment.name,
+      destinationRefId: establishment.id,
+    });
+  };
+
   const handleRequestUniversityTrip = () => {
     const isIntern = player.careerTier === 'ESTAGIARIO'
       || player.careerTier === 'ESTAGIARIO_SENIOR';
@@ -1353,10 +1367,16 @@ export default function App() {
         ...clock,
         money: Math.max(0, prev.money - result.cost),
         personalFinances: finances,
-        worldLocation: worldLocationForLifePlace(
-          request.destination,
-          result.destination.label,
-        ),
+        worldLocation: request.destination === 'ESTABLISHMENT'
+          ? {
+              kind: 'ESTABLISHMENT',
+              refId: request.destinationRefId || null,
+              label: result.destination.label,
+            }
+          : worldLocationForLifePlace(
+              request.destination,
+              result.destination.label,
+            ),
       };
     });
 
@@ -1374,6 +1394,11 @@ export default function App() {
 
     if (request.reason === 'GO_UNIVERSITY') {
       setHomeActivity('STUDY_UNIVERSITY');
+      return;
+    }
+
+    if (request.reason === 'GO_ESTABLISHMENT') {
+      setIsCityWorldMapOpen(true);
     }
   };
 
@@ -2012,16 +2037,21 @@ export default function App() {
         onOpenHome={handleRequestGoHome}
         onGoToOffice={handleRequestGoOffice}
         onStudyAtUniversity={handleRequestUniversityTrip}
+        onGoToEstablishment={handleRequestEstablishment}
         onPurchaseOffer={handlePurchaseWorldOffer}
       />
 
       <LifeTravelConfirmModal
         isOpen={!!lifeTravelConfirm}
         originLabel={player.worldLocation.label || 'Local atual'}
-        destinationLabel="Sua casa"
-        title="Deseja ir para casa?"
-        message="O personagem sairá do local atual e o deslocamento até a residência será mostrado no mapa. A viagem consome tempo e transporte."
-        confirmLabel="Sim, ir para casa"
+        destinationLabel={lifeTravelConfirm?.destinationLabel || (lifeTravelConfirm?.destination === 'HOME' ? 'Sua casa' : 'Destino')}
+        title={lifeTravelConfirm?.reason === 'GO_ESTABLISHMENT'
+          ? `Deseja ir até ${lifeTravelConfirm.destinationLabel || 'o estabelecimento'}?`
+          : 'Deseja ir para casa?'}
+        message={lifeTravelConfirm?.reason === 'GO_ESTABLISHMENT'
+          ? 'O personagem irá até o estabelecimento pelo mapa. O deslocamento consome tempo e transporte; ao chegar, serão abertas as opções disponíveis no local.'
+          : 'O personagem sairá do local atual e o deslocamento até a residência será mostrado no mapa. A viagem consome tempo e transporte.'}
+        confirmLabel={lifeTravelConfirm?.reason === 'GO_ESTABLISHMENT' ? 'Sim, ir ao estabelecimento' : 'Sim, ir para casa'}
         onCancel={() => setLifeTravelConfirm(null)}
         onConfirm={() => {
           if (lifeTravelConfirm) beginLifeTravel(lifeTravelConfirm);
