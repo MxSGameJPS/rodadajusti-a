@@ -73,3 +73,6 @@ export async function submitProfessionalExam(params: {
 
   return data as ProfessionalExamResult;
 }
+
+export async function loadPublishedExamByType(examType:string):Promise<ProfessionalExam>{if(!supabase)throw new Error('Supabase não está configurado.');const{data:row,error}=await supabase.from('exams').select('slug').eq('exam_type',examType).eq('status','published').eq('is_active',true).order('published_at',{ascending:false}).limit(1).maybeSingle();if(error||!row?.slug)throw new Error('A prova deste concurso ainda não foi publicada pelo Rota Admin.');return loadProfessionalExam(row.slug)}
+export async function submitPublicCareerExam(params:{slug:string;answers:Record<string,string>;durationSeconds:number;careerId:string;opportunityId:string}):Promise<ProfessionalExamResult>{if(!supabase)throw new Error('Supabase não está configurado.');const{data,error}=await supabase.rpc('submit_public_career_exam',{p_exam_slug:params.slug,p_answers:params.answers,p_duration_seconds:Math.max(0,Math.floor(params.durationSeconds)),p_career_id:params.careerId,p_opportunity_id:params.opportunityId});if(error)throw new Error(error.message||'Não foi possível corrigir o concurso.');return data as ProfessionalExamResult}
