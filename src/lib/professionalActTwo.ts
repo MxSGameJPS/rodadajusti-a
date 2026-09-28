@@ -53,12 +53,13 @@ export interface ProfessionalPortfolioState {
 export interface ProfessionalWorkState {
   version:1; workdayStartMinute:number; workdayEndMinute:number; weeklyHours:number;
   arrivalKeys:string[]; completedResponsibilityKeys:string[]; missedDeadlineKeys:string[];
+  processedAgendaKeys:string[]; seniorReviewCompleted:boolean; actTwoCompleted:boolean;
 }
 
 const PORTFOLIO_PREFIX='rota_act_two_portfolio_v1:';
 const WORK_PREFIX='rota_act_two_work_v1:';
 const emptyPortfolio=():ProfessionalPortfolioState=>({version:1,matters:[],agenda:[],firstProfessionalDayCompleted:false,firstMatterAssigned:false,clients:[],hearings:[],strategies:[],specializations:[],reputation:{technical:20,internalTrust:20,publicRecognition:5,marketPrestige:10,lastReason:null},network:[]});
-const emptyWork=():ProfessionalWorkState=>({version:1,workdayStartMinute:9*60,workdayEndMinute:18*60,weeklyHours:40,arrivalKeys:[],completedResponsibilityKeys:[],missedDeadlineKeys:[]});
+const emptyWork=():ProfessionalWorkState=>({version:1,workdayStartMinute:9*60,workdayEndMinute:18*60,weeklyHours:40,arrivalKeys:[],completedResponsibilityKeys:[],missedDeadlineKeys:[],processedAgendaKeys:[],seniorReviewCompleted:false,actTwoCompleted:false});
 const owner=(p:PlayerProfile)=>p.cloudCareerId||p.oabRegistration?.code||p.name||'player';
 function read<T>(key:string,fallback:T):T{if(typeof window==='undefined')return fallback;try{const raw=localStorage.getItem(key);return raw?{...fallback,...JSON.parse(raw)}:fallback}catch{return fallback}}
 function write(key:string,value:unknown){if(typeof window==='undefined')return;try{localStorage.setItem(key,JSON.stringify(value))}catch{/* cache opcional */}}
@@ -67,7 +68,7 @@ function normalizePortfolio(value:Partial<ProfessionalPortfolioState>|null|undef
  const base=emptyPortfolio(); return {...base,...(value||{}),matters:Array.isArray(value?.matters)?value!.matters:[],agenda:Array.isArray(value?.agenda)?value!.agenda:[],clients:Array.isArray(value?.clients)?value!.clients:[],hearings:Array.isArray(value?.hearings)?value!.hearings:[],strategies:Array.isArray(value?.strategies)?value!.strategies:[],specializations:Array.isArray(value?.specializations)?value!.specializations:[],reputation:{...base.reputation,...(value?.reputation||{})},network:Array.isArray(value?.network)?value!.network:[]};
 }
 export function readProfessionalPortfolio(player:PlayerProfile){return normalizePortfolio(read(PORTFOLIO_PREFIX+owner(player),emptyPortfolio()))}
-export function readProfessionalWorkState(player:PlayerProfile){return read(WORK_PREFIX+owner(player),emptyWork())}
+export function readProfessionalWorkState(player:PlayerProfile){const value=read(WORK_PREFIX+owner(player),emptyWork());return {...emptyWork(),...value,arrivalKeys:Array.isArray(value.arrivalKeys)?value.arrivalKeys:[],completedResponsibilityKeys:Array.isArray(value.completedResponsibilityKeys)?value.completedResponsibilityKeys:[],missedDeadlineKeys:Array.isArray(value.missedDeadlineKeys)?value.missedDeadlineKeys:[],processedAgendaKeys:Array.isArray(value.processedAgendaKeys)?value.processedAgendaKeys:[]}}
 export function saveProfessionalPortfolio(player:PlayerProfile,state:ProfessionalPortfolioState){write(PORTFOLIO_PREFIX+owner(player),state);void persistActTwoState(player,{professional_portfolio:state})}
 export function saveProfessionalWorkState(player:PlayerProfile,state:ProfessionalWorkState){write(WORK_PREFIX+owner(player),state);void persistActTwoState(player,{professional_work_state:state})}
 
@@ -82,7 +83,7 @@ export async function hydrateActTwoState(player:PlayerProfile){
  const {data,error}=await supabase.from('careers').select('professional_portfolio,professional_work_state').eq('id',player.cloudCareerId).maybeSingle();
  if(error||!data)return {portfolio:readProfessionalPortfolio(player),work:readProfessionalWorkState(player)};
  const portfolio=normalizePortfolio(data.professional_portfolio as Partial<ProfessionalPortfolioState>);
- const work={...emptyWork(),...(data.professional_work_state||{})} as ProfessionalWorkState;
+ const rawWork=(data.professional_work_state||{}) as Partial<ProfessionalWorkState>; const work={...emptyWork(),...rawWork,arrivalKeys:Array.isArray(rawWork.arrivalKeys)?rawWork.arrivalKeys:[],completedResponsibilityKeys:Array.isArray(rawWork.completedResponsibilityKeys)?rawWork.completedResponsibilityKeys:[],missedDeadlineKeys:Array.isArray(rawWork.missedDeadlineKeys)?rawWork.missedDeadlineKeys:[],processedAgendaKeys:Array.isArray(rawWork.processedAgendaKeys)?rawWork.processedAgendaKeys:[]} as ProfessionalWorkState;
  write(PORTFOLIO_PREFIX+owner(player),portfolio);write(WORK_PREFIX+owner(player),work);return{portfolio,work};
 }
 
@@ -246,4 +247,34 @@ export interface ActTwoClosure{ready:boolean;title:string;summary:string;dialogu
 export function getActTwoClosure(player:PlayerProfile):ActTwoClosure{
  const review=getSeniorReviewSnapshot(player);
  return{ready:review.eligible,title:'Consolidação Profissional',summary:review.eligible?'Sua atuação deixou de ser apenas promessa. Você construiu carteira, clientes, confiança interna e uma identidade técnica própria.':'A sociedade ainda acompanha sua consolidação antes de entregar responsabilidades de Advogado Sênior.',dialogues:review.eligible?['Roberto: Você já não trabalha como alguém que acabou de sair da OAB.','Mariana: Os clientes começaram a procurar você pelo seu nome, não apenas pelo escritório.','Roberto: A partir de agora, quero você conduzindo casos de maior responsabilidade e ajudando a orientar os mais novos.']:review.gaps.map(gap=>`Avaliação pendente: ${gap}.`),unlocks:review.eligible?['Casos de maior complexidade','Maior autonomia estratégica','Orientação de profissionais juniores','Elegibilidade para trajetória societária']:[]};
+}
+
+function gameDateKey(player:PlayerProfile){return [String(player.gameCurrentYear).padStart(4,'0'),String(player.gameCurrentMonth).padStart(2,'0'),String(player.gameCurrentDay).padStart(2,'0')].join('-')}
+function agendaExpired(task:ProfessionalAgendaTask,date:string,minute:number){return task.dueGameDate<date||(task.dueGameDate===date&&task.dueMinute!=null&&task.dueMinute<minute)}
+export function reconcileProfessionalAgenda(player:PlayerProfile){
+ const state=readProfessionalPortfolio(player),work=readProfessionalWorkState(player),date=gameDateKey(player),minute=player.gameCurrentHour*60+player.gameCurrentMinute;
+ const expired=state.agenda.filter(task=>task.status==='PENDING'&&agendaExpired(task,date,minute)&&!work.processedAgendaKeys.includes(task.id));
+ if(!expired.length)return{portfolio:state,work,missed:[] as ProfessionalAgendaTask[]};
+ const ids=new Set(expired.map(task=>task.id));
+ const affectedCases=new Set(expired.map(task=>task.caseId).filter((id):id is string=>Boolean(id)));
+ const agenda=state.agenda.map(task=>ids.has(task.id)?{...task,status:'MISSED' as const}:task);
+ const clients=state.clients.map(client=>client.matterIds.some(matterId=>state.matters.some(m=>m.id===matterId&&affectedCases.has(m.caseId)))?{...client,trust:clamp100(client.trust-8),satisfaction:clamp100(client.satisfaction-10),mood:'UPSET' as ClientMood}:client);
+ const reputation={...state.reputation,internalTrust:clamp100(state.reputation.internalTrust-expired.length*4),technical:clamp100(state.reputation.technical-expired.filter(task=>task.critical).length*2),lastReason:'Prazo ou compromisso profissional perdido'};
+ const nextPortfolio={...state,agenda,clients,reputation};
+ const nextWork={...work,missedDeadlineKeys:Array.from(new Set([...work.missedDeadlineKeys,...expired.filter(task=>task.kind==='DEADLINE').map(task=>task.id])).values()).slice(-120),processedAgendaKeys:Array.from(new Set([...work.processedAgendaKeys,...expired.map(task=>task.id)]).values()).slice(-240)};
+ saveProfessionalPortfolio(player,nextPortfolio);saveProfessionalWorkState(player,nextWork);return{portfolio:nextPortfolio,work:nextWork,missed:expired};
+}
+export function completeProfessionalAgendaTask(player:PlayerProfile,taskId:string){
+ const state=readProfessionalPortfolio(player),task=state.agenda.find(item=>item.id===taskId);if(!task||task.status!=='PENDING')return state;
+ const next={...state,agenda:state.agenda.map(item=>item.id===taskId?{...item,status:'DONE' as const}:item),reputation:{...state.reputation,internalTrust:clamp100(state.reputation.internalTrust+(task.critical?2:1)),lastReason:'Obrigação profissional cumprida'}};
+ saveProfessionalPortfolio(player,next);return next;
+}
+export function recordProfessionalHearingResult(player:PlayerProfile,hearingId:string,result:ProfessionalHearing['result']){
+ const state=readProfessionalPortfolio(player),hearing=state.hearings.find(item=>item.id===hearingId);if(!hearing||hearing.attended)return state;
+ const taskId=`agenda:${hearing.id}`;const reputation={...state.reputation,technical:clamp100(state.reputation.technical+(result==='FAVORABLE'?3:result==='UNFAVORABLE'?-2:1)),internalTrust:clamp100(state.reputation.internalTrust+(hearing.preparation==='READY'?2:hearing.preparation==='UNPREPARED'?-4:0)),lastReason:'Audiência profissional realizada'};
+ const next={...state,hearings:state.hearings.map(item=>item.id===hearingId?{...item,attended:true,result}:item),agenda:state.agenda.map(task=>task.id===taskId?{...task,status:'DONE' as const}:task),reputation};saveProfessionalPortfolio(player,next);return next;
+}
+export function markSeniorReviewCompleted(player:PlayerProfile){
+ const work=readProfessionalWorkState(player);if(work.seniorReviewCompleted&&work.actTwoCompleted)return work;
+ const next={...work,seniorReviewCompleted:true,actTwoCompleted:true};saveProfessionalWorkState(player,next);return next;
 }
