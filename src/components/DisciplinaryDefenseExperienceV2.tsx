@@ -26,6 +26,7 @@ import {
   beginDisciplinaryDefense,
   evaluateAndOpenDisciplinaryProceeding,
   getDefenseStrategies,
+  hydrateDisciplinaryState,
   isProfessionalPracticeBlocked,
   loadDisciplinaryState,
   saveDisciplinaryState,
@@ -110,7 +111,12 @@ export const DisciplinaryDefenseExperienceV2: React.FC = () => {
       }
     };
 
-    sync();
+    const currentPlayer = readCurrentPlayerSnapshot();
+    if (currentPlayer?.oabRegistration) {
+      void hydrateDisciplinaryState(currentPlayer).then(() => sync());
+    } else {
+      sync();
+    }
     const timer = window.setInterval(sync, 1000);
 
     const handleState = (event: Event) => {
