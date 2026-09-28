@@ -194,8 +194,19 @@ export function recordProfessionalMatterOutcome(player:PlayerProfile,caseId:stri
  });
  const specializations=state.specializations.map(spec=>spec.area===matter.area?withSpecializationLevel({...spec,experiencePoints:spec.experiencePoints+(success?25:12),successfulMatters:spec.successfulMatters+(success?1:0)}):spec);
  const rep=state.reputation;
- const reputation={technical:clamp100(rep.technical+(success?4:1)),internalTrust:clamp100(rep.internalTrust+(success?3:-3)),publicRecognition:clamp100(rep.publicRecognition+(success?2:0)),marketPrestige:clamp100(rep.marketPrestige+(success?2:-1)),lastReason:success?'Resultado profissional favorável':'Resultado profissional desfavorável'};
- const next={...state,clients,specializations,reputation,matters:state.matters.map(item=>item.id===matter.id?{...item,status:'CLOSED' as const,nextAction:'Processo encerrado'}:item)};saveProfessionalPortfolio(player,next);return next;
+ const reputation:ProfessionalReputationState={
+  ...rep,
+  technical:clamp100(rep.technical+(success?4:-2)),
+  internalTrust:clamp100(rep.internalTrust+(success?3:-3)),
+  publicRecognition:clamp100(rep.publicRecognition+(success?2:0)),
+  clientReputation:clamp100(rep.clientReputation+(success?5:-4)),
+  marketPrestige:clamp100(rep.marketPrestige+(success?3:-2)),
+  institutionalRespect:clamp100(rep.institutionalRespect+(success?2:-1)),
+  lastReason:success?'Resultado profissional favorável':'Resultado profissional desfavorável',
+  processedSourceKeys:[...rep.processedSourceKeys,`case-outcome:${caseId}`].slice(-300),
+  history:[...rep.history,{id:`rep:case-outcome:${caseId}`,sourceKey:`case-outcome:${caseId}`,gameDate:gameDateKey(player),reason:success?'Resultado profissional favorável':'Resultado profissional desfavorável',deltas:{technical:success?4:-2,publicRecognition:success?2:0,clientReputation:success?5:-4,marketPrestige:success?3:-2,institutionalRespect:success?2:-1}}].slice(-120),
+ };
+ const next={...state,clients,specializations,reputation,matters:state.matters.map(item=>item.id===matter.id?{...item,status:'CLOSED' as const,nextAction:'Processo encerrado'}:item)};saveProfessionalPortfolio(player,next);syncLegacyPlayerReputation(reputationLegacyScore(reputation));return next;
 }
 
 export function addSpecializationStudy(player:PlayerProfile,area:string,points=10){
@@ -350,7 +361,7 @@ export function reconcileProfessionalAgenda(player:PlayerProfile){
  const affectedCases=new Set(expired.map(task=>task.caseId).filter((id):id is string=>Boolean(id)));
  const agenda=state.agenda.map(task=>ids.has(task.id)?{...task,status:'MISSED' as const}:task);
  const clients=state.clients.map(client=>client.matterIds.some(matterId=>state.matters.some(m=>m.id===matterId&&affectedCases.has(m.caseId)))?{...client,trust:clamp100(client.trust-8),satisfaction:clamp100(client.satisfaction-10),mood:'UPSET' as ClientMood}:client);
- const reputation={...state.reputation,internalTrust:clamp100(state.reputation.internalTrust-expired.length*4),technical:clamp100(state.reputation.technical-expired.filter(task=>task.critical).length*2),lastReason:'Prazo ou compromisso profissional perdido'};
+ const reputation={...state.reputation,internalTrust:clamp100(state.reputation.internalTrust-expired.length*4),technical:clamp100(state.reputation.technical-expired.filter(task=>task.critical).length*2),clientReputation:clamp100(state.reputation.clientReputation-affectedCases.size*2),institutionalRespect:clamp100(state.reputation.institutionalRespect-expired.filter(task=>task.kind==='HEARING'||task.kind==='DEADLINE').length*2),lastReason:'Prazo ou compromisso profissional perdido'};
  const nextPortfolio={...state,agenda,clients,reputation};
  const nextWork={
   ...work,
@@ -372,7 +383,7 @@ export function completeProfessionalAgendaTask(player:PlayerProfile,taskId:strin
 }
 export function recordProfessionalHearingResult(player:PlayerProfile,hearingId:string,result:ProfessionalHearing['result']){
  const state=readProfessionalPortfolio(player),hearing=state.hearings.find(item=>item.id===hearingId);if(!hearing||hearing.attended)return state;
- const taskId=`agenda:${hearing.id}`;const reputation={...state.reputation,technical:clamp100(state.reputation.technical+(result==='FAVORABLE'?3:result==='UNFAVORABLE'?-2:1)),internalTrust:clamp100(state.reputation.internalTrust+(hearing.preparation==='READY'?2:hearing.preparation==='UNPREPARED'?-4:0)),lastReason:'Audiência profissional realizada'};
+ const taskId=`agenda:${hearing.id}`;const reputation={...state.reputation,technical:clamp100(state.reputation.technical+(result==='FAVORABLE'?3:result==='UNFAVORABLE'?-2:1)),internalTrust:clamp100(state.reputation.internalTrust+(hearing.preparation==='READY'?2:hearing.preparation==='UNPREPARED'?-4:0)),institutionalRespect:clamp100(state.reputation.institutionalRespect+(result==='FAVORABLE'?2:result==='UNFAVORABLE'?-1:1)+(hearing.preparation==='READY'?1:hearing.preparation==='UNPREPARED'?-2:0)),lastReason:'Audiência profissional realizada'};
  const next={...state,hearings:state.hearings.map(item=>item.id===hearingId?{...item,attended:true,result}:item),agenda:state.agenda.map(task=>task.id===taskId?{...task,status:'DONE' as const}:task),reputation};saveProfessionalPortfolio(player,next);return next;
 }
 export function markSeniorReviewCompleted(player:PlayerProfile){
