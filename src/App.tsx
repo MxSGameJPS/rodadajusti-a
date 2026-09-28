@@ -1528,14 +1528,15 @@ export default function App() {
 
     const employmentState = readProfessionalEmploymentState(player);
     const employedProfessional = player.oabRegistration && !isInternCareer(player) && isEmployedProfessional(player);
-    const supervisorOutcome = employedProfessional
+    const shouldHaveSupervisorReview = isInternCareer(player) || employedProfessional;
+    const supervisorOutcome = shouldHaveSupervisorReview
       ? buildSupervisorReview({
           decision,
           caseId: activeCaseData.id,
           caseTitle: activeCaseData.title,
           completedDate,
           currentDiscipline: player.officeDiscipline,
-          officeName: employmentState?.officeName || 'Escritório atual',
+          officeName: isInternCareer(player) ? 'Ramos & Associados' : (employmentState?.officeName || 'Escritório atual'),
         })
       : { review: null, discipline: player.officeDiscipline };
     const { review: supervisorReview, discipline: nextDiscipline } = supervisorOutcome;
