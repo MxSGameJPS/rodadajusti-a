@@ -358,8 +358,12 @@ export function applyIndependentCasePresentations(player: PlayerProfile, catalog
   return catalog.map((caseItem) => getIndependentCasePresentation(player, caseItem));
 }
 
+/** @deprecated A abertura real do escritório exige imóvel e constituição via officeBusiness.acquireCommercialProperty. */
 export function openOwnOffice(player: PlayerProfile, officeName: string) {
   if (typeof window === 'undefined') return false;
+  console.warn('[Ato 3] openOwnOffice legado bloqueado: use o fluxo de imobiliária/officeBusiness.');
+  return false;
+  /* legado mantido temporariamente para compatibilidade de imports
   const cleanName = officeName.trim().slice(0, 80);
   if (!cleanName) return false;
 
@@ -387,4 +391,5 @@ export function openOwnOffice(player: PlayerProfile, officeName: string) {
   } catch {
     return false;
   }
+  */
 }
