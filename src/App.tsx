@@ -1782,7 +1782,7 @@ export default function App() {
   };
 
   const handleEnrollCourse = (course: AcademicCourse) => {
-    if (player.money < course.cost) return;
+    if (player.money < course.cost || player.completedCourseIds.includes(course.id)) return;
 
     if (player.oabRegistration && !isInternCareer(player)) {
       const portfolio = readProfessionalPortfolio(player);
