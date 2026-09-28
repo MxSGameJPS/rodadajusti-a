@@ -7,6 +7,7 @@ import {
   type ProfessionalEmploymentState,
 } from './professionalEmployment';
 import { syncProfessionalProfileWithPlayer } from './professionalRpg';
+import { professionalMarketScore, readProfessionalPortfolio } from './professionalActTwo';
 import { isSupabaseConfigured, supabase } from './supabase';
 
 const LOCAL_OFFERS_PREFIX = 'rota_law_firm_offers_v1:';
@@ -391,9 +392,13 @@ export function evaluateMarketPolicy(
   const eligibleRoleCodes = asStringArray(policy.eligibleRoleCodes);
   const playerEthics = getPlayerEthics(player);
   const specialties = getPlayerSpecialties(player);
+  const professionalPortfolio = readProfessionalPortfolio(player);
+  const marketScore = professionalMarketScore(player);
 
-  if (player.reputation < minReputation) reasons.push(`Reputação mínima: ${minReputation}.`);
+  if (Math.max(player.reputation, professionalPortfolio.reputation.marketPrestige) < minReputation) reasons.push(`Prestígio profissional mínimo: ${minReputation}.`);
   if (player.xp < minXp) reasons.push(`XP mínimo: ${minXp}.`);
+  const minimumMarketScore = asNumber(policy.minimumMarketScore);
+  if (minimumMarketScore > 0 && marketScore < minimumMarketScore) reasons.push(`Força de mercado mínima: ${minimumMarketScore}.`);
   if (player.casesSolved < minCasesSolved) reasons.push(`Casos vencidos mínimos: ${minCasesSolved}.`);
   if (playerEthics < minEthics) reasons.push(`Ética mínima: ${minEthics}.`);
   if (requiredSpecialties.length > 0 && !requiredSpecialties.some((item) => specialties.includes(item))) {
@@ -449,6 +454,8 @@ function buildOffer(
     },
     eligibilitySnapshot: {
       reputation: player.reputation,
+      professionalReputation: readProfessionalPortfolio(player).reputation,
+      marketScore: professionalMarketScore(player),
       xp: player.xp,
       casesSolved: player.casesSolved,
       ethics: getPlayerEthics(player),
