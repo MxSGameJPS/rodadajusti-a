@@ -63,6 +63,7 @@ import { advanceSeniorPortfolioDeadlines, applySeniorDecisionConsequence, buildR
 import { SeniorProfessionalScene } from './components/SeniorProfessionalScene';
 import { completeOabStudy, emptyOabPreparation, OAB_AREAS, oabReadiness, recordOabMock, recordFinalOabExam, unlockOabPreparation, type OabPreparationState, type OabStudyArea } from './lib/oabIntensivePreparation';
 import { evaluatePetition } from './lib/judicialDecisionEngine';
+import { getCaseReactiveOutcome } from './lib/reactiveWorldStore';
 import { buildSupervisorReview } from './lib/officeDisciplineEngine';
 import {
   DEFAULT_OFFICE_PERFORMANCE,
@@ -75,7 +76,7 @@ import {
 import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
 import { persistPlayerCloudSave } from './lib/playerCloudSave';
 import { readProfessionalEmploymentState } from './lib/professionalEmployment';
-import { assignLongRunningProfessionalMatter, getProfessionalWorkLifeConflict, recordProfessionalMatterOutcome, recordProfessionalNetworkInteraction, recordProfessionalStrategy, settleProfessionalCaseEconomy, updateMatterLifecycle } from './lib/professionalActTwo';
+import { addSpecializationStudy, assignLongRunningProfessionalMatter, getProfessionalWorkLifeConflict, prepareProfessionalHearing, readProfessionalPortfolio, recordProfessionalHearingResult, recordProfessionalMatterOutcome, recordProfessionalNetworkInteraction, recordProfessionalStrategy, scheduleProfessionalHearing, settleProfessionalCaseEconomy, updateMatterLifecycle } from './lib/professionalActTwo';
 import { getProfessionalGameplayModifiers, loadProfessionalProfile } from './lib/professionalRpg';
 import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
 import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } from './lib/gameTime';
@@ -1443,6 +1444,31 @@ export default function App() {
 
     const completedDate = formatGameDate(getPlayerGameDate(player));
     if (player.oabRegistration && !isInternCareer(player)) {
+      const reactiveOutcome = getCaseReactiveOutcome(activeCaseData.id, player.activeCase);
+      if (reactiveOutcome.hearing) {
+        const hearingType = activeCaseData.area.toLocaleLowerCase('pt-BR').includes('trabalh')
+          ? 'INSTRUCTION' as const
+          : 'CONCILIATION' as const;
+        const hearingId = `hearing:${activeCaseData.id}:${completedDate}:${hearingType}`;
+        scheduleProfessionalHearing(player, {
+          caseId: activeCaseData.id,
+          title: activeCaseData.title,
+          type: hearingType,
+          gameDate: completedDate,
+          minute: player.gameCurrentMinutes,
+        });
+        if (selectedEvidenceIds.length > 0) prepareProfessionalHearing(player, hearingId);
+        if (selectedEvidenceIds.length >= 3) prepareProfessionalHearing(player, hearingId);
+        recordProfessionalHearingResult(
+          player,
+          hearingId,
+          reactiveOutcome.hearing.performancePercent >= 70
+            ? 'FAVORABLE'
+            : reactiveOutcome.hearing.performancePercent >= 45
+              ? 'NEUTRAL'
+              : 'UNFAVORABLE',
+        );
+      }
       const selectedStrategy = activeCaseData.strategies.find((strategy) => strategy.id === strategyId);
       recordProfessionalStrategy(player, {
         caseId: activeCaseData.id,
@@ -1688,6 +1714,19 @@ export default function App() {
 
   const handleEnrollCourse = (course: AcademicCourse) => {
     if (player.money < course.cost) return;
+
+    if (player.oabRegistration && !isInternCareer(player)) {
+      const portfolio = readProfessionalPortfolio(player);
+      const practicedArea = portfolio.specializations
+        .slice()
+        .sort((a, b) => (b.handledMatters + b.successfulMatters) - (a.handledMatters + a.successfulMatters))[0]?.area;
+      const academicArea = course.id === 'POS_CIVIL'
+        ? 'Direito Civil'
+        : course.id === 'POS_PROCESSO'
+          ? 'Direito Processual'
+          : practicedArea || 'Formação Jurídica';
+      addSpecializationStudy(player, academicArea, Math.max(10, Math.round(course.xpReward / 12)));
+    }
 
     setPlayer((prev) => ({
       ...prev,
