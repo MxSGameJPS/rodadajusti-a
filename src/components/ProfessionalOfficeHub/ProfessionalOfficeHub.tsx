@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   Award,
@@ -23,7 +23,7 @@ import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import type { PlayerProfile } from '../../types/game';
 import { sound } from '../../utils/sound';
 import { ProfessionalDailyBrief } from './ProfessionalDailyBrief';
-import { getProfessionalEconomySnapshot, getProfessionalWorkLifeConflict, getSeniorReviewSnapshot, professionalDaySummary, readProfessionalPortfolio, registerProfessionalArrival } from '../../lib/professionalActTwo';
+import { completeProfessionalAgendaTask, getActTwoClosure, getProfessionalEconomySnapshot, getProfessionalWorkLifeConflict, getSeniorReviewSnapshot, hydrateActTwoState, markSeniorReviewCompleted, professionalDaySummary, readProfessionalPortfolio, reconcileProfessionalAgenda, registerProfessionalArrival } from '../../lib/professionalActTwo';
 import styles from './ProfessionalOfficeHub.module.css';
 
 const OPEN_SOCIAL_JURIDICO_EVENT = 'rota:open-social-juridico';
@@ -54,10 +54,17 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
   const officeName = employment?.officeName || 'Escritório atual';
   const roleTitle = employment?.role || 'Advogado';
   const socialJuridicoIncluded = employmentIncludesSocialJuridico(player);
+  const [professionalRevision, setProfessionalRevision] = useState(0);
+  const [closureOpen, setClosureOpen] = useState(false);
   const gameDate = `${String(player.gameCurrentDay).padStart(2,'0')}/${String(player.gameCurrentMonth).padStart(2,'0')}/${player.gameCurrentYear}`;
-  useEffect(() => { if (!previewMode && employment?.contractStatus === 'SIGNED') registerProfessionalArrival(player, gameDate); }, [player.cloudCareerId, gameDate, employment?.contractStatus, previewMode]);
-  const portfolio = useMemo(() => readProfessionalPortfolio(player), [player, gameDate]);
-  const daySummary = useMemo(() => professionalDaySummary(player), [player, gameDate]);
+  useEffect(() => {
+    if (previewMode || employment?.contractStatus !== 'SIGNED') return;
+    let active=true;
+    void hydrateActTwoState(player).then(()=>{if(!active)return;registerProfessionalArrival(player,gameDate);reconcileProfessionalAgenda(player);setProfessionalRevision(value=>value+1)});
+    return()=>{active=false};
+  }, [player.cloudCareerId, gameDate, employment?.contractStatus, previewMode]);
+  const portfolio = useMemo(() => readProfessionalPortfolio(player), [player, gameDate, professionalRevision]);
+  const daySummary = useMemo(() => professionalDaySummary(player), [player, gameDate, professionalRevision]);
   const seniorReview = useMemo(() => getSeniorReviewSnapshot(player), [player, portfolio]);
   const workLife = useMemo(() => getProfessionalWorkLifeConflict(player), [player, daySummary]);
   const economy = useMemo(() => getProfessionalEconomySnapshot(player, employment?.salaryMonthly || 0), [player, portfolio, employment?.salaryMonthly]);
@@ -98,7 +105,7 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
         <div className={styles.sectionTitle}><div><span>Responsabilidade profissional</span><h3>Minha carteira e agenda</h3></div><div className={styles.assignmentFlow}><span>{daySummary.activeMatters} processos</span><span>{daySummary.pendingTasks} tarefas</span><span>{daySummary.criticalTasks} críticas</span></div></div>
         {daySummary.nextTasks.length > 0 ? daySummary.nextTasks.map((task) => (
           <article key={task.id} className={task.critical ? styles.activeCaseCard : styles.waitingCaseCard}>
-            <div><span className={styles.caseCode}>{task.kind}{task.critical ? ' • PRIORIDADE' : ''}</span><h4>{task.title}</h4><p>Prazo: {task.dueGameDate}{task.dueMinute != null ? ` • ${String(Math.floor(task.dueMinute/60)).padStart(2,'0')}:${String(task.dueMinute%60).padStart(2,'0')}` : ''}</p></div>
+            <div><span className={styles.caseCode}>{task.kind}{task.critical ? ' • PRIORIDADE' : ''}</span><h4>{task.title}</h4><p>Prazo: {task.dueGameDate}{task.dueMinute != null ? ` • ${String(Math.floor(task.dueMinute/60)).padStart(2,'0')}:${String(task.dueMinute%60).padStart(2,'0')}` : ''}</p></div><button type="button" onClick={()=>{completeProfessionalAgendaTask(player,task.id);setProfessionalRevision(value=>value+1)}}>Concluir obrigação <ArrowRight size={14}/></button>
           </article>
         )) : <article className={styles.waitingCaseCard}><div><span>Agenda organizada</span><h4>Nenhuma obrigação profissional pendente</h4><p>Novas atribuições e compromissos aparecerão aqui conforme sua carteira crescer.</p></div></article>}
         {portfolio.matters.filter((matter)=>matter.status!=='CLOSED').slice(0,4).map((matter)=>(
@@ -185,6 +192,9 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
           </article>
         )}
       </section>
+
+      {seniorReview.eligible && player.careerTier === 'ADVOGADO_CONTRATADO' && <button type="button" className={styles.waitingCaseCard} onClick={()=>setClosureOpen(true)}><div><span>AVALIAÇÃO FINAL DISPONÍVEL</span><h4>Reunião de promoção com Roberto e Mariana</h4><p>Concluir a avaliação formal e assumir as responsabilidades de Advogado Sênior.</p></div><ArrowRight size={18}/></button>}
+      {closureOpen && <section className={styles.caseSection}><div className={styles.sectionTitle}><div><span>{getActTwoClosure(player).title}</span><h3>Encerramento do Ato 2</h3></div></div>{getActTwoClosure(player).dialogues.map(line=><article key={line} className={styles.activeCaseCard}><div><p>{line}</p></div></article>)}<button type="button" onClick={()=>{markSeniorReviewCompleted(player);setClosureOpen(false);window.dispatchEvent(new CustomEvent('rota:act-two-senior-review-completed'));}}>Assumir função de Advogado Sênior</button></section>}
 
       <section className={styles.caseSection} aria-label="Evolução para advogado sênior">
         <div className={styles.sectionTitle}><div><span>Ato 2 • consolidação profissional</span><h3>Avaliação para Advogado Sênior</h3></div><div className={styles.assignmentFlow}><span>{seniorReview.progress}%</span><span>{seniorReview.eligible ? 'Pronto para avaliação final' : 'Em desenvolvimento'}</span></div></div>
