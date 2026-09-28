@@ -9,6 +9,7 @@ import {
   type ProfessionalTrait,
 } from './professionalRpg';
 import { supabase } from './supabase';
+import { applyProfessionalReputation } from './professionalActTwo';
 
 export type DisciplinaryProfessionalStatus =
   | 'REGULAR'
@@ -451,6 +452,13 @@ export function submitDisciplinaryDefense(
     proceedingHistory: [decidedProceeding, ...state.proceedingHistory],
   };
   saveDisciplinaryState(player, next);
+  const repPenalty = Math.max(0, decision.reputationPenalty);
+  applyProfessionalReputation(player, {
+    institutionalRespect: -repPenalty,
+    marketPrestige: -Math.round(repPenalty * 0.75),
+    publicRecognition: -Math.round(repPenalty * 0.45),
+    clientReputation: -Math.round(repPenalty * 0.35),
+  }, decision.title, `disciplinary:${proceeding.id}`);
   window.dispatchEvent(new CustomEvent('rota:disciplinary-decision', { detail: decision }));
   return next;
 }
