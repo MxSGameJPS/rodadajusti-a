@@ -494,6 +494,8 @@ export interface ProfessionalExamResult {
   registrationCode: string | null;
   isSimulatedRegistration: boolean;
   examTitle: string;
+  examType?: string;
+  newCareerStage?: CareerTierId | null;
 }
 
 export interface ProfessionalExamAttemptRecord {
