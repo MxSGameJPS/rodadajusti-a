@@ -48,42 +48,10 @@ export const PUBLIC_EXAM_RULES = {
 };
 
 export const SPECIAL_CAREER_RULES = [
-  {
-    id: 'MINISTRO_STF' as SpecialCareerId,
-    label: 'Ministro do STF',
-    minMasterLevel: 4,
-    minReputation: 86,
-    termYears: 5,
-    endBehavior: 'Após 5 anos, o jogo pergunta se o personagem deseja se aposentar.',
-    nextPossibilities: [] as string[],
-  },
-  {
-    id: 'MINISTRO_STE' as SpecialCareerId,
-    label: 'Ministro do STE',
-    minMasterLevel: 4,
-    minReputation: 86,
-    termYears: 5,
-    endBehavior: 'Após 5 anos, dependendo da reputação, pode receber convite para o STF.',
-    nextPossibilities: ['MINISTRO_STF'],
-  },
-  {
-    id: 'MINISTRO_JUSTICA' as SpecialCareerId,
-    label: 'Ministro da Justiça',
-    minMasterLevel: 4,
-    minReputation: 56,
-    termYears: 4,
-    endBehavior: 'Após no máximo 4 anos, retorna à rotina como advogado mantendo sua progressão acadêmica.',
-    nextPossibilities: ['MINISTRO_STF', 'MINISTRO_STE'],
-  },
-  {
-    id: 'PGR' as SpecialCareerId,
-    label: 'Procurador-Geral da República',
-    minMasterLevel: 3,
-    minReputation: 86,
-    termYears: 5,
-    endBehavior: 'Após 5 anos no cargo, o personagem se aposenta.',
-    nextPossibilities: [] as string[],
-  },
+  { id: 'MINISTRO_STF' as SpecialCareerId, label: 'Ministro do STF', minMasterLevel: 0, minReputation: 94, termYears: null, endBehavior: 'Cargo de cúpula acessível apenas por evento próprio de indicação e nomeação.', nextPossibilities: [] as string[] },
+  { id: 'MINISTRO_STE' as SpecialCareerId, label: 'Ministro do TSE', minMasterLevel: 0, minReputation: 90, termYears: null, endBehavior: 'Composição e investidura são tratadas como evento institucional próprio, não como promoção comum.', nextPossibilities: [] as string[] },
+  { id: 'MINISTRO_JUSTICA' as SpecialCareerId, label: 'Ministro da Justiça', minMasterLevel: 0, minReputation: 82, termYears: null, endBehavior: 'Função política tratada como convite/nomeação temporária, sem progressão automática.', nextPossibilities: [] as string[] },
+  { id: 'PGR' as SpecialCareerId, label: 'Procurador-Geral da República', minMasterLevel: 0, minReputation: 90, termYears: null, endBehavior: 'Chefia institucional tratada por evento de nomeação e aprovação, não como promoção automática.', nextPossibilities: [] as string[] },
 ];
 
 export function isPublicExamEligible(legalPracticeMonths: number) {
