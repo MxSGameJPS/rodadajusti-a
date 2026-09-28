@@ -140,6 +140,7 @@ import {
   currentHouseholdBillKey,
   getHouseholdBillSummary,
   getHouseholdServiceStatus,
+  getMealEligibility,
   getLifeBlockingReason,
   getPantryCapacity,
   getSleepPlan,
@@ -1767,13 +1768,15 @@ export default function App() {
   };
 
   const handleEatAtHome = (pantryItemId: string) => {
+    const eligibility = getMealEligibility(player, pantryItemId);
+    if (!eligibility.allowed) {
+      setLifeWarning(eligibility.reason);
+      return;
+    }
+    setLifeWarning('');
     setPlayer((prev) => {
-      const item = prev.household.pantry.find((entry) => entry.id === pantryItemId);
-      if (!item || item.quantity <= 0) return prev;
-
-      const services = getHouseholdServiceStatus(prev);
-      if (item.requiresCooking && !services.gas) return prev;
-
+      const currentEligibility = getMealEligibility(prev, pantryItemId);
+      if (!currentEligibility.allowed) return prev;
       const clock = gameClockFields(prev, 45);
       return {
         ...prev,
