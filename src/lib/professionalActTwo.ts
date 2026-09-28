@@ -134,6 +134,8 @@ export function professionalDaySummary(player:PlayerProfile){
  return {activeMatters:portfolio.matters.filter(m=>m.status!=='CLOSED').length,pendingTasks:pending.length,criticalTasks:pending.filter(t=>t.critical).length,nextTasks:pending.slice().sort((a,b)=>a.dueGameDate.localeCompare(b.dueGameDate)||(a.dueMinute??9999)-(b.dueMinute??9999)).slice(0,5)};
 }
 
+const clamp100=(value:number)=>Math.max(0,Math.min(100,Math.round(value)));
+
 function withSpecializationLevel(spec:ProfessionalSpecialization):ProfessionalSpecialization {
  const score=spec.experiencePoints+spec.studyPoints+spec.successfulMatters*15;
  const level:SpecializationLevel=score>=320?'AUTHORITY':score>=180?'REGIONAL_REFERENCE':score>=80?'SPECIALIST':'EXPERIENCE';
@@ -226,7 +228,6 @@ export function assignLongRunningProfessionalMatter(player:PlayerProfile,caseIte
  saveProfessionalPortfolio(player,next);return next;
 }
 
-const clamp100=(value:number)=>Math.max(0,Math.min(100,Math.round(value)));
 function reputationLegacyScore(reputation:ProfessionalReputationState){
  return clamp100(
   reputation.technical*.27+
