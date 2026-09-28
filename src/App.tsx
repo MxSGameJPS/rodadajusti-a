@@ -75,7 +75,8 @@ import {
 import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
 import { persistPlayerCloudSave } from './lib/playerCloudSave';
 import { readProfessionalEmploymentState } from './lib/professionalEmployment';
-import { assignLongRunningProfessionalMatter, recordProfessionalMatterOutcome, recordProfessionalNetworkInteraction, recordProfessionalStrategy, updateMatterLifecycle } from './lib/professionalActTwo';
+import { assignLongRunningProfessionalMatter, getProfessionalWorkLifeConflict, recordProfessionalMatterOutcome, recordProfessionalNetworkInteraction, recordProfessionalStrategy, updateMatterLifecycle } from './lib/professionalActTwo';
+import { getProfessionalGameplayModifiers, loadProfessionalProfile } from './lib/professionalRpg';
 import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
 import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } from './lib/gameTime';
 import { sound } from './utils/sound';
@@ -1456,6 +1457,11 @@ export default function App() {
       });
       updateMatterLifecycle(player, activeCaseData.id, 'DECISION', 'Aguardar decisão e avaliar continuidade processual', 'WAITING');
     }
+    const professionalProfile = player.oabRegistration && !isInternCareer(player) ? loadProfessionalProfile(player) : null;
+    const gameplayModifiers = professionalProfile ? getProfessionalGameplayModifiers(professionalProfile) : null;
+    const workLifeConflict = player.oabRegistration && !isInternCareer(player) ? getProfessionalWorkLifeConflict(player) : null;
+    const professionalPerformanceDelta = (gameplayModifiers?.legalStrategyBonus || 0) + (workLifeConflict?.performancePenalty || 0);
+
     const { review: supervisorReview, discipline: nextDiscipline } = buildSupervisorReview({
       decision,
       caseId: activeCaseData.id,
@@ -1471,9 +1477,9 @@ export default function App() {
 
     if (decision.success) {
       sound.playVictory();
-      earnedXp = activeCaseData.xpReward;
+      earnedXp = Math.max(0, activeCaseData.xpReward + professionalPerformanceDelta * 8);
       earnedMoney = activeCaseData.honorariosReward;
-      earnedReputation = activeCaseData.reputationReward;
+      earnedReputation = Math.max(0, activeCaseData.reputationReward + Math.max(0, professionalPerformanceDelta));
     } else {
       sound.playFailure();
       earnedXp = Math.round(activeCaseData.xpReward * 0.25);
