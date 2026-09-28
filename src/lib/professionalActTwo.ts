@@ -214,15 +214,18 @@ export function applyConductReputationImpact(player:PlayerProfile,ethics:number,
 
 export interface SeniorReviewSnapshot{eligible:boolean;progress:number;requirements:{label:string;current:string;met:boolean}[];strengths:string[];gaps:string[]}
 export function getSeniorReviewSnapshot(player:PlayerProfile):SeniorReviewSnapshot{
- const state=readProfessionalPortfolio(player),rep=state.reputation,closed=state.matters.filter(m=>m.status==='CLOSED').length;
+ const state=readProfessionalPortfolio(player),rep=state.reputation;
+ const closedIds=new Set(state.matters.filter(m=>m.status==='CLOSED').map(m=>m.caseId));
+ const historicalProfessionalCases=player.history.filter(record=>record.success||record.score>=0).map(record=>record.caseId);
+ const closed=Math.max(closedIds.size,new Set(historicalProfessionalCases).size);
  const strongClients=state.clients.filter(c=>c.trust>=60&&c.satisfaction>=60).length;
  const bestSpec=state.specializations.reduce((best,s)=>Math.max(best,s.experiencePoints+s.studyPoints+s.successfulMatters*15),0);
  const requirements=[
   {label:'Experiência como advogado',current:`${closed} processos profissionais encerrados`,met:closed>=6},
   {label:'Maturidade técnica',current:`${rep.technical}/100`,met:rep.technical>=55},
   {label:'Confiança do escritório',current:`${rep.internalTrust}/100`,met:rep.internalTrust>=55},
-  {label:'Clientes consolidados',current:`${strongClients}`,met:strongClients>=2},
-  {label:'Especialização em formação',current:`${bestSpec} pontos`,met:bestSpec>=80},
+  {label:'Clientes consolidados',current:`${strongClients}`,met:strongClients>=2||closed>=6},
+  {label:'Especialização em formação',current:`${bestSpec} pontos`,met:bestSpec>=80||closed>=6},
  ];
  const met=requirements.filter(r=>r.met).length,progress=Math.round(met/requirements.length*100);
  return{eligible:requirements.every(r=>r.met),progress,requirements,strengths:requirements.filter(r=>r.met).map(r=>r.label),gaps:requirements.filter(r=>!r.met).map(r=>r.label)};
