@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
@@ -48,6 +48,11 @@ export const IndependentProfessionalHub: React.FC<IndependentProfessionalHubProp
   const activeCase = GAME_CASES.find((item) => item.id === player.activeCase?.caseId) || null;
   const [showOfficeSetup, setShowOfficeSetup] = useState(false);
   const [showJobMarket, setShowJobMarket] = useState(false);
+  useEffect(() => {
+    const openMarket = () => setShowJobMarket(true);
+    window.addEventListener('rota:open-law-firm-market', openMarket);
+    return () => window.removeEventListener('rota:open-law-firm-market', openMarket);
+  }, []);
   const [officeName, setOfficeName] = useState(player.officeFinances.officeName || `${player.name} Advocacia`);
   const [officeError, setOfficeError] = useState('');
 
