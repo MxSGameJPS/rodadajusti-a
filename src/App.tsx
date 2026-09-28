@@ -101,6 +101,7 @@ import { applyRelationshipInteraction, seedCoreRelationships } from './lib/relat
 import { persistRelationshipEngine } from './lib/relationshipRepository';
 import { createCaseMediaEvent } from './lib/mediaRepercussion';
 import { hydrateWorldMemories } from './lib/worldMemory';
+import { hydrateLegalPrestige, recordPrestigeCaseOutcome } from './lib/legalPrestige';
 import {
   applyRoutinePerformance,
   attendancePerformanceDelta,
@@ -533,7 +534,7 @@ export default function App() {
     if (!player.cloudCareerId || !player.oabRegistration || player.careerTier !== 'ADVOGADO_CONTRATADO') return;
     let active = true;
     void hydrateActTwoState(player).then(({ work }) => {
-      if (active) void hydrateWorldMemories(player);
+      if (active) { void hydrateWorldMemories(player); void hydrateLegalPrestige(player); }
       if (!active || !work.actTwoCompleted) return;
       setPlayer((prev) => prev.careerTier === 'ADVOGADO_CONTRATADO' ? { ...prev, careerTier: 'ADVOGADO_SENIOR' } : prev);
     });
@@ -1662,6 +1663,7 @@ export default function App() {
     if (player.oabRegistration && !isInternCareer(player)) {
       recordProfessionalMatterOutcome(player, activeCaseData.id, decision.success);
       void createCaseMediaEvent(player, activeCaseData, 'DECISION', decision.success);
+      void recordPrestigeCaseOutcome(player, activeCaseData, decision.success);
       professionalEconomyNet = settleProfessionalCaseEconomy(player, activeCaseData.id, decision.success).net;
     }
 
