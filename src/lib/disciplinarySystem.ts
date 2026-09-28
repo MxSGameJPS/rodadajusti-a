@@ -8,6 +8,7 @@ import {
   type ProfessionalRpgProfile,
   type ProfessionalTrait,
 } from './professionalRpg';
+import { supabase } from './supabase';
 
 export type DisciplinaryProfessionalStatus =
   | 'REGULAR'
@@ -160,6 +161,44 @@ export function saveDisciplinaryState(
 ) {
   localStorage.setItem(storageKey(player), JSON.stringify(state));
   window.dispatchEvent(new CustomEvent('rota:disciplinary-state-updated', { detail: state }));
+  if (supabase && player.cloudCareerId) {
+    void supabase.from('careers').select('professional_work_state').eq('id', player.cloudCareerId).maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn('[Ato 2] Falha ao ler estado disciplinar na nuvem.', error.message);
+          return;
+        }
+        const workState = data?.professional_work_state && typeof data.professional_work_state === 'object'
+          ? data.professional_work_state as Record<string, unknown>
+          : {};
+        void supabase!.from('careers').update({
+          professional_work_state: { ...workState, disciplinary: state },
+        }).eq('id', player.cloudCareerId)
+          .then(({ error: updateError }) => {
+            if (updateError) console.warn('[Ato 2] Falha ao salvar estado disciplinar.', updateError.message);
+          });
+      });
+  }
+}
+
+export async function hydrateDisciplinaryState(player: PlayerProfile) {
+  if (!supabase || !player.cloudCareerId) return loadDisciplinaryState(player);
+  const { data, error } = await supabase.from('careers').select('professional_work_state').eq('id', player.cloudCareerId).maybeSingle();
+  if (error || !data?.professional_work_state || typeof data.professional_work_state !== 'object') {
+    return loadDisciplinaryState(player);
+  }
+  const raw = (data.professional_work_state as Record<string, unknown>).disciplinary;
+  if (!raw || typeof raw !== 'object') return loadDisciplinaryState(player);
+  const parsed = raw as ProfessionalDisciplinaryState;
+  const state: ProfessionalDisciplinaryState = {
+    ...createEmptyState(player),
+    ...parsed,
+    incidents: Array.isArray(parsed.incidents) ? parsed.incidents : [],
+    proceedingHistory: Array.isArray(parsed.proceedingHistory) ? parsed.proceedingHistory : [],
+  };
+  localStorage.setItem(storageKey(player), JSON.stringify(state));
+  window.dispatchEvent(new CustomEvent('rota:disciplinary-state-updated', { detail: state }));
+  return state;
 }
 
 export function registerDisciplinaryIncident(
