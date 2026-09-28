@@ -160,19 +160,19 @@ export const CAREER_TIERS: Record<CareerTierId, CareerTier> = {
     badgeColor: 'from-amber-600 to-red-950'
   },
   PROMOTOR_SUBSTITUTO: {
-    id: 'PROMOTOR_SUBSTITUTO', title: 'Promotor de Justiça Substituto', category: 'magistratura',
+    id: 'PROMOTOR_SUBSTITUTO', title: 'Promotor de Justiça Substituto', category: 'ministerio_publico',
     minCasesSolved: 0, minXp: 0, minReputation: 70, salaryBaseMonthly: 30000,
     description: 'Ingresso na carreira do Ministério Público após concurso público. Atua na defesa da ordem jurídica e dos interesses sociais.',
     perks: ['Atuação ministerial independente', 'Acesso à carreira do Ministério Público', 'Docência permanece disponível'], badgeColor: 'from-emerald-700 to-slate-900'
   },
   PROMOTOR_JUSTICA: {
-    id: 'PROMOTOR_JUSTICA', title: 'Promotor de Justiça', category: 'magistratura',
+    id: 'PROMOTOR_JUSTICA', title: 'Promotor de Justiça', category: 'ministerio_publico',
     minCasesSolved: 0, minXp: 5000, minReputation: 85, salaryBaseMonthly: 35000,
     description: 'Membro titular do Ministério Público com atuação consolidada e possibilidade de progressão institucional.',
     perks: ['Titularidade institucional', 'Casos de maior relevância', 'Progressão para Procurador de Justiça'], badgeColor: 'from-emerald-800 to-stone-950'
   },
   PROCURADOR_JUSTICA: {
-    id: 'PROCURADOR_JUSTICA', title: 'Procurador de Justiça', category: 'magistratura',
+    id: 'PROCURADOR_JUSTICA', title: 'Procurador de Justiça', category: 'ministerio_publico',
     minCasesSolved: 0, minXp: 8500, minReputation: 92, salaryBaseMonthly: 40000,
     description: 'Atua perante o Tribunal e integra o estágio avançado da carreira do Ministério Público.',
     perks: ['Atuação perante tribunais', 'Elegibilidade futura a funções de cúpula', 'Possibilidade de quinto constitucional conforme trajetória'], badgeColor: 'from-emerald-900 to-amber-950'
