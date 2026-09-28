@@ -254,8 +254,9 @@ export function getActTwoClosure(player:PlayerProfile):ActTwoClosure{
  return{ready:review.eligible,title:'Consolidação Profissional',summary:review.eligible?'Sua atuação deixou de ser apenas promessa. Você construiu carteira, clientes, confiança interna e uma identidade técnica própria.':'A sociedade ainda acompanha sua consolidação antes de entregar responsabilidades de Advogado Sênior.',dialogues:review.eligible?['Roberto: Você já não trabalha como alguém que acabou de sair da OAB.','Mariana: Os clientes começaram a procurar você pelo seu nome, não apenas pelo escritório.','Roberto: A partir de agora, quero você conduzindo casos de maior responsabilidade e ajudando a orientar os mais novos.']:review.gaps.map(gap=>`Avaliação pendente: ${gap}.`),unlocks:review.eligible?['Casos de maior complexidade','Maior autonomia estratégica','Orientação de profissionais juniores','Elegibilidade para trajetória societária']:[]};
 }
 
-function gameDateKey(player:PlayerProfile){return [String(player.gameCurrentYear).padStart(4,'0'),String(player.gameCurrentMonth).padStart(2,'0'),String(player.gameCurrentDay).padStart(2,'0')].join('-')}
-function agendaExpired(task:ProfessionalAgendaTask,date:string,minute:number){return task.dueGameDate<date||(task.dueGameDate===date&&task.dueMinute!=null&&task.dueMinute<minute)}
+function gameDateKey(player:PlayerProfile){return [String(player.gameCurrentDay).padStart(2,'0'),String(player.gameCurrentMonth).padStart(2,'0'),String(player.gameCurrentYear).padStart(4,'0')].join('/')}
+function dateOrdinal(value:string){const match=value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);if(!match)return Number.POSITIVE_INFINITY;return Number(match[3])*10000+Number(match[2])*100+Number(match[1])}
+function agendaExpired(task:ProfessionalAgendaTask,date:string,minute:number){const due=dateOrdinal(task.dueGameDate),today=dateOrdinal(date);return due<today||(due===today&&task.dueMinute!=null&&task.dueMinute<minute)}
 export function reconcileProfessionalAgenda(player:PlayerProfile){
  const state=readProfessionalPortfolio(player),work=readProfessionalWorkState(player),date=gameDateKey(player),minute=player.gameCurrentMinutes;
  const expired=state.agenda.filter(task=>task.status==='PENDING'&&agendaExpired(task,date,minute)&&!work.processedAgendaKeys.includes(task.id));
