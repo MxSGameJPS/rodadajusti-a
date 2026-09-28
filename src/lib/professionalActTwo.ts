@@ -1,5 +1,7 @@
 import type { PlayerProfile } from '../types/game';
 import { supabase } from './supabase';
+import { getAppealOfCaseId, getProceduralStage } from './caseMetadata';
+import type { LegalCase } from '../types/game';
 
 export type ProfessionalTaskKind = 'DEADLINE'|'HEARING'|'CLIENT_RETURN'|'MEETING'|'DILIGENCE'|'DOCUMENT';
 export type HearingType = 'CONCILIATION'|'INSTRUCTION'|'ORAL_ARGUMENT';
@@ -158,4 +160,14 @@ export function addSpecializationStudy(player:PlayerProfile,area:string,points=1
  const state=readProfessionalPortfolio(player); const current=state.specializations.find(spec=>spec.area===area)||{area,experiencePoints:0,handledMatters:0,successfulMatters:0,studyPoints:0,level:'EXPERIENCE' as SpecializationLevel};
  const updated=withSpecializationLevel({...current,studyPoints:current.studyPoints+Math.max(0,points)});
  const next={...state,specializations:[...state.specializations.filter(spec=>spec.area!==area),updated]};saveProfessionalPortfolio(player,next);return next;
+}
+
+export function assignLongRunningProfessionalMatter(player:PlayerProfile,caseItem:LegalCase,gameDate:string){
+ const predecessorCaseId=getAppealOfCaseId(caseItem);
+ const state=assignProfessionalMatter(player,{caseId:caseItem.id,title:caseItem.title,clientName:caseItem.client.name,area:caseItem.area,status:predecessorCaseId?'APPEAL':'ACTIVE',responsibility:'LEAD',nextAction:predecessorCaseId?'Revisar decisão anterior e preparar recurso':'Analisar dossiê e definir estratégia',officePriority:caseItem.difficultyStars>=4?'URGENT':caseItem.difficultyStars>=3?'IMPORTANT':'NORMAL',lifecycleStage:getProceduralStage(caseItem),predecessorCaseId},gameDate);
+ if(!predecessorCaseId)return state;
+ const predecessor=state.matters.find(m=>m.caseId===predecessorCaseId);
+ if(!predecessor)return state;
+ const next={...state,matters:state.matters.map(m=>m.caseId===predecessorCaseId?{...m,status:'APPEAL' as const,nextAction:`Processo prossegue em ${getProceduralStage(caseItem)}`}:m)};
+ saveProfessionalPortfolio(player,next);return next;
 }
