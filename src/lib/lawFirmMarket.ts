@@ -1,6 +1,7 @@
 import { GAME_CASES } from '../data/cases';
 import type { CareerTierId, PlayerProfile } from '../types/game';
 import { emitPlayerSaveExternalUpdated } from './playerSaveEvents';
+import { isProfessionalPracticeBlocked, loadDisciplinaryState } from './disciplinarySystem';
 import {
   activateLawFirmEmployment,
   readProfessionalEmploymentState,
@@ -658,6 +659,9 @@ export async function declineLawFirmOffer(player: PlayerProfile, offer: LawFirmO
 }
 
 export async function acceptLawFirmOffer(player: PlayerProfile, offer: LawFirmOffer) {
+  if (isProfessionalPracticeBlocked(loadDisciplinaryState(player).professionalStatus)) {
+    throw new Error('Sua situação disciplinar atual impede assumir um novo vínculo de advocacia.');
+  }
   await updateRemoteOfferStatus(offer, 'ACCEPTED');
 
   const nextEmployment: ProfessionalEmploymentState = activateLawFirmEmployment(player, {
