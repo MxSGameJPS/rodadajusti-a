@@ -22,6 +22,7 @@ import {
 } from '../lib/ethicalDilemmas';
 import {
   getCharacterBand,
+  hydrateProfessionalProfile,
   loadProfessionalProfile,
   readCurrentPlayerSnapshot,
   type ProfessionalRpgProfile,
@@ -109,7 +110,9 @@ export const EthicalDilemmaExperience: React.FC = () => {
       }
     };
 
-    sync();
+    const initial = readCurrentPlayerSnapshot();
+    if (initial?.oabRegistration) void hydrateProfessionalProfile(initial).then(() => sync());
+    else sync();
     const timer = window.setInterval(sync, 900);
 
     const handleOpened = () => {
