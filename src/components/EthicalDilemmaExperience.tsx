@@ -28,6 +28,7 @@ import {
 } from '../lib/professionalRpg';
 import { GAME_CASES } from '../data/cases';
 import { sound } from '../utils/sound';
+import { applyConductReputationImpact } from '../lib/professionalActTwo';
 
 const MISCONDUCT_FINANCIAL_PENALTY = 2000;
 
@@ -147,6 +148,7 @@ export const EthicalDilemmaExperience: React.FC = () => {
     setResolution(result);
     setState(result.state);
     setProfile(result.profile);
+    applyConductReputationImpact(player, result.profile.ethics, result.profile.exposure, `Dilema ético: ${result.event.title}`);
     setEvent(result.event);
     setCaseData(GAME_CASES.find((item) => item.id === result.record.caseId) ?? caseData);
   };
