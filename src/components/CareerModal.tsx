@@ -16,15 +16,19 @@ import { sound } from '../utils/sound';
 import { getLegalReputationSnapshot } from '../lib/professionalActTwo';
 import { MediaRepercussionPanel } from './MediaRepercussionPanel';
 import { getLegalPrestigeSnapshot, LEGAL_PRESTIGE_CONFIG } from '../lib/legalPrestige';
+import { readPublicCareerState } from '../lib/publicCareerOpportunities';
+import { PublicServiceCareerPanel } from './PublicServiceCareerPanel';
 
 interface CareerModalProps {
   isOpen: boolean;
   onClose: () => void;
   player: PlayerProfile;
   onSelectCareerPath?: (tierId: CareerTierId) => void;
+  onCareerChange?: (tierId: CareerTierId) => void;
+  onMoneyChange?: (delta: number) => void;
 }
 
-export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, player }) => {
+export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, player, onCareerChange, onMoneyChange }) => {
   const displayName = usePlayerDisplayName(player);
   if (!isOpen) return null;
 
@@ -36,6 +40,7 @@ export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, playe
   const performance = normalizeOfficePerformance(player.officePerformance);
   const legalReputation = getLegalReputationSnapshot(player);
   const legalPrestige = getLegalPrestigeSnapshot(player);
+  const publicCareer = readPublicCareerState(player);
   const internPromotion = getInternPromotionStatus({
     casesSolved: player.casesSolved,
     xp: player.xp,
@@ -155,19 +160,21 @@ export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, playe
             </div>
           </section>
 
+          {['MAGISTRADO_SUBSTITUTO','JUIZ_TITULAR','DESEMBARGADOR','PROMOTOR_SUBSTITUTO','PROMOTOR_JUSTICA','PROCURADOR_JUSTICA'].includes(player.careerTier) && onCareerChange && onMoneyChange && <PublicServiceCareerPanel player={player} onCareerChange={onCareerChange} onMoneyChange={onMoneyChange}/>} 
+
           <section className="space-y-3">
-            <SectionTitle icon={<Landmark size={14}/>} title="Concursos de Magistratura" color="text-[#F87171]"/>
+            <SectionTitle icon={<Landmark size={14}/>} title="Carreiras Públicas" color="text-[#F87171]"/>
             <div className="grid md:grid-cols-2 gap-4">
               {Object.values(PUBLIC_EXAM_RULES).map((rule) => {
-                const eligible = isPublicExamEligible(doctorateLevel);
+                const eligible = isPublicExamEligible(publicCareer.legalPracticeMonths);
                 return <div key={rule.examType} className={`p-4 rounded-xl border ${eligible ? 'border-[#34D399]/40 bg-[#34D399]/5' : 'border-[#2A2A2E] bg-[#111113]'}`}>
-                  <div className="flex items-start gap-3">{eligible ? <CheckCircle2 size={18} className="text-[#34D399]"/> : <Lock size={18} className="text-[#666]"/>}<div><h4 className="font-bold">{rule.label}</h4><p className="text-xs text-[#AAA] mt-1">{rule.questions} questões • requisito: {rule.requirementText}.</p><p className={`text-[11px] mt-2 font-semibold ${eligible ? 'text-[#34D399]' : 'text-[#888]'}`}>{eligible ? 'Elegível para prestar quando houver prova publicada.' : `Doutorado atual: ${doctorateLevel}/5`}</p></div></div>
+                  <div className="flex items-start gap-3">{eligible ? <CheckCircle2 size={18} className="text-[#34D399]"/> : <Lock size={18} className="text-[#666]"/>}<div><h4 className="font-bold">{rule.label}</h4><p className="text-xs text-[#AAA] mt-1">{rule.questions} questões • requisito: {rule.requirementText}.</p><p className={`text-[11px] mt-2 font-semibold ${eligible ? 'text-[#34D399]' : 'text-[#888]'}`}>{eligible ? 'Elegível para prestar quando houver prova publicada.' : `Atividade jurídica: ${Math.floor(publicCareer.legalPracticeMonths / 12)}a ${publicCareer.legalPracticeMonths % 12}m`}</p></div></div>
                 </div>;
               })}
             </div>
 
             <div className="space-y-3 mt-4">
-              {tiers.filter(t => t.category === 'magistratura').map((tier) => <CareerTierCard key={tier.id} title={tier.title} description={tier.description} current={player.careerTier === tier.id} unlocked={player.careerTier === tier.id} salary={tier.salaryBaseMonthly} requirements={tier.id === 'DESEMBARGADOR' ? 'Via concurso + Doutorado nível 4 ou 5' : tier.id === 'MINISTRO_STF' ? 'Cargo especial por convite' : 'Via progressão da magistratura'} perks={tier.perks}/>) }
+              {tiers.filter(t => t.category === 'magistratura' || t.category === 'ministerio_publico').map((tier) => <CareerTierCard key={tier.id} title={tier.title} description={tier.description} current={player.careerTier === tier.id} unlocked={player.careerTier === tier.id} salary={tier.salaryBaseMonthly} requirements={tier.id === 'DESEMBARGADOR' ? 'Promoção na magistratura ou quinto constitucional' : tier.id === 'MINISTRO_STF' ? 'Cargo especial por convite' : tier.category === 'ministerio_publico' ? 'Via progressão do Ministério Público' : 'Via progressão da magistratura'} perks={tier.perks}/>) }
             </div>
           </section>
 
