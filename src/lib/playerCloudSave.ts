@@ -45,7 +45,7 @@ export async function persistPlayerCloudSave(player: PlayerProfile): Promise<{ o
   }, { onConflict: 'career_id,slot' });
   if (error) {
     console.warn('[Rota da Justiça] Falha ao persistir save em nuvem.', error.message);
-    return { ok: false, careerId: null };
+    return { ok: false, careerId };
   }
   await supabase.from('careers').update({
     character_name: player.name,
