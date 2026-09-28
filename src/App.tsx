@@ -1909,6 +1909,16 @@ export default function App() {
 
   const handleRequestGoOffice = () => {
     if (player.worldLocation.kind === 'OFFICE') {
+      if (isInternCareer(player)) {
+        const access = getOfficeAccessDecision(player);
+        if (!access.allowed) {
+          setOfficeClosedArrivalMinute(player.gameCurrentMinutes);
+          setIsCityWorldMapOpen(false);
+          setIsPlayerHomeOpen(false);
+          return;
+        }
+        handleRegisterInternArrival();
+      }
       setIsCityWorldMapOpen(false);
       setIsPlayerHomeOpen(false);
       setCurrentView('HUB');
@@ -2023,6 +2033,10 @@ export default function App() {
       const arrivalMinute = Math.max(0, projectedPlayer.gameCurrentMinutes);
       const access = getOfficeAccessDecision(projectedPlayer, arrivalMinute);
       if (!access.allowed) {
+        setPlayer((prev) => ({
+          ...prev,
+          worldLocation: { kind: 'ESTABLISHMENT', refId: 'RAMOS_ENTRANCE', label: 'Entrada do Ramos & Associados' },
+        }));
         setOfficeClosedArrivalMinute(arrivalMinute);
         setIsCityWorldMapOpen(false);
         return;
@@ -2035,7 +2049,14 @@ export default function App() {
           const delta = attendancePerformanceDelta(resultArrival.record);
           setPlayer((prev) => ({ ...prev, officePerformance: applyRoutinePerformance(prev.officePerformance, delta) }));
           const disciplineAssessment = assessArrivalDiscipline(projectedPlayer, resultArrival.record);
-          if (disciplineAssessment) applyRoutineDiscipline(disciplineAssessment);
+          if (disciplineAssessment) applyRoutineDiscipline(disciplineAssessment, resultArrival.record.date);
+          applyRelationshipInteraction(projectedPlayer, {
+            entityId: 'npc:MARIANA', entityType: 'NPC', name: 'Mariana Duarte', role: 'Secretária • Ramos & Associados',
+            gameDate: resultArrival.record.date, kind: 'ATTENDANCE', title: resultArrival.record.status === 'LATE' ? 'Chegada com atraso' : 'Presença no expediente',
+            description: resultArrival.record.status === 'LATE' ? `Mariana registrou uma chegada com ${resultArrival.record.lateMinutes} minutos de atraso.` : 'Mariana registrou a presença regular no expediente.',
+            scope: 'WORKPLACE', intensity: resultArrival.record.status === 'LATE' ? 24 : 10,
+            dimensions: { professionalTrust: resultArrival.record.status === 'LATE' ? -2 : 1, affinity: resultArrival.record.status === 'LATE' ? -1 : 0 }, bond: 'PROFESSIONAL',
+          });
           if (!hasReceivedDailyBriefing(projectedPlayer)) {
             const tasks = getTasksForTier(projectedPlayer.careerTier);
             const assignedIds = getDailyTaskIds(projectedPlayer, tasks.map((task) => task.id));
