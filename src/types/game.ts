@@ -9,6 +9,9 @@ export type CareerTierId =
   | 'MAGISTRADO_SUBSTITUTO'
   | 'JUIZ_TITULAR'
   | 'DESEMBARGADOR'
+  | 'PROMOTOR_SUBSTITUTO'
+  | 'PROMOTOR_JUSTICA'
+  | 'PROCURADOR_JUSTICA'
   | 'MINISTRO_STF';
 
 export interface CareerTier {
