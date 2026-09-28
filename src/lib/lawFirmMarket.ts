@@ -11,6 +11,7 @@ import {
 import { syncProfessionalProfileWithPlayer } from './professionalRpg';
 import { professionalMarketScore, readProfessionalPortfolio } from './professionalActTwo';
 import { isSupabaseConfigured, supabase } from './supabase';
+import { getLegalPrestigeSnapshot } from './legalPrestige';
 
 const LOCAL_OFFERS_PREFIX = 'rota_law_firm_offers_v1:';
 
@@ -405,6 +406,10 @@ export function evaluateMarketPolicy(
   const specialties = getPlayerSpecialties(player);
   const professionalPortfolio = readProfessionalPortfolio(player);
   const marketScore = professionalMarketScore(player);
+  const legalPrestige = getLegalPrestigeSnapshot(player);
+  const prestigeRank = { LOCAL: 0, REGIONAL: 1, ESTADUAL: 2, NACIONAL: 3 } as const;
+  const requiredPrestige = String(policy.minimumLegalPrestige || '').toUpperCase() as keyof typeof prestigeRank;
+  if (requiredPrestige in prestigeRank && prestigeRank[legalPrestige.tier] < prestigeRank[requiredPrestige]) reasons.push(`Prestígio jurídico mínimo: ${requiredPrestige}.`);
 
   if (Math.max(player.reputation, professionalPortfolio.reputation.marketPrestige) < minReputation) reasons.push(`Prestígio profissional mínimo: ${minReputation}.`);
   if (player.xp < minXp) reasons.push(`XP mínimo: ${minXp}.`);
