@@ -183,6 +183,12 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
         )}
       </section>
 
+      <section className={styles.caseSection} aria-label="Clientes e especializações">
+        <div className={styles.sectionTitle}><div><span>Construção de carreira</span><h3>Clientes e especialização</h3></div></div>
+        {portfolio.clients.slice(-3).map((client)=><article key={client.id} className={styles.waitingCaseCard}><div><span>{client.mood} • Confiança {client.trust}%</span><h4>{client.clientName}</h4><p>Satisfação {client.satisfaction}% • Comunicação {client.communication}% • {client.matterIds.length} atendimento(s)</p></div></article>)}
+        {portfolio.specializations.slice().sort((a,b)=>b.experiencePoints+b.studyPoints-a.experiencePoints-a.studyPoints).slice(0,4).map((spec)=><article key={spec.area} className={styles.activeCaseCard}><div><span className={styles.caseCode}>{spec.level.replaceAll('_',' ')}</span><h4>{spec.area}</h4><p>{spec.handledMatters} processo(s) • {spec.successfulMatters} resultado(s) favorável(is) • {spec.experiencePoints+spec.studyPoints} pontos de experiência.</p></div></article>)}
+      </section>
+
       <section className={styles.routineGrid}>
         <button type="button" onClick={onOpenCareerModal}>
           <Award size={19} />
