@@ -30,6 +30,7 @@ import { VerdictModal } from './components/VerdictModal';
 import { SupervisorReviewModal } from './components/SupervisorReviewModal';
 import { CareerModal } from './components/CareerModal';
 import { AcademicModal } from './components/AcademicModal';
+import { hydrateAcademicCareer, syncAcademicLevels } from './lib/academicCareer';
 import { UniversityCampusModal } from './components/UniversityCampus/UniversityCampusModal';
 import { ConcursoModal } from './components/ConcursoModal';
 import { OfficeManagementModal } from './components/OfficeManagementModal';
@@ -534,7 +535,7 @@ export default function App() {
     if (!player.cloudCareerId || !player.oabRegistration || player.careerTier !== 'ADVOGADO_CONTRATADO') return;
     let active = true;
     void hydrateActTwoState(player).then(({ work }) => {
-      if (active) { void hydrateWorldMemories(player); void hydrateLegalPrestige(player); }
+      if (active) { void hydrateWorldMemories(player); void hydrateLegalPrestige(player); void hydrateAcademicCareer(player); }
       if (!active || !work.actTwoCompleted) return;
       setPlayer((prev) => prev.careerTier === 'ADVOGADO_CONTRATADO' ? { ...prev, careerTier: 'ADVOGADO_SENIOR' } : prev);
     });
@@ -2965,6 +2966,7 @@ export default function App() {
         onClose={() => setIsAcademicModalOpen(false)}
         player={player}
         onEnrollCourse={handleEnrollCourse}
+        onAcademicMoneyChange={(delta) => setPlayer((prev) => ({ ...prev, money: Math.max(0, prev.money + delta) }))}
       />
 
       <ConcursoModal
