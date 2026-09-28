@@ -4,6 +4,7 @@ import { emitPlayerSaveExternalUpdated } from './playerSaveEvents';
 import { isProfessionalPracticeBlocked, loadDisciplinaryState } from './disciplinarySystem';
 import {
   activateLawFirmEmployment,
+  isEmployedProfessional,
   readProfessionalEmploymentState,
   type ProfessionalEmploymentState,
 } from './professionalEmployment';
@@ -212,6 +213,15 @@ function daysBetween(leftIso: string, rightIso: string) {
   return Math.floor(Math.abs(right - left) / 86_400_000);
 }
 
+function deterministicChance(seed: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4_294_967_296;
+}
+
 function localOfferKey(player: PlayerProfile) {
   const identity = player.oabRegistration?.code
     || player.cloudCareerId
@@ -369,14 +379,14 @@ function normalizeOffer(row: RawOffer): LawFirmOffer | null {
   };
 }
 
-function policyFor(firm: LawFirmMarketFirm, key: 'postTermination' | 'applications') {
+function policyFor(firm: LawFirmMarketFirm, key: 'postTermination' | 'applications' | 'headhunting') {
   return asRecord(firm.recruitment[key]);
 }
 
 export function evaluateMarketPolicy(
   player: PlayerProfile,
   firm: LawFirmMarketFirm,
-  key: 'postTermination' | 'applications',
+  key: 'postTermination' | 'applications' | 'headhunting',
 ): MarketEligibility {
   const policy = policyFor(firm, key);
   const reasons: string[] = [];
@@ -588,6 +598,37 @@ export async function loadLawFirmMarket(player: PlayerProfile): Promise<LawFirmM
   const currentEmployerId = employment?.officeId || null;
   const currentEmployerSlug = employment?.officeSlug || '';
   const shouldGenerateTerminationOffers = player.officeDiscipline?.employmentStatus === 'TERMINATED';
+  const shouldEvaluateHeadhunting = isEmployedProfessional(player);
+
+  if (shouldEvaluateHeadhunting) {
+    const currentDate = gameDateIso(player);
+    const playerMarketIdentity = careerId || player.oabRegistration?.code || slug(player.name);
+
+    for (const firm of firms) {
+      if (firm.id === currentEmployerId || firm.slug === currentEmployerSlug) continue;
+
+      const eligibility = evaluateMarketPolicy(player, firm, 'headhunting');
+      if (!eligibility.eligible || !eligibility.role) continue;
+
+      const policy = policyFor(firm, 'headhunting');
+      const cooldown = Math.max(1, Math.floor(asNumber(policy.cooldownGameDays, 90)));
+      if (isOnCooldown(offers, firm.id, 'HEADHUNTING', currentDate, cooldown)) continue;
+
+      const evaluationChance = Math.max(0, Math.min(1, asNumber(policy.evaluationChance, 0.08)));
+      if (evaluationChance <= 0) continue;
+
+      // A mesma carreira, escritório e data sempre produzem a mesma avaliação.
+      // Assim, fechar/abrir o mercado ou dar F5 não permite rerrolar uma proposta.
+      const roll = deterministicChance(`${playerMarketIdentity}:${firm.id}:${currentDate}:headhunting`);
+      if (roll >= evaluationChance) continue;
+
+      const offer = await persistOffer(
+        player,
+        buildOffer(player, firm, eligibility.role, 'HEADHUNTING', careerId, userId),
+      );
+      offers = [offer, ...offers];
+    }
+  }
 
   if (shouldGenerateTerminationOffers) {
     const currentDate = gameDateIso(player);
@@ -662,6 +703,28 @@ export async function acceptLawFirmOffer(player: PlayerProfile, offer: LawFirmOf
   if (isProfessionalPracticeBlocked(loadDisciplinaryState(player).professionalStatus)) {
     throw new Error('Sua situação disciplinar atual impede assumir um novo vínculo de advocacia.');
   }
+  if (offer.status !== 'PENDING') {
+    throw new Error('Esta proposta já foi respondida e não pode ser reutilizada.');
+  }
+
+  if (supabase && !offer.id.startsWith('local-')) {
+    const { data: currentOffer, error: currentOfferError } = await supabase
+      .from('career_law_firm_offers')
+      .select('status,expires_game_date')
+      .eq('id', offer.id)
+      .maybeSingle();
+    if (currentOfferError || !currentOffer || currentOffer.status !== 'PENDING') {
+      throw new Error('Esta proposta não está mais disponível.');
+    }
+    if (currentOffer.expires_game_date && currentOffer.expires_game_date < gameDateIso(player)) {
+      await updateRemoteOfferStatus(offer, 'EXPIRED');
+      throw new Error('Esta proposta expirou.');
+    }
+  } else if (offer.expiresGameDate && offer.expiresGameDate < gameDateIso(player)) {
+    upsertLocalOffer(player, { ...offer, status: 'EXPIRED' });
+    throw new Error('Esta proposta expirou.');
+  }
+
   await updateRemoteOfferStatus(offer, 'ACCEPTED');
 
   const nextEmployment: ProfessionalEmploymentState = activateLawFirmEmployment(player, {
@@ -684,7 +747,23 @@ export async function acceptLawFirmOffer(player: PlayerProfile, offer: LawFirmOf
 
   upsertLocalOffer(player, { ...offer, status: 'ACCEPTED' });
 
+  // Um profissional só pode assumir um vínculo por vez. Propostas concorrentes
+  // ainda pendentes são retiradas ao assinar o novo contrato.
+  const localOffers = readLocalOffers(player);
+  saveLocalOffers(player, localOffers.map((item) => (
+    item.id !== offer.id && item.status === 'PENDING'
+      ? { ...item, status: 'WITHDRAWN' as LawFirmOfferStatus }
+      : item
+  )));
+
   if (supabase && offer.careerId) {
+    await supabase
+      .from('career_law_firm_offers')
+      .update({ status: 'WITHDRAWN', responded_at: new Date().toISOString() })
+      .eq('career_id', offer.careerId)
+      .eq('status', 'PENDING')
+      .neq('id', offer.id);
+
     const careerPatch: Record<string, unknown> = {
       current_law_firm_id: offer.lawFirmId,
       current_law_firm_role_id: offer.roleId,
