@@ -4,20 +4,17 @@ import {
   ArrowRight,
   BriefcaseBusiness,
   Building2,
-  CheckCircle2,
   Laptop,
   Megaphone,
   Search,
   Smartphone,
   UserRoundSearch,
-  X,
 } from 'lucide-react';
 import { GAME_CASES } from '../../data/cases';
 import {
   getSocialMediaLeadCase,
   hydrateIndependentPracticeState,
   isSocialJuridicoProActive,
-  openOwnOffice,
   readIndependentPracticeState,
   runSocialMediaCampaign,
   SOCIAL_JURIDICO_PRO_MONTHLY_PRICE,
@@ -55,7 +52,6 @@ export const IndependentProfessionalHub: React.FC<IndependentProfessionalHubProp
   const activeCase = GAME_CASES.find((item) => item.id === player.activeCase?.caseId) || null;
   const socialMediaLead = getSocialMediaLeadCase(player, GAME_CASES);
   const [socialNotice, setSocialNotice] = useState('');
-  const [showOfficeSetup, setShowOfficeSetup] = useState(false);
   useEffect(() => {
     let active = true;
     void hydrateIndependentPracticeState(player).then(() => {
@@ -69,8 +65,6 @@ export const IndependentProfessionalHub: React.FC<IndependentProfessionalHubProp
     window.addEventListener('rota:open-law-firm-market', openMarket);
     return () => window.removeEventListener('rota:open-law-firm-market', openMarket);
   }, []);
-  const [officeName, setOfficeName] = useState(player.officeFinances.officeName || `${player.name} Advocacia`);
-  const [officeError, setOfficeError] = useState('');
 
   const officeStatus = useMemo(() => {
     if (player.officeFinances.isOfficeOpen) return player.officeFinances.officeName;
@@ -112,19 +106,7 @@ export const IndependentProfessionalHub: React.FC<IndependentProfessionalHubProp
     window.location.reload();
   };
 
-  const confirmOwnOffice = () => {
-    setOfficeError('');
-    if (!officeName.trim()) {
-      setOfficeError('Informe um nome para o seu escritório.');
-      return;
-    }
-    sound.playStamp();
-    if (!openOwnOffice(player, officeName)) {
-      setOfficeError('Não foi possível registrar o escritório.');
-      return;
-    }
-    window.location.reload();
-  };
+  const openOfficeManagement = () => { sound.playClick(); window.dispatchEvent(new CustomEvent('rota:open-office-management')); };
 
   return (
     <div className="space-y-5">
@@ -244,10 +226,10 @@ export const IndependentProfessionalHub: React.FC<IndependentProfessionalHubProp
           <span className="mt-3 block text-[9px] font-black uppercase tracking-wider text-[#777]">Mercado de trabalho</span>
           <strong className="mt-1 block text-sm text-[#E6E3DC]">Buscar outro escritório</strong>
         </button>
-        <button type="button" onClick={() => setShowOfficeSetup(true)} className="rounded-2xl border border-[#2B2B30] bg-[#141416] p-4 text-left transition hover:border-[#34D399]/35">
+        <button type="button" onClick={openOfficeManagement} className="rounded-2xl border border-[#2B2B30] bg-[#141416] p-4 text-left transition hover:border-[#34D399]/35">
           <Building2 size={19} className="text-[#34D399]" />
           <span className="mt-3 block text-[9px] font-black uppercase tracking-wider text-[#777]">Autonomia</span>
-          <strong className="mt-1 block text-sm text-[#E6E3DC]">{player.officeFinances.isOfficeOpen ? 'Revisar escritório próprio' : 'Abrir meu próprio escritório'}</strong>
+          <strong className="mt-1 block text-sm text-[#E6E3DC]">{player.officeFinances.isOfficeOpen ? 'Administrar escritório próprio' : 'Procurar imóvel e abrir escritório'}</strong>
         </button>
       </section>
 
@@ -257,38 +239,6 @@ export const IndependentProfessionalHub: React.FC<IndependentProfessionalHubProp
         <button type="button" onClick={onOpenConcursoModal} className="rounded-xl border border-[#2A2A2E] bg-[#111113] px-4 py-3 text-xs font-bold text-[#BDBDBF]">Magistratura</button>
       </section>
 
-      {showOfficeSetup && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/85 p-4 backdrop-blur-md">
-          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-[#36554A] bg-[#111514] shadow-2xl">
-            <header className="flex items-center justify-between border-b border-[#293C35] px-5 py-4">
-              <div>
-                <span className="text-[9px] font-black uppercase tracking-[0.16em] text-[#6EE7B7]">Decisão de carreira</span>
-                <h3 className="mt-1 font-serif text-xl font-black text-[#ECF7F2]">Abrir escritório próprio</h3>
-              </div>
-              <button type="button" onClick={() => setShowOfficeSetup(false)} className="rounded-lg p-2 text-[#8B9892] hover:bg-white/5"><X size={17} /></button>
-            </header>
-            <div className="space-y-4 p-5">
-              <div className="rounded-xl border border-[#3D453F] bg-[#161A18] p-4 text-xs leading-5 text-[#9EA8A3]">
-                <strong className="block text-[#DDE9E3]">Você não precisa esperar virar sócio do Ramos & Associados para tentar a advocacia por conta própria.</strong>
-                Abrir agora é possível, mas sua reputação atual continua pesando na capacidade de atrair bons clientes. Escritório próprio não garante demanda nem sucesso.
-              </div>
-              <label className="block">
-                <span className="mb-2 block text-[10px] font-black uppercase tracking-wider text-[#7F8C86]">Nome do escritório</span>
-                <input value={officeName} onChange={(event) => setOfficeName(event.target.value)} maxLength={80} className="w-full rounded-xl border border-[#36413C] bg-[#0B0E0D] px-4 py-3 text-sm text-[#EDF5F1] outline-none focus:border-[#34D399]/55" />
-              </label>
-              <div className="grid gap-2 text-[11px] sm:grid-cols-2">
-                <div className="rounded-xl border border-[#2D3531] bg-[#0E1110] p-3"><CheckCircle2 size={14} className="mb-1 text-[#34D399]" /><strong className="block text-[#DDE7E2]">Independência imediata</strong><span className="text-[#78817C]">Você administra sua própria estrutura.</span></div>
-                <div className="rounded-xl border border-[#2D3531] bg-[#0E1110] p-3"><AlertTriangle size={14} className="mb-1 text-[#FBBF24]" /><strong className="block text-[#DDE7E2]">Risco comercial real</strong><span className="text-[#78817C]">Baixa reputação pode significar poucos clientes.</span></div>
-              </div>
-              {officeError && <p className="text-xs font-bold text-[#FCA5A5]">{officeError}</p>}
-              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <button type="button" onClick={() => setShowOfficeSetup(false)} className="rounded-xl border border-[#343A37] px-4 py-3 text-xs font-bold text-[#A4AAA7]">Agora não</button>
-                <button type="button" onClick={confirmOwnOffice} className="rounded-xl bg-[#2E765E] px-4 py-3 text-xs font-black text-white">{player.officeFinances.isOfficeOpen ? 'Salvar nome do escritório' : 'Abrir meu escritório'}</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <LawFirmMarketModal
         player={player}
