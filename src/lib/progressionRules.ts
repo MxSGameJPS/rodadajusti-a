@@ -11,13 +11,6 @@ export const CAREER_LEVEL_SUMMARY = {
     levels: ['Advogado Contratado', 'Advogado Sênior', 'Sócio do Escritório'],
 
   },
-  PROMOTOR: {
-    label: 'Concurso para Promotor de Justiça',
-    examType: 'concurso_promotor',
-    questions: 20,
-    minLegalPracticeYears: 3,
-    requirementText: '3 anos de atividade jurídica',
-  },
 };
 
 export const ACADEMIC_TRACKS = {
@@ -41,6 +34,13 @@ export const PUBLIC_EXAM_RULES = {
   JUIZ: {
     label: 'Concurso para Juiz',
     examType: 'concurso_juiz',
+    questions: 20,
+    minLegalPracticeYears: 3,
+    requirementText: '3 anos de atividade jurídica',
+  },
+  PROMOTOR: {
+    label: 'Concurso para Promotor de Justiça',
+    examType: 'concurso_promotor',
     questions: 20,
     minLegalPracticeYears: 3,
     requirementText: '3 anos de atividade jurídica',
