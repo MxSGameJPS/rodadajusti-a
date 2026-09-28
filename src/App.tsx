@@ -75,7 +75,7 @@ import {
 import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
 import { persistPlayerCloudSave } from './lib/playerCloudSave';
 import { readProfessionalEmploymentState } from './lib/professionalEmployment';
-import { assignLongRunningProfessionalMatter, getProfessionalWorkLifeConflict, recordProfessionalMatterOutcome, recordProfessionalNetworkInteraction, recordProfessionalStrategy, updateMatterLifecycle } from './lib/professionalActTwo';
+import { assignLongRunningProfessionalMatter, getProfessionalWorkLifeConflict, recordProfessionalMatterOutcome, recordProfessionalNetworkInteraction, recordProfessionalStrategy, settleProfessionalCaseEconomy, updateMatterLifecycle } from './lib/professionalActTwo';
 import { getProfessionalGameplayModifiers, loadProfessionalProfile } from './lib/professionalRpg';
 import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
 import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } from './lib/gameTime';
@@ -1554,8 +1554,10 @@ export default function App() {
     setVerdictResult(resultRecord);
     setPromotedTierAnnouncement(promotionAnnouncement);
 
+    let professionalEconomyNet = 0;
     if (player.oabRegistration && !isInternCareer(player)) {
       recordProfessionalMatterOutcome(player, activeCaseData.id, decision.success);
+      professionalEconomyNet = settleProfessionalCaseEconomy(player, activeCaseData.id, decision.success).net;
     }
 
     if (player.oabRegistration && !isInternCareer(player)) {
@@ -1597,7 +1599,7 @@ export default function App() {
 
     setPlayer((prev) => ({
       ...prev,
-      money: prev.money + earnedMoney,
+      money: prev.money + earnedMoney + professionalEconomyNet,
       xp: nextXp,
       reputation: Math.max(0, Math.min(100, prev.reputation + earnedReputation)),
       casesSolved: newSolvedCount,
