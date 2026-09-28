@@ -17,8 +17,6 @@ interface AcademicModalProps {
 }
 
 export const AcademicModal: React.FC<AcademicModalProps> = ({ isOpen, onClose, player, onEnrollCourse, onAcademicMoneyChange }) => {
-  if (!isOpen) return null;
-
   const [academicCareer, setAcademicCareer] = useState<AcademicCareerState>(() => readAcademicCareer(player));
   useEffect(() => {
     if (!isOpen) return;
@@ -29,6 +27,7 @@ export const AcademicModal: React.FC<AcademicModalProps> = ({ isOpen, onClose, p
   }, [isOpen, player.cloudCareerId]);
   const masterLevel = academicCareer.masterLevel;
   const doctorateLevel = academicCareer.doctorateLevel;
+  if (!isOpen) return null;
   const regularCourses = ACADEMIC_COURSES.filter((course) => !['MESTRE', 'DOUTOR'].includes(course.degree));
   const knowledge = normalizeLegalKnowledge(player.legalKnowledge);
 
