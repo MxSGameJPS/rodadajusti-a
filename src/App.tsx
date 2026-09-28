@@ -99,6 +99,8 @@ import { canManageOwnOffice } from './lib/independentPractice';
 import { addLegalKnowledge, CAMPUS_ACTIVITIES, type CampusActivityId } from './lib/academicLife';
 import { applyRelationshipInteraction, seedCoreRelationships } from './lib/relationshipEngine';
 import { persistRelationshipEngine } from './lib/relationshipRepository';
+import { createCaseMediaEvent } from './lib/mediaRepercussion';
+import { hydrateWorldMemories } from './lib/worldMemory';
 import {
   applyRoutinePerformance,
   attendancePerformanceDelta,
@@ -817,6 +819,7 @@ export default function App() {
     if (player.oabRegistration && !isInternCareer(player)) {
       if (player.activeCase && player.activeCase.caseId !== caseItem.id) stashProfessionalCaseState(player, player.activeCase);
       assignLongRunningProfessionalMatter(player, caseItem, currentGameDateLabel(player));
+      void createCaseMediaEvent(player, caseItem, 'CASE_OPENED');
     }
     const initialState: ActiveCaseState = {
       caseId: caseItem.id,
@@ -1657,6 +1660,7 @@ export default function App() {
     let professionalEconomyNet = 0;
     if (player.oabRegistration && !isInternCareer(player)) {
       recordProfessionalMatterOutcome(player, activeCaseData.id, decision.success);
+      void createCaseMediaEvent(player, activeCaseData, 'DECISION', decision.success);
       professionalEconomyNet = settleProfessionalCaseEconomy(player, activeCaseData.id, decision.success).net;
     }
 
