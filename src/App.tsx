@@ -33,6 +33,8 @@ import { AcademicModal } from './components/AcademicModal';
 import { hydrateAcademicCareer } from './lib/academicCareer';
 import { UniversityCampusModal } from './components/UniversityCampus/UniversityCampusModal';
 import { ConcursoModal } from './components/ConcursoModal';
+import { PublicCareerOpportunityModal } from './components/PublicCareerOpportunityModal';
+import { answerPublicOpportunity, hydratePublicCareerState, rollPublicCareerOpportunity, type PublicOpportunity } from './lib/publicCareerOpportunities';
 import { OfficeManagementModal } from './components/OfficeManagementModal';
 import { OabExamModal } from './components/OabExamModal';
 import { SocialJuridicoExperience } from './components/SocialJuridicoExperience';
@@ -435,6 +437,7 @@ export default function App() {
   const [isCareerModalOpen, setIsCareerModalOpen] = useState<boolean>(false);
   const [isAcademicModalOpen, setIsAcademicModalOpen] = useState<boolean>(false);
   const [isConcursoModalOpen, setIsConcursoModalOpen] = useState<boolean>(false);
+  const [publicCareerOpportunity, setPublicCareerOpportunity] = useState<PublicOpportunity | null>(null);
   const [isOfficeModalOpen, setIsOfficeModalOpen] = useState<boolean>(false);
   const [isOabExamOpen, setIsOabExamOpen] = useState<boolean>(false);
   const [oabExamPurpose, setOabExamPurpose] = useState<'GENERAL' | 'ACT_ONE_FINAL'>('GENERAL');
@@ -489,6 +492,15 @@ export default function App() {
 
     return false;
   };
+
+  useEffect(() => {
+    if (!player.name || !player.oabRegistration) return;
+    let active = true;
+    void hydratePublicCareerState(player).then(() => rollPublicCareerOpportunity(player)).then((state) => {
+      if (active) setPublicCareerOpportunity(state.active?.status === 'ANNOUNCED' ? state.active : null);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [player.cloudCareerId, player.careerTier, player.gameCurrentMonth, player.gameCurrentYear, player.oabRegistration?.code]);
 
   const [verdictResult, setVerdictResult] = useState<CaseHistoryRecord | null>(null);
   const [verdictCase, setVerdictCase] = useState<LegalCase | null>(null);
@@ -2967,6 +2979,21 @@ export default function App() {
         player={player}
         onEnrollCourse={handleEnrollCourse}
         onAcademicMoneyChange={(delta) => setPlayer((prev) => ({ ...prev, money: Math.max(0, prev.money + delta) }))}
+      />
+
+      <PublicCareerOpportunityModal
+        opportunity={publicCareerOpportunity}
+        onDecline={() => {
+          void answerPublicOpportunity(player, false).then(() => setPublicCareerOpportunity(null));
+        }}
+        onAccept={() => {
+          void answerPublicOpportunity(player, true).then((result) => {
+            if (!result.ok) return;
+            setPlayer((prev) => ({ ...prev, money: Math.max(0, prev.money - result.fee) }));
+            setPublicCareerOpportunity(null);
+            if (result.opportunity?.examType) setIsConcursoModalOpen(true);
+          });
+        }}
       />
 
       <ConcursoModal
