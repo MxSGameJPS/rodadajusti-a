@@ -256,7 +256,7 @@ export function getActTwoClosure(player:PlayerProfile):ActTwoClosure{
 function gameDateKey(player:PlayerProfile){return [String(player.gameCurrentYear).padStart(4,'0'),String(player.gameCurrentMonth).padStart(2,'0'),String(player.gameCurrentDay).padStart(2,'0')].join('-')}
 function agendaExpired(task:ProfessionalAgendaTask,date:string,minute:number){return task.dueGameDate<date||(task.dueGameDate===date&&task.dueMinute!=null&&task.dueMinute<minute)}
 export function reconcileProfessionalAgenda(player:PlayerProfile){
- const state=readProfessionalPortfolio(player),work=readProfessionalWorkState(player),date=gameDateKey(player),minute=player.gameCurrentHour*60+player.gameCurrentMinute;
+ const state=readProfessionalPortfolio(player),work=readProfessionalWorkState(player),date=gameDateKey(player),minute=player.gameCurrentMinutes;
  const expired=state.agenda.filter(task=>task.status==='PENDING'&&agendaExpired(task,date,minute)&&!work.processedAgendaKeys.includes(task.id));
  if(!expired.length)return{portfolio:state,work,missed:[] as ProfessionalAgendaTask[]};
  const ids=new Set(expired.map(task=>task.id));
