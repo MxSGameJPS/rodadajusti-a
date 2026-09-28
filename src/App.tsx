@@ -75,7 +75,7 @@ import {
 } from './lib/internCareerEngine';
 import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
 import { persistPlayerCloudSave } from './lib/playerCloudSave';
-import { readProfessionalEmploymentState } from './lib/professionalEmployment';
+import { isEmployedProfessional, isRamosEmploymentActive, readProfessionalEmploymentState } from './lib/professionalEmployment';
 import { addSpecializationStudy, assignLongRunningProfessionalMatter, getProfessionalWorkLifeConflict, hydrateActTwoState, prepareProfessionalHearing, readProfessionalCaseState, readProfessionalPortfolio, recordProfessionalHearingResult, recordProfessionalMatterOutcome, recordProfessionalNetworkInteraction, recordProfessionalStrategy, scheduleProfessionalHearing, settleProfessionalCaseEconomy, stashProfessionalCaseState, updateMatterLifecycle } from './lib/professionalActTwo';
 import { getProfessionalGameplayModifiers, loadProfessionalProfile } from './lib/professionalRpg';
 import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
@@ -1526,14 +1526,19 @@ export default function App() {
     const workLifeConflict = player.oabRegistration && !isInternCareer(player) ? getProfessionalWorkLifeConflict(player) : null;
     const professionalPerformanceDelta = (gameplayModifiers?.legalStrategyBonus || 0) + (workLifeConflict?.performancePenalty || 0);
 
-    const { review: supervisorReview, discipline: nextDiscipline } = buildSupervisorReview({
-      decision,
-      caseId: activeCaseData.id,
-      caseTitle: activeCaseData.title,
-      completedDate,
-      currentDiscipline: player.officeDiscipline,
-      officeName: readProfessionalEmploymentState(player)?.officeName || 'Ramos & Associados',
-    });
+    const employmentState = readProfessionalEmploymentState(player);
+    const employedProfessional = player.oabRegistration && !isInternCareer(player) && isEmployedProfessional(player);
+    const supervisorOutcome = employedProfessional
+      ? buildSupervisorReview({
+          decision,
+          caseId: activeCaseData.id,
+          caseTitle: activeCaseData.title,
+          completedDate,
+          currentDiscipline: player.officeDiscipline,
+          officeName: employmentState?.officeName || 'Escritório atual',
+        })
+      : { review: null, discipline: player.officeDiscipline };
+    const { review: supervisorReview, discipline: nextDiscipline } = supervisorOutcome;
 
     let earnedXp = 0;
     let earnedMoney = 0;
@@ -1626,11 +1631,12 @@ export default function App() {
       professionalEconomyNet = settleProfessionalCaseEconomy(player, activeCaseData.id, decision.success).net;
     }
 
-    if (player.oabRegistration && !isInternCareer(player)) {
+    if (employedProfessional) {
+      const ramos = isRamosEmploymentActive(player);
       recordProfessionalNetworkInteraction(player, {
-        entityId: 'npc:ROBERTO',
-        name: 'Dr. Roberto Ramos',
-        role: 'Sócio responsável • Ramos & Associados',
+        entityId: ramos ? 'npc:ROBERTO' : `office:${employmentState?.officeSlug || employmentState?.officeId || 'current'}`,
+        name: ramos ? 'Dr. Roberto Ramos' : (employmentState?.officeName || 'Coordenação do escritório'),
+        role: ramos ? 'Sócio responsável • Ramos & Associados' : `Coordenação • ${employmentState?.officeName || 'Escritório atual'}`,
         gameDate: completedDate,
         trustDelta: decision.success ? 5 : -4,
         respectDelta: decision.success ? 5 : -2,
@@ -1639,7 +1645,7 @@ export default function App() {
       });
     }
 
-    applyRelationshipInteraction(player, {
+    if (isRamosEmploymentActive(player)) applyRelationshipInteraction(player, {
       entityId: 'npc:ROBERTO',
       entityType: 'NPC',
       name: 'Dr. Roberto Ramos',
