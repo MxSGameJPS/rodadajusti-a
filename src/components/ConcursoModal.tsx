@@ -27,7 +27,7 @@ export const ConcursoModal: React.FC<ConcursoModalProps> = ({ isOpen, onClose, p
 
         <div className="p-6 space-y-4 bg-[#0A0A0B]">
           <div className={`p-4 rounded-xl border ${eligible ? 'border-[#34D399]/35 bg-[#34D399]/5' : 'border-[#F87171]/30 bg-[#F87171]/5'}`}>
-            <div className="flex items-start gap-3">{eligible ? <CheckCircle2 className="text-[#34D399]" size={20}/> : <Lock className="text-[#F87171]" size={20}/>}<div><h3 className="font-bold">Elegibilidade acadêmica</h3><p className="text-sm text-[#AAA] mt-1">Doutorado atual: <strong className="text-[#E0E0E0]">{doctorateLevel}/5</strong>. Para prestar concurso de Juiz ou Desembargador é necessário nível superior ao Doutorado 3, portanto nível 4 ou 5.</p></div></div>
+            <div className="flex items-start gap-3">{eligible ? <CheckCircle2 className="text-[#34D399]" size={20}/> : <Lock className="text-[#F87171]" size={20}/>}<div><h3 className="font-bold">Elegibilidade acadêmica</h3><p className="text-sm text-[#AAA] mt-1">Doutorado atual: <strong className="text-[#E0E0E0]">{doctorateLevel}/5</strong>. Para prestar o concurso de ingresso na Magistratura é necessário Doutorado nível 4 ou 5 dentro da progressão atual do jogo.</p></div></div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -40,7 +40,7 @@ export const ConcursoModal: React.FC<ConcursoModalProps> = ({ isOpen, onClose, p
           </div>
 
           <div className="p-4 rounded-xl border border-[#C5A059]/25 bg-[#C5A059]/5 text-xs text-[#CFC5AD]">
-            O antigo concurso hardcoded de 100 questões e fases fixas foi desativado. A quantidade, nota de corte, duração e conteúdo passam a vir das provas publicadas pelo administrador.
+            O concurso ativo é o de ingresso na Magistratura. A antiga prova direta para Desembargador foi aposentada: a chegada aos tribunais passará pela progressão da carreira judicial no módulo nacional.
           </div>
         </div>
 
