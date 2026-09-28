@@ -30,7 +30,7 @@ import { VerdictModal } from './components/VerdictModal';
 import { SupervisorReviewModal } from './components/SupervisorReviewModal';
 import { CareerModal } from './components/CareerModal';
 import { AcademicModal } from './components/AcademicModal';
-import { hydrateAcademicCareer, syncAcademicLevels } from './lib/academicCareer';
+import { hydrateAcademicCareer } from './lib/academicCareer';
 import { UniversityCampusModal } from './components/UniversityCampus/UniversityCampusModal';
 import { ConcursoModal } from './components/ConcursoModal';
 import { OfficeManagementModal } from './components/OfficeManagementModal';
