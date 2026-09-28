@@ -76,7 +76,7 @@ import {
 import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
 import { persistPlayerCloudSave } from './lib/playerCloudSave';
 import { readProfessionalEmploymentState } from './lib/professionalEmployment';
-import { addSpecializationStudy, assignLongRunningProfessionalMatter, getProfessionalWorkLifeConflict, prepareProfessionalHearing, readProfessionalCaseState, readProfessionalPortfolio, recordProfessionalHearingResult, recordProfessionalMatterOutcome, recordProfessionalNetworkInteraction, recordProfessionalStrategy, scheduleProfessionalHearing, settleProfessionalCaseEconomy, stashProfessionalCaseState, updateMatterLifecycle } from './lib/professionalActTwo';
+import { addSpecializationStudy, assignLongRunningProfessionalMatter, getProfessionalWorkLifeConflict, hydrateActTwoState, prepareProfessionalHearing, readProfessionalCaseState, readProfessionalPortfolio, recordProfessionalHearingResult, recordProfessionalMatterOutcome, recordProfessionalNetworkInteraction, recordProfessionalStrategy, scheduleProfessionalHearing, settleProfessionalCaseEconomy, stashProfessionalCaseState, updateMatterLifecycle } from './lib/professionalActTwo';
 import { getProfessionalGameplayModifiers, loadProfessionalProfile } from './lib/professionalRpg';
 import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
 import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } from './lib/gameTime';
@@ -519,6 +519,16 @@ export default function App() {
     window.addEventListener('rota:switch-professional-case', switchProfessionalCase);
     return () => window.removeEventListener('rota:switch-professional-case', switchProfessionalCase);
   }, [player]);
+
+    useEffect(() => {
+    if (!player.cloudCareerId || !player.oabRegistration || player.careerTier !== 'ADVOGADO_CONTRATADO') return;
+    let active = true;
+    void hydrateActTwoState(player).then(({ work }) => {
+      if (!active || !work.actTwoCompleted) return;
+      setPlayer((prev) => prev.careerTier === 'ADVOGADO_CONTRATADO' ? { ...prev, careerTier: 'ADVOGADO_SENIOR' } : prev);
+    });
+    return () => { active = false; };
+  }, [player.cloudCareerId, player.oabRegistration?.code, player.careerTier]);
 
     const [pendingSupervisorReview, setPendingSupervisorReview] = useState<SupervisorReview | null>(null);
   const [isInternPromotionCeremonyOpen, setIsInternPromotionCeremonyOpen] = useState(false);
