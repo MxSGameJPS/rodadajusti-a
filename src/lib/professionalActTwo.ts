@@ -104,9 +104,11 @@ export function assignProfessionalMatter(player:PlayerProfile,input:Omit<Profess
  saveProfessionalPortfolio(player,next);return next;
 }
 
-export function registerProfessionalArrival(player:PlayerProfile,gameDate:string){
- const state=readProfessionalWorkState(player);if(state.arrivalKeys.includes(gameDate))return state;
- const next:ProfessionalWorkState={...state,arrivalKeys:[...state.arrivalKeys,gameDate].slice(-90)};
+export function registerProfessionalArrival(player:PlayerProfile,gameDate:string,weeklyHours?:number){
+ const state=readProfessionalWorkState(player);
+ const normalizedHours=Math.max(0,Math.round(Number(weeklyHours??state.weeklyHours)||0));
+ if(state.arrivalKeys.includes(gameDate)&&state.weeklyHours===normalizedHours)return state;
+ const next:ProfessionalWorkState={...state,weeklyHours:normalizedHours,arrivalKeys:state.arrivalKeys.includes(gameDate)?state.arrivalKeys:[...state.arrivalKeys,gameDate].slice(-90)};
  saveProfessionalWorkState(player,next);
  const portfolio=readProfessionalPortfolio(player);
  if(!portfolio.firstProfessionalDayCompleted)saveProfessionalPortfolio(player,{...portfolio,firstProfessionalDayCompleted:true});
