@@ -237,6 +237,19 @@ export function declineProfessionalEmploymentOffer(player: PlayerProfile) {
   };
   saveProfessionalEmploymentState(player, next);
   patchWorkingPlayer({ careerTier: 'ADVOGADO_HABILITADO' });
+  if (supabase && player.cloudCareerId) {
+    void supabase.from('careers').update({
+      current_law_firm_id: null,
+      current_law_firm_role_id: null,
+      employment_status: 'INDEPENDENT',
+      career_stage: 'ADVOGADO_HABILITADO',
+      professional_employment: next,
+      last_played_at: new Date().toISOString(),
+    }).eq('id', player.cloudCareerId)
+      .then(({ error }) => {
+        if (error) console.warn('[Ato 2] Falha ao persistir escolha pela advocacia autônoma.', error.message);
+      });
+  }
   return next;
 }
 
