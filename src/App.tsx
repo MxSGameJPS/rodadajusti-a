@@ -1478,6 +1478,12 @@ export default function App() {
         setLifeWarning('Sua inscrição profissional está impedida de atuar. O protocolo não pode ser realizado enquanto durar a sanção.');
         return;
       }
+      const professionalMatter = readProfessionalPortfolio(player).matters.find((matter) => matter.caseId === activeCaseData.id);
+      if (professionalMatter?.status === 'CLOSED') {
+        setIsCourtroomOpen(false);
+        setLifeWarning('Este processo profissional já foi encerrado. A recompensa e o resultado não podem ser aplicados novamente.');
+        return;
+      }
     }
 
     setIsCourtroomOpen(false);
