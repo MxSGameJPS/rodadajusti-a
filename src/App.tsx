@@ -1189,10 +1189,13 @@ export default function App() {
 
   const handleOabStudy = async (area:OabStudyArea) => {
     if(!oabPreparation.unlocked||!ensureOfficeGameplayAvailable())return;
+    if(player.household.needs.energy<18||player.household.needs.hunger<12){setLifeWarning('Você precisa descansar e se alimentar antes de continuar a preparação intensiva.');return}
     const minutes=OAB_AREAS[area].minutes;const conflict=getWorkTimeConflict(player,minutes,'OFFICE');
     if(conflict){setLifeWarning(conflict);return}
-    const next=completeOabStudy(oabPreparation,area,portfolioDate(player));setOabPreparation(next);
-    setPlayer(prev=>({...prev,...gameClockFields(prev,minutes),energy:Math.max(0,prev.energy-5)}));
+    const next=completeOabStudy(oabPreparation,area,portfolioDate(player));
+    if(next===oabPreparation){setLifeWarning('Você já estudou esta área duas vezes hoje. Alterne a matéria ou continue a preparação em outro dia.');return}
+    setOabPreparation(next);
+    setPlayer(prev=>({...prev,...gameClockFields(prev,minutes),household:{...gameClockFields(prev,minutes).household,needs:{...gameClockFields(prev,minutes).household.needs,energy:Math.max(0,gameClockFields(prev,minutes).household.needs.energy-5)}}}));
     await persistOabPreparation(player,next);
   };
 
