@@ -76,7 +76,7 @@ import {
 import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
 import { persistPlayerCloudSave } from './lib/playerCloudSave';
 import { readProfessionalEmploymentState } from './lib/professionalEmployment';
-import { addSpecializationStudy, assignLongRunningProfessionalMatter, getProfessionalWorkLifeConflict, prepareProfessionalHearing, readProfessionalPortfolio, recordProfessionalHearingResult, recordProfessionalMatterOutcome, recordProfessionalNetworkInteraction, recordProfessionalStrategy, scheduleProfessionalHearing, settleProfessionalCaseEconomy, updateMatterLifecycle } from './lib/professionalActTwo';
+import { addSpecializationStudy, assignLongRunningProfessionalMatter, getProfessionalWorkLifeConflict, prepareProfessionalHearing, readProfessionalCaseState, readProfessionalPortfolio, recordProfessionalHearingResult, recordProfessionalMatterOutcome, recordProfessionalNetworkInteraction, recordProfessionalStrategy, scheduleProfessionalHearing, settleProfessionalCaseEconomy, stashProfessionalCaseState, updateMatterLifecycle } from './lib/professionalActTwo';
 import { getProfessionalGameplayModifiers, loadProfessionalProfile } from './lib/professionalRpg';
 import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
 import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } from './lib/gameTime';
@@ -491,7 +491,36 @@ export default function App() {
     return () => window.removeEventListener('rota:act-two-senior-review-completed', completeActTwo);
   }, []);
 
-  const [pendingSupervisorReview, setPendingSupervisorReview] = useState<SupervisorReview | null>(null);
+  useEffect(() => {
+    const switchProfessionalCase = (event: Event) => {
+      const caseId = (event as CustomEvent<{ caseId?: string }>).detail?.caseId;
+      if (!caseId || !player.oabRegistration || isInternCareer(player) || player.activeCase?.caseId === caseId) return;
+      const caseItem = GAME_CASES.find((item) => item.id === caseId);
+      if (!caseItem) return;
+      if (player.activeCase) stashProfessionalCaseState(player, player.activeCase);
+      const stored = readProfessionalCaseState(player, caseId);
+      const firstLocation = caseItem.locations.find((location) => location.unlockedByDefault) || caseItem.locations[0];
+      const restored: ActiveCaseState = stored || {
+        caseId,
+        hoursSpent: 0,
+        currentLocationId: firstLocation?.id || 'LOC_ESCRITORIO_RAMOS',
+        discoveredClueIds: [],
+        unlockedLocationIds: caseItem.locations.filter((location) => location.unlockedByDefault).map((location) => location.id),
+        askedDialogueIds: [],
+        inspectedSpotIds: [],
+        logs: [{ id: `log-${Date.now()}`, timestampGameHours: 0, message: `Retomada profissional: ${caseItem.title}`, type: 'alerta' }],
+        selectedStrategyId: null,
+        selectedEvidenceIds: [],
+        socialJuridicoActions: [],
+      };
+      setPlayer((prev) => ({ ...prev, activeCase: restored }));
+      setCurrentView('INVESTIGATION_MAP');
+    };
+    window.addEventListener('rota:switch-professional-case', switchProfessionalCase);
+    return () => window.removeEventListener('rota:switch-professional-case', switchProfessionalCase);
+  }, [player]);
+
+    const [pendingSupervisorReview, setPendingSupervisorReview] = useState<SupervisorReview | null>(null);
   const [isInternPromotionCeremonyOpen, setIsInternPromotionCeremonyOpen] = useState(false);
   const [internPromotionNarrative, setInternPromotionNarrative] = useState<InternPromotionNarrative | null>(null);
   const [promotionReviewDialogues, setPromotionReviewDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
@@ -762,6 +791,7 @@ export default function App() {
     if (!ensureLifeReady()) return;
     if (isInternCareer(player) && !ensureOfficeGameplayAvailable()) return;
     if (player.oabRegistration && !isInternCareer(player)) {
+      if (player.activeCase && player.activeCase.caseId !== caseItem.id) stashProfessionalCaseState(player, player.activeCase);
       assignLongRunningProfessionalMatter(player, caseItem, currentGameDateLabel(player));
     }
     const initialState: ActiveCaseState = {
