@@ -1,11 +1,11 @@
 import type { PlayerProfile } from '../types/game';
 import { isSupabaseConfigured, supabase } from './supabase';
 
-export async function persistPlayerCloudSave(player: PlayerProfile) {
-  if (!isSupabaseConfigured || !supabase || !player.name) return false;
+export async function persistPlayerCloudSave(player: PlayerProfile): Promise<{ ok: boolean; careerId: string | null }> {
+  if (!isSupabaseConfigured || !supabase || !player.name) return { ok: false, careerId: null };
   const { data: userData, error: userError } = await supabase.auth.getUser();
   const user = userData.user;
-  if (userError || !user) return false;
+  if (userError || !user) return { ok: false, careerId: null };
 
   let careerId = player.cloudCareerId || null;
   if (careerId) {
@@ -30,7 +30,7 @@ export async function persistPlayerCloudSave(player: PlayerProfile) {
       cases_failed: Math.max(0, Math.floor(player.casesFailed || 0)),
       last_played_at: new Date().toISOString(),
     }).select('id').single();
-    if (error || !data?.id) return false;
+    if (error || !data?.id) return { ok: false, careerId: null };
     careerId = data.id;
   }
 
@@ -45,7 +45,7 @@ export async function persistPlayerCloudSave(player: PlayerProfile) {
   }, { onConflict: 'career_id,slot' });
   if (error) {
     console.warn('[Rota da Justiça] Falha ao persistir save em nuvem.', error.message);
-    return false;
+    return { ok: false, careerId: null };
   }
   await supabase.from('careers').update({
     character_name: player.name,
@@ -59,5 +59,5 @@ export async function persistPlayerCloudSave(player: PlayerProfile) {
     cases_failed: Math.max(0, Math.floor(player.casesFailed || 0)),
     last_played_at: new Date().toISOString(),
   }).eq('id', careerId).eq('user_id', user.id);
-  return true;
+  return { ok: true, careerId };
 }
