@@ -75,7 +75,7 @@ import {
 import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
 import { persistPlayerCloudSave } from './lib/playerCloudSave';
 import { readProfessionalEmploymentState } from './lib/professionalEmployment';
-import { assignProfessionalMatter } from './lib/professionalActTwo';
+import { assignLongRunningProfessionalMatter, recordProfessionalMatterOutcome, recordProfessionalStrategy, updateMatterLifecycle } from './lib/professionalActTwo';
 import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
 import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } from './lib/gameTime';
 import { sound } from './utils/sound';
