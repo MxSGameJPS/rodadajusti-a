@@ -242,8 +242,9 @@ export function getProfessionalWorkLifeConflict(player:PlayerProfile):WorkLifeCo
 export interface ProfessionalEconomySnapshot{salary:number;estimatedSuccessFees:number;professionalCosts:number;netProjection:number}
 export function getProfessionalEconomySnapshot(player:PlayerProfile,salary:number):ProfessionalEconomySnapshot{
  const state=readProfessionalPortfolio(player),active=state.matters.filter(m=>m.status!=='CLOSED').length,urgent=state.matters.filter(m=>m.status!=='CLOSED'&&(m.officePriority==='URGENT'||m.officePriority==='CRITICAL')).length;
- const estimatedSuccessFees=state.reputation.technical>=65?Math.round(active*180):Math.round(active*90);
- const professionalCosts=Math.round(active*65+urgent*120);
+ const independent=readProfessionalWorkState(player).weeklyHours===0;
+ const estimatedSuccessFees=independent?(state.reputation.technical>=65?Math.round(active*180):Math.round(active*90)):0;
+ const professionalCosts=independent?Math.round(active*65+urgent*120):0;
  return{salary,estimatedSuccessFees,professionalCosts,netProjection:salary+estimatedSuccessFees-professionalCosts};
 }
 
