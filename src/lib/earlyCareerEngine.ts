@@ -1,5 +1,6 @@
 import type { PlayerProfile } from '../types/game';
 import { getInternPromotionStatus, getOabPreparationStatus, normalizeOfficePerformance } from './internCareerEngine';
+import { readInternshipRoutine } from './internshipRoutine';
 
 export type ActOneStageId =
   | 'ARRIVAL'
@@ -57,6 +58,8 @@ export function getEarlyCareerSnapshot(player: PlayerProfile): EarlyCareerSnapsh
   const performance = normalizeOfficePerformance(player.officePerformance);
   const internTasks = completedInternTasks(player);
   const seniorTasks = completedSeniorTasks(player);
+  const routine = readInternshipRoutine(player);
+  const seniorPriorities = routine.handledSeniorPriorityKeys.length;
   const promotion = getInternPromotionStatus({
     casesSolved: player.casesSolved,
     xp: player.xp,
@@ -117,7 +120,7 @@ export function getEarlyCareerSnapshot(player: PlayerProfile): EarlyCareerSnapsh
     { id: 'INTERN_FOUNDATIONS', title: 'Fundamentos', description: 'Tarefas supervisionadas do estágio.', completed: internTasks >= 2 || isSenior || actOneComplete, current: stage === 'INTERN_FOUNDATIONS' },
     { id: 'FIRST_CASES', title: 'Casos do escritório', description: 'Participação prática em casos reais.', completed: player.casesSolved >= 2 || isSenior || actOneComplete, current: stage === 'FIRST_CASES' },
     { id: 'PROMOTION_REVIEW', title: 'Avaliação', description: 'Requisitos para Estagiário Sênior.', completed: isSenior || actOneComplete, current: stage === 'PROMOTION_REVIEW' },
-    { id: 'SENIOR_AUTONOMY', title: 'Estágio Sênior', description: 'Mais autonomia e responsabilidade.', completed: seniorTasks >= 2 && oab.ready || actOneComplete, current: stage === 'SENIOR_AUTONOMY' },
+    { id: 'SENIOR_AUTONOMY', title: 'Estágio Sênior', description: 'Mais autonomia e responsabilidade.', completed: (seniorTasks >= 2 || seniorPriorities >= 3) && oab.ready || actOneComplete, current: stage === 'SENIOR_AUTONOMY' },
     { id: 'OAB_PREPARATION', title: 'OAB', description: 'Encerramento do primeiro arco.', completed: actOneComplete, current: stage === 'OAB_PREPARATION' || stage === 'ACT_ONE_COMPLETE' },
   ];
 
