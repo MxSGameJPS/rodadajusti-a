@@ -17,6 +17,7 @@ import {
   registerDisciplinaryIncident,
   type RegisterDisciplinaryIncidentInput,
 } from './disciplinarySystem';
+import { supabase } from './supabase';
 
 export type EthicalChoiceTone = 'ethical' | 'gray' | 'corrupt';
 
@@ -743,6 +744,44 @@ export function saveEthicalDilemmaState(
 ) {
   localStorage.setItem(storageKey(player), JSON.stringify(state));
   window.dispatchEvent(new CustomEvent('rota:ethical-dilemma-state-updated', { detail: state }));
+  if (supabase && player.cloudCareerId) {
+    void supabase.from('careers').select('professional_work_state').eq('id', player.cloudCareerId).maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn('[Ato 2] Falha ao ler dilemas éticos na nuvem.', error.message);
+          return;
+        }
+        const workState = data?.professional_work_state && typeof data.professional_work_state === 'object'
+          ? data.professional_work_state as Record<string, unknown>
+          : {};
+        void supabase!.from('careers').update({
+          professional_work_state: { ...workState, ethicalDilemmas: state },
+        }).eq('id', player.cloudCareerId)
+          .then(({ error: updateError }) => {
+            if (updateError) console.warn('[Ato 2] Falha ao salvar dilemas éticos.', updateError.message);
+          });
+      });
+  }
+}
+
+export async function hydrateEthicalDilemmaState(player: PlayerProfile) {
+  if (!supabase || !player.cloudCareerId) return loadEthicalDilemmaState(player);
+  const { data, error } = await supabase.from('careers').select('professional_work_state').eq('id', player.cloudCareerId).maybeSingle();
+  if (error || !data?.professional_work_state || typeof data.professional_work_state !== 'object') {
+    return loadEthicalDilemmaState(player);
+  }
+  const raw = (data.professional_work_state as Record<string, unknown>).ethicalDilemmas;
+  if (!raw || typeof raw !== 'object') return loadEthicalDilemmaState(player);
+  const parsed = raw as EthicalDilemmaState;
+  const state: EthicalDilemmaState = {
+    ...emptyState(player),
+    ...parsed,
+    records: Array.isArray(parsed.records) ? parsed.records : [],
+    resolvedSlots: parsed.resolvedSlots && typeof parsed.resolvedSlots === 'object' ? parsed.resolvedSlots : {},
+  };
+  localStorage.setItem(storageKey(player), JSON.stringify(state));
+  window.dispatchEvent(new CustomEvent('rota:ethical-dilemma-state-updated', { detail: state }));
+  return state;
 }
 
 function hashString(value: string) {
