@@ -1624,7 +1624,7 @@ export default function App() {
       return {
         ...prev,
         careerTier:
-          prev.careerTier === 'ESTAGIARIO_SENIOR' ? 'ADVOGADO_CONTRATADO' : prev.careerTier,
+          prev.careerTier === 'ESTAGIARIO_SENIOR' ? 'ADVOGADO_HABILITADO' : prev.careerTier,
         professionalExamAttempts: attempts,
         oabRegistration:
           prev.oabRegistration || {
