@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Gavel, ShieldCheck, TrendingUp } from 'lucide-react';
+import { PublicServiceDesk } from './PublicServiceDesk';
 import type { PlayerProfile } from '../types/game';
 import {
   applyPublicServicePromotion,
@@ -102,6 +103,8 @@ export function PublicServiceCareerPanel({
       >
         {isProsecution ? 'Cumprir atuação ministerial do mês' : 'Cumprir atividade jurisdicional do mês'}
       </button>
+
+      <div className="mt-4"><PublicServiceDesk player={player} /></div>
 
       {promotion && (
         <div className="mt-4 rounded-xl border border-[#2A2A2E] bg-[#0A0A0B] p-4">
