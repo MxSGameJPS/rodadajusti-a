@@ -3,13 +3,14 @@ import { getCaseRepercussionLevel,type CaseRepercussionLevel } from './caseMetad
 import { applyProfessionalReputation } from './professionalActTwo';
 import { applyWorldMemoryEvent } from './worldMemory';
 import { supabase } from './supabase';
+import { prestigeReachMultiplier } from './legalPrestige';
 export type MediaStrategy='SILENCE'|'TECHNICAL_STATEMENT'|'INTERVIEW'|'SOCIAL_MEDIA';
 export interface MediaEvent{id:string;caseId:string;eventKey:string;eventType:string;gameDate:string;repercussionLevel:CaseRepercussionLevel;headline:string;summary:string;exposure:number;sentiment:number;legalRisk:number;clientImpact:number;institutionalImpact:number;responseStrategy:MediaStrategy|null}
 const date=(p:PlayerProfile)=>[p.gameCurrentYear,String(p.gameCurrentMonth).padStart(2,'0'),String(p.gameCurrentDay).padStart(2,'0')].join('-');
 const scale=(l:CaseRepercussionLevel)=>l==='NACIONAL'?100:l==='GRANDE_REPERCUSSAO'?70:l==='RELEVANTE'?35:0;
 export function isMediaCase(c:LegalCase){return getCaseRepercussionLevel(c)!=='COMUM'}
 export async function createCaseMediaEvent(p:PlayerProfile,c:LegalCase,eventType:'CASE_OPENED'|'HEARING'|'DECISION',success?:boolean){
- const level=getCaseRepercussionLevel(c);if(level==='COMUM'||!supabase||!p.cloudCareerId)return null;const {data:user}=await supabase.auth.getUser();if(!user.user)return null;const key=[eventType,c.id].join(':');const base=scale(level);const sentiment=success===undefined?0:success?Math.round(base*.25):-Math.round(base*.2);
+ const level=getCaseRepercussionLevel(c);if(level==='COMUM'||!supabase||!p.cloudCareerId)return null;const {data:user}=await supabase.auth.getUser();if(!user.user)return null;const key=[eventType,c.id].join(':');const base=Math.min(100,Math.round(scale(level)*prestigeReachMultiplier(p)));const sentiment=success===undefined?0:success?Math.round(base*.25):-Math.round(base*.2);
  const headline=eventType==='CASE_OPENED'?'Caso '+c.title+' ganha repercussão':eventType==='HEARING'?'Audiência de '+c.title+' atrai atenção pública':'Decisão em '+c.title+' repercute no meio jurídico';const summary='O caso '+c.title+' passou a integrar o debate público.';
  const row={career_id:p.cloudCareerId,user_id:user.user.id,case_id:c.id,event_key:key,event_type:eventType,game_date:date(p),repercussion_level:level,headline,summary,exposure:base,sentiment,legal_risk:Math.round(base*.1),client_impact:sentiment,institutional_impact:Math.round(sentiment*.6)};
  const {data}=await supabase.from('career_media_events').upsert(row,{onConflict:'career_id,event_key'}).select('*').single();if(!data)return null;if(success!==undefined)applyProfessionalReputation(p,{publicRecognition:success?Math.max(1,Math.round(base/20)):0,marketPrestige:success?Math.max(1,Math.round(base/30)):-Math.max(1,Math.round(base/40)),institutionalRespect:success?2:-2},'Repercussão de caso público','media:'+key);
