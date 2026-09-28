@@ -406,14 +406,6 @@ export default function App() {
     return INITIAL_PLAYER_STATE;
   });
 
-  useEffect(() => {
-    const completeActTwo = () => {
-      setPlayer((prev) => prev.careerTier === 'ADVOGADO_CONTRATADO' ? { ...prev, careerTier: 'ADVOGADO_SENIOR' } : prev);
-      setPromotedTierAnnouncement('ADVOGADO_SENIOR');
-    };
-    window.addEventListener('rota:act-two-senior-review-completed', completeActTwo);
-    return () => window.removeEventListener('rota:act-two-senior-review-completed', completeActTwo);
-  }, []);
 
   const [isMobileFrame, setIsMobileFrame] = useState<boolean>(false);
   const [currentView, setCurrentView] = useState<'HUB' | 'INVESTIGATION_MAP' | 'LOCATION_SCENE'>(() => {
@@ -488,6 +480,15 @@ export default function App() {
   const [verdictResult, setVerdictResult] = useState<CaseHistoryRecord | null>(null);
   const [verdictCase, setVerdictCase] = useState<LegalCase | null>(null);
   const [promotedTierAnnouncement, setPromotedTierAnnouncement] = useState<CareerTierId | null>(null);
+  useEffect(() => {
+    const completeActTwo = () => {
+      setPlayer((prev) => prev.careerTier === 'ADVOGADO_CONTRATADO' ? { ...prev, careerTier: 'ADVOGADO_SENIOR' } : prev);
+      setPromotedTierAnnouncement('ADVOGADO_SENIOR');
+    };
+    window.addEventListener('rota:act-two-senior-review-completed', completeActTwo);
+    return () => window.removeEventListener('rota:act-two-senior-review-completed', completeActTwo);
+  }, []);
+
   const [pendingSupervisorReview, setPendingSupervisorReview] = useState<SupervisorReview | null>(null);
   const [isInternPromotionCeremonyOpen, setIsInternPromotionCeremonyOpen] = useState(false);
   const [internPromotionNarrative, setInternPromotionNarrative] = useState<InternPromotionNarrative | null>(null);
