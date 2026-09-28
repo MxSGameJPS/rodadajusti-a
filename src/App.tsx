@@ -2974,7 +2974,6 @@ export default function App() {
         onClose={() => setIsCareerModalOpen(false)}
         player={player}
         onCareerChange={(tier) => setPlayer((prev) => ({ ...prev, careerTier: tier }))}
-        onMoneyChange={(delta) => setPlayer((prev) => ({ ...prev, money: Math.max(0, prev.money + delta) }))}
       />
 
       <AcademicModal
