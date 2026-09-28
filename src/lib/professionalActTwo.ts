@@ -74,7 +74,13 @@ export function saveProfessionalWorkState(player:PlayerProfile,state:Professiona
 
 async function persistActTwoState(player:PlayerProfile,patch:Record<string,unknown>){
  if(!supabase||!player.cloudCareerId)return false;
- const {data,error}=await supabase.from('careers').update(patch).eq('id',player.cloudCareerId).select('id').maybeSingle();
+ let safePatch=patch;
+ if(patch.professional_work_state&&typeof patch.professional_work_state==='object'){
+  const {data:current}=await supabase.from('careers').select('professional_work_state').eq('id',player.cloudCareerId).maybeSingle();
+  const remote=current?.professional_work_state&&typeof current.professional_work_state==='object'?current.professional_work_state as Record<string,unknown>:{};
+  safePatch={...patch,professional_work_state:{...remote,...patch.professional_work_state as Record<string,unknown>}};
+ }
+ const {data,error}=await supabase.from('careers').update(safePatch).eq('id',player.cloudCareerId).select('id').maybeSingle();
  if(error||!data){console.warn('[Ato 2] Falha ao persistir estado profissional.',error?.message);return false}return true;
 }
 
