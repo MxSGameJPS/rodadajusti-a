@@ -9,7 +9,7 @@ function eligible(player: PlayerProfile) {
 }
 
 function emptyState(): InternshipRoutineState {
-  return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [], handledSeniorPriorityKeys: [] };
+  return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [], handledSeniorPriorityKeys: [], processedDisciplineKeys: [] };
 }
 
 export interface InternshipCloudState { routine: InternshipRoutineState; seniorPortfolio: SeniorPortfolioMatter[]; seniorDecisions: SeniorPortfolioDecision[]; }
@@ -25,6 +25,7 @@ function fromRow(row: any): InternshipCloudState {
     greetedWorkdays: Array.isArray(row.greeted_workdays) ? row.greeted_workdays : [],
     excusedAbsenceKeys: Array.isArray(row.excused_absence_keys) ? row.excused_absence_keys : [],
     handledSeniorPriorityKeys: Array.isArray(row.senior_state?.handledSeniorPriorityKeys) ? row.senior_state.handledSeniorPriorityKeys : [],
+    processedDisciplineKeys: Array.isArray(row.senior_state?.processedDisciplineKeys) ? row.senior_state.processedDisciplineKeys : [],
     lastTaskDeliveryKey: row.senior_state?.lastTaskDeliveryKey || null,
   };
   return { routine, seniorPortfolio: Array.isArray(row.senior_portfolio) ? row.senior_portfolio : [], seniorDecisions: Array.isArray(row.senior_decisions) ? row.senior_decisions : [] };
@@ -40,7 +41,7 @@ function row(player: PlayerProfile, userId: string, state: InternshipRoutineStat
     daily_task_keys: state.dailyTaskKeys,
     greeted_workdays: state.greetedWorkdays,
     excused_absence_keys: state.excusedAbsenceKeys,
-    senior_state: { lastTaskDeliveryKey: state.lastTaskDeliveryKey, handledSeniorPriorityKeys: state.handledSeniorPriorityKeys },
+    senior_state: { lastTaskDeliveryKey: state.lastTaskDeliveryKey, handledSeniorPriorityKeys: state.handledSeniorPriorityKeys, processedDisciplineKeys: state.processedDisciplineKeys },
     updated_at: new Date().toISOString(),
   };
 }
