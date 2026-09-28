@@ -1564,7 +1564,7 @@ export default function App() {
     if (decision.success) {
       sound.playVictory();
       earnedXp = Math.max(0, activeCaseData.xpReward + professionalPerformanceDelta * 8);
-      earnedMoney = activeCaseData.honorariosReward;
+      earnedMoney = employedProfessional ? 0 : activeCaseData.honorariosReward;
       earnedReputation = Math.max(0, activeCaseData.reputationReward + Math.max(0, professionalPerformanceDelta));
     } else {
       sound.playFailure();
