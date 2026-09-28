@@ -3,7 +3,7 @@ import { getCareerRank, getAvailableCasesForCareer } from './caseRules';
 import { getAppealOfCaseId } from './caseMetadata';
 import { getProfessionalOwnerKey } from './professionalRpg';
 import { isIndependentProfessional } from './professionalEmployment';
-import { assignLongRunningProfessionalMatter } from './professionalActTwo';
+import { assignLongRunningProfessionalMatter, getLegalReputationSnapshot } from './professionalActTwo';
 import { isProfessionalPracticeBlocked, loadDisciplinaryState } from './disciplinarySystem';
 import { emitPlayerSaveExternalUpdated } from './playerSaveEvents';
 import { supabase } from './supabase';
@@ -205,7 +205,9 @@ export function runSocialMediaCampaign(player: PlayerProfile) {
       return { ok: false as const, reason: 'MONEY' as const };
     }
 
-    const visibilityGain = Math.max(4, Math.min(12, 4 + Math.floor((current.reputation || 0) / 12)));
+    const legalReputation = getLegalReputationSnapshot(current);
+    const commercialSignal = legalReputation.publicRecognition * 0.45 + legalReputation.clientReputation * 0.55;
+    const visibilityGain = Math.max(4, Math.min(14, 4 + Math.floor(commercialSignal / 12)));
     const nextState: IndependentPracticeState = {
       ...state,
       socialMediaVisibility: Math.min(100, state.socialMediaVisibility + visibilityGain),
