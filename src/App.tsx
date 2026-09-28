@@ -34,7 +34,8 @@ import { hydrateAcademicCareer } from './lib/academicCareer';
 import { UniversityCampusModal } from './components/UniversityCampus/UniversityCampusModal';
 import { ConcursoModal } from './components/ConcursoModal';
 import { PublicCareerOpportunityModal } from './components/PublicCareerOpportunityModal';
-import { answerPublicOpportunity, hydratePublicCareerState, rollPublicCareerOpportunity, type PublicOpportunity } from './lib/publicCareerOpportunities';
+import { PublicCareerExamModal } from './components/PublicCareerExamModal';
+import { answerPublicOpportunity, hydratePublicCareerState, isOpportunityDue, rollPublicCareerOpportunity, type PublicOpportunity } from './lib/publicCareerOpportunities';
 import { OfficeManagementModal } from './components/OfficeManagementModal';
 import { OabExamModal } from './components/OabExamModal';
 import { SocialJuridicoExperience } from './components/SocialJuridicoExperience';
@@ -438,6 +439,7 @@ export default function App() {
   const [isAcademicModalOpen, setIsAcademicModalOpen] = useState<boolean>(false);
   const [isConcursoModalOpen, setIsConcursoModalOpen] = useState<boolean>(false);
   const [publicCareerOpportunity, setPublicCareerOpportunity] = useState<PublicOpportunity | null>(null);
+  const [publicCareerExam, setPublicCareerExam] = useState<PublicOpportunity | null>(null);
   const [isOfficeModalOpen, setIsOfficeModalOpen] = useState<boolean>(false);
   const [isOabExamOpen, setIsOabExamOpen] = useState<boolean>(false);
   const [oabExamPurpose, setOabExamPurpose] = useState<'GENERAL' | 'ACT_ONE_FINAL'>('GENERAL');
@@ -497,7 +499,7 @@ export default function App() {
     if (!player.name || !player.oabRegistration) return;
     let active = true;
     void hydratePublicCareerState(player).then(() => rollPublicCareerOpportunity(player)).then((state) => {
-      if (active) setPublicCareerOpportunity(state.active?.status === 'ANNOUNCED' ? state.active : null);
+      if (active) { setPublicCareerOpportunity(state.active?.status === 'ANNOUNCED' ? state.active : null); setPublicCareerExam(isOpportunityDue(player, state.active) ? state.active : null); }
     }).catch(() => undefined);
     return () => { active = false; };
   }, [player.cloudCareerId, player.careerTier, player.gameCurrentMonth, player.gameCurrentYear, player.oabRegistration?.code]);
@@ -2971,6 +2973,8 @@ export default function App() {
         isOpen={isCareerModalOpen}
         onClose={() => setIsCareerModalOpen(false)}
         player={player}
+        onCareerChange={(tier) => setPlayer((prev) => ({ ...prev, careerTier: tier }))}
+        onMoneyChange={(delta) => setPlayer((prev) => ({ ...prev, money: Math.max(0, prev.money + delta) }))}
       />
 
       <AcademicModal
@@ -2991,8 +2995,19 @@ export default function App() {
             if (!result.ok) return;
             setPlayer((prev) => ({ ...prev, money: Math.max(0, prev.money - result.fee) }));
             setPublicCareerOpportunity(null);
-            if (result.opportunity?.examType) setIsConcursoModalOpen(true);
+            if (result.opportunity?.examType && isOpportunityDue(player, result.opportunity)) setPublicCareerExam(result.opportunity);
           });
+        }}
+      />
+
+      <PublicCareerExamModal
+        player={player}
+        opportunity={publicCareerExam}
+        onClose={() => setPublicCareerExam(null)}
+        onComplete={(result) => {
+          if (result.passed && result.newCareerStage) {
+            setPlayer((prev) => ({ ...prev, careerTier: result.newCareerStage as PlayerProfile['careerTier'] }));
+          }
         }}
       />
 
