@@ -21,6 +21,7 @@ import {
   readProfessionalEmploymentState,
 } from '../../lib/professionalEmployment';
 import { usePlayerDisplayName } from '../../lib/playerTreatment';
+import { loadLawFirmMarket } from '../../lib/lawFirmMarket';
 import type { PlayerProfile } from '../../types/game';
 import { sound } from '../../utils/sound';
 import { ProfessionalDailyBrief } from './ProfessionalDailyBrief';
@@ -57,6 +58,7 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
   const socialJuridicoIncluded = employmentIncludesSocialJuridico(player);
   const [professionalRevision, setProfessionalRevision] = useState(0);
   const [closureOpen, setClosureOpen] = useState(false);
+  const [marketOfferCount, setMarketOfferCount] = useState(0);
   const gameDate = `${String(player.gameCurrentDay).padStart(2,'0')}/${String(player.gameCurrentMonth).padStart(2,'0')}/${player.gameCurrentYear}`;
   const gameDateKey = `${player.gameCurrentYear}-${String(player.gameCurrentMonth).padStart(2,'0')}-${String(player.gameCurrentDay).padStart(2,'0')}`;
   useEffect(() => {
@@ -65,6 +67,17 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
     void hydrateActTwoState(player).then(()=>{if(!active)return;registerProfessionalArrival(player,gameDateKey,employment.weeklyHours);reconcileProfessionalAgenda(player);setProfessionalRevision(value=>value+1)});
     return()=>{active=false};
   }, [player.cloudCareerId, gameDate, employment?.contractStatus, previewMode]);
+  useEffect(() => {
+    if (previewMode || employment?.contractStatus !== 'SIGNED') return;
+    let active = true;
+    void loadLawFirmMarket(player)
+      .then((snapshot) => {
+        if (!active) return;
+        setMarketOfferCount(snapshot.offers.filter((offer) => offer.status === 'PENDING').length);
+      })
+      .catch((cause) => console.warn('[Rota da Justiça] Mercado profissional indisponível.', cause));
+    return () => { active = false; };
+  }, [player.cloudCareerId, gameDateKey, player.reputation, player.xp, player.casesSolved, employment?.contractStatus, employment?.officeId]);
   const portfolio = useMemo(() => readProfessionalPortfolio(player), [player, gameDate, professionalRevision]);
   const daySummary = useMemo(() => professionalDaySummary(player), [player, gameDate, professionalRevision]);
   const seniorReview = useMemo(() => getSeniorReviewSnapshot(player), [player, portfolio]);
@@ -102,6 +115,17 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
       </section>
 
       <ProfessionalDailyBrief player={player} onResumeActiveCase={onResumeActiveCase} />
+
+      {marketOfferCount > 0 && (
+        <section className={styles.activeCaseCard}>
+          <div>
+            <span className={styles.caseCode}>MERCADO DE TRABALHO • {marketOfferCount} PROPOSTA(S)</span>
+            <h4>Outros escritórios estão interessados no seu perfil.</h4>
+            <p>Seu desempenho profissional chamou atenção do mercado. Você pode analisar as condições sem encerrar o vínculo atual.</p>
+          </div>
+          <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('rota:open-law-firm-market'))}>Analisar propostas <ArrowRight size={14} /></button>
+        </section>
+      )}
 
       <section className={styles.caseSection} aria-label="Carteira e agenda profissional">
         <div className={styles.sectionTitle}><div><span>Responsabilidade profissional</span><h3>Minha carteira e agenda</h3></div><div className={styles.assignmentFlow}><span>{daySummary.activeMatters} processos</span><span>{daySummary.pendingTasks} tarefas</span><span>{daySummary.criticalTasks} críticas</span></div></div>
