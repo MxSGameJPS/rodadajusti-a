@@ -155,7 +155,7 @@ export function updateMatterLifecycle(player:PlayerProfile,caseId:string,stage:s
 }
 
 export function recordProfessionalMatterOutcome(player:PlayerProfile,caseId:string,success:boolean){
- const state=readProfessionalPortfolio(player); const matter=state.matters.find(item=>item.caseId===caseId); if(!matter)return state;
+ const state=readProfessionalPortfolio(player); const matter=state.matters.find(item=>item.caseId===caseId); if(!matter||matter.status==='CLOSED')return state;
  const clients=state.clients.map(client=>client.matterIds.includes(matter.id)?{...client,trust:Math.max(0,Math.min(100,client.trust+(success?10:-8))),satisfaction:Math.max(0,Math.min(100,client.satisfaction+(success?12:-10))),mood:success?'SATISFIED':'ANXIOUS' as ClientMood,successfulMatterIds:success?Array.from(new Set([...client.successfulMatterIds,matter.id])):client.successfulMatterIds}:client);
  const specializations=state.specializations.map(spec=>spec.area===matter.area?withSpecializationLevel({...spec,experiencePoints:spec.experiencePoints+(success?25:12),successfulMatters:spec.successfulMatters+(success?1:0)}):spec);
  const rep=state.reputation;
