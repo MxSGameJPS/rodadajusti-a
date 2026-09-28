@@ -41,6 +41,7 @@ export interface InternshipRoutineState {
   greetedWorkdays: string[];
   excusedAbsenceKeys: string[];
   handledSeniorPriorityKeys: string[];
+  processedDisciplineKeys: string[];
 }
 
 export interface WorkSchedule {
@@ -79,7 +80,7 @@ function hash(value: string) {
 export function readInternshipRoutine(player: PlayerProfile): InternshipRoutineState {
   try {
     const raw = localStorage.getItem(storageKey(player));
-    if (!raw) return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [], handledSeniorPriorityKeys: [] };
+    if (!raw) return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [], handledSeniorPriorityKeys: [], processedDisciplineKeys: [] };
     const parsed = JSON.parse(raw);
     return {
       attendance: Array.isArray(parsed.attendance) ? parsed.attendance.slice(-90) : [],
@@ -90,9 +91,10 @@ export function readInternshipRoutine(player: PlayerProfile): InternshipRoutineS
       greetedWorkdays: Array.isArray(parsed.greetedWorkdays) ? parsed.greetedWorkdays.slice(-60) : [],
       excusedAbsenceKeys: Array.isArray(parsed.excusedAbsenceKeys) ? parsed.excusedAbsenceKeys.slice(-60) : [],
       handledSeniorPriorityKeys: Array.isArray(parsed.handledSeniorPriorityKeys) ? parsed.handledSeniorPriorityKeys.slice(-120) : [],
+      processedDisciplineKeys: Array.isArray(parsed.processedDisciplineKeys) ? parsed.processedDisciplineKeys.slice(-120) : [],
     };
   } catch {
-    return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [], handledSeniorPriorityKeys: [] };
+    return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [], handledSeniorPriorityKeys: [], processedDisciplineKeys: [] };
   }
 }
 
@@ -173,6 +175,23 @@ export function reconcileMissedWorkdays(player: PlayerProfile) {
   state.attendance = state.attendance.slice(-90);
   if (added) saveInternshipRoutine(player, state);
   return { state, added };
+}
+
+export function disciplineKeyForAttendance(record: InternshipAttendanceRecord) {
+  return `attendance:${record.date}:${record.status}`;
+}
+
+export function hasProcessedAttendanceDiscipline(player: PlayerProfile, record: InternshipAttendanceRecord) {
+  return readInternshipRoutine(player).processedDisciplineKeys.includes(disciplineKeyForAttendance(record));
+}
+
+export function markAttendanceDisciplineProcessed(player: PlayerProfile, record: InternshipAttendanceRecord) {
+  const state = readInternshipRoutine(player);
+  const key = disciplineKeyForAttendance(record);
+  if (!state.processedDisciplineKeys.includes(key)) state.processedDisciplineKeys.push(key);
+  state.processedDisciplineKeys = state.processedDisciplineKeys.slice(-120);
+  saveInternshipRoutine(player, state);
+  return state;
 }
 
 export function attendancePerformanceDelta(record: InternshipAttendanceRecord) {
