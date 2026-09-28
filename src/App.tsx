@@ -35,7 +35,7 @@ import { UniversityCampusModal } from './components/UniversityCampus/UniversityC
 import { ConcursoModal } from './components/ConcursoModal';
 import { PublicCareerOpportunityModal } from './components/PublicCareerOpportunityModal';
 import { PublicCareerExamModal } from './components/PublicCareerExamModal';
-import { answerPublicOpportunity, hydratePublicCareerState, isOpportunityDue, rollPublicCareerOpportunity, type PublicOpportunity } from './lib/publicCareerOpportunities';
+import { answerPublicOpportunity, hydratePublicCareerState, isOpportunityDue, resolveFifthConstitutional, rollPublicCareerOpportunity, type PublicOpportunity } from './lib/publicCareerOpportunities';
 import { OfficeManagementModal } from './components/OfficeManagementModal';
 import { OabExamModal } from './components/OabExamModal';
 import { SocialJuridicoExperience } from './components/SocialJuridicoExperience';
@@ -499,7 +499,7 @@ export default function App() {
     if (!player.name || !player.oabRegistration) return;
     let active = true;
     void hydratePublicCareerState(player).then(() => rollPublicCareerOpportunity(player)).then((state) => {
-      if (active) { setPublicCareerOpportunity(state.active?.status === 'ANNOUNCED' ? state.active : null); setPublicCareerExam(isOpportunityDue(player, state.active) ? state.active : null); }
+      if (active) { setPublicCareerOpportunity(state.active?.status === 'ANNOUNCED' ? state.active : null); setPublicCareerExam(isOpportunityDue(player, state.active) ? state.active : null); if (state.active?.kind === 'FIFTH_ADVOCACY' && isOpportunityDue(player, state.active)) { void resolveFifthConstitutional(player, state.active.id).then((r) => { if (r.ok) setPlayer((prev) => ({ ...prev, careerTier: 'DESEMBARGADOR' })); }); } }
     }).catch(() => undefined);
     return () => { active = false; };
   }, [player.cloudCareerId, player.careerTier, player.gameCurrentMonth, player.gameCurrentYear, player.oabRegistration?.code]);
