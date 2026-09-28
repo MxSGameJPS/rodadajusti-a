@@ -454,12 +454,18 @@ export default function App() {
   const [absenceJustificationDialogues, setAbsenceJustificationDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
 
   const openOfficeManagement = () => {
-    if (!canManageOwnOffice(player)) {
+    if (!player.oabRegistration) {
       setIsOfficeModalOpen(false);
       return;
     }
     setIsOfficeModalOpen(true);
   };
+
+  useEffect(() => {
+    const open = () => openOfficeManagement();
+    window.addEventListener('rota:open-office-management', open);
+    return () => window.removeEventListener('rota:open-office-management', open);
+  }, [player.oabRegistration]);
 
   const ensureLifeReady = () => {
     const reason = getLifeBlockingReason(player);
@@ -2962,7 +2968,7 @@ export default function App() {
       />
 
       <OfficeManagementModal
-        isOpen={isOfficeModalOpen && canManageOwnOffice(player)}
+        isOpen={isOfficeModalOpen && Boolean(player.oabRegistration)}
         onClose={() => setIsOfficeModalOpen(false)}
         player={player}
         onHireEmployee={handleHireEmployee}
