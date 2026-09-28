@@ -6,10 +6,10 @@ export type LegalPrestigeTier='LOCAL'|'REGIONAL'|'ESTADUAL'|'NACIONAL';
 export interface LegalPrestigeState{tier:LegalPrestigeTier;score:number;peakTier:LegalPrestigeTier;promotedAt:string|null;lastReason:string|null;processedKeys:string[]}
 export interface LegalPrestigeSnapshot extends LegalPrestigeState{nextTier:LegalPrestigeTier|null;nextThreshold:number;progress:number;requirements:string[]}
 const PREFIX='rota_legal_prestige_v1:';
+export const LEGAL_PRESTIGE_ORDER:LegalPrestigeTier[]=['LOCAL','REGIONAL','ESTADUAL','NACIONAL'];
 const order=LEGAL_PRESTIGE_ORDER;
 export const LEGAL_PRESTIGE_CONFIG:Record<LegalPrestigeTier,{label:string;minScore:number;description:string}>={LOCAL:{label:'Local',minScore:0,description:'Nome reconhecido na cidade e no círculo profissional próximo.'},REGIONAL:{label:'Regional',minScore:30,description:'Reconhecimento alcança cidades e profissionais da região.'},ESTADUAL:{label:'Estadual',minScore:58,description:'Nome conhecido no mercado jurídico do estado.'},NACIONAL:{label:'Nacional',minScore:82,description:'Atuação reconhecida além das fronteiras estaduais.'}};
 const owner=(p:PlayerProfile)=>p.cloudCareerId||p.oabRegistration?.code||p.name||'player';
-export const LEGAL_PRESTIGE_ORDER:LegalPrestigeTier[]=['LOCAL','REGIONAL','ESTADUAL','NACIONAL'];
 const base=():LegalPrestigeState=>({tier:'LOCAL',score:0,peakTier:'LOCAL',promotedAt:null,lastReason:null,processedKeys:[]});
 const gameDate=(p:PlayerProfile)=>[p.gameCurrentYear,String(p.gameCurrentMonth).padStart(2,'0'),String(p.gameCurrentDay).padStart(2,'0')].join('-');
 function readLocal(p:PlayerProfile){if(typeof window==='undefined')return base();try{const x=JSON.parse(localStorage.getItem(PREFIX+owner(p))||'{}');return{...base(),...x,processedKeys:Array.isArray(x.processedKeys)?x.processedKeys:[]}as LegalPrestigeState}catch{return base()}}
