@@ -533,6 +533,7 @@ export default function App() {
     if (!player.cloudCareerId || !player.oabRegistration || player.careerTier !== 'ADVOGADO_CONTRATADO') return;
     let active = true;
     void hydrateActTwoState(player).then(({ work }) => {
+      if (active) void hydrateWorldMemories(player);
       if (!active || !work.actTwoCompleted) return;
       setPlayer((prev) => prev.careerTier === 'ADVOGADO_CONTRATADO' ? { ...prev, careerTier: 'ADVOGADO_SENIOR' } : prev);
     });
