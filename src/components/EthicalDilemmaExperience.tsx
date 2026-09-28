@@ -14,7 +14,6 @@ import {
   evaluateAndOpenEthicalDilemma,
   getEthicalDilemmaDefinition,
   hydrateEthicalDilemmaState,
-  loadEthicalDilemmaState,
   resolveEthicalDilemmaChoice,
   type EthicalChoiceResolution,
   type EthicalDilemmaChoice,
