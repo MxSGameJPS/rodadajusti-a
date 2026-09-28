@@ -17,7 +17,7 @@ export type CareerTierId =
 export interface CareerTier {
   id: CareerTierId;
   title: string;
-  category: 'advocacia' | 'gestao' | 'magistratura';
+  category: 'advocacia' | 'gestao' | 'magistratura' | 'ministerio_publico';
   minCasesSolved: number;
   minXp: number;
   minReputation: number;
