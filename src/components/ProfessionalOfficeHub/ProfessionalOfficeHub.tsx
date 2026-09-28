@@ -62,7 +62,7 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
   useEffect(() => {
     if (previewMode || employment?.contractStatus !== 'SIGNED') return;
     let active=true;
-    void hydrateActTwoState(player).then(()=>{if(!active)return;registerProfessionalArrival(player,gameDateKey);reconcileProfessionalAgenda(player);setProfessionalRevision(value=>value+1)});
+    void hydrateActTwoState(player).then(()=>{if(!active)return;registerProfessionalArrival(player,gameDateKey,employment.weeklyHours);reconcileProfessionalAgenda(player);setProfessionalRevision(value=>value+1)});
     return()=>{active=false};
   }, [player.cloudCareerId, gameDate, employment?.contractStatus, previewMode]);
   const portfolio = useMemo(() => readProfessionalPortfolio(player), [player, gameDate, professionalRevision]);
