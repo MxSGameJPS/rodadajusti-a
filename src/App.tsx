@@ -2979,10 +2979,11 @@ export default function App() {
         waitMinutes={officeClosedArrivalMinute === null ? 0 : Math.max(0, getWorkSchedule(player).startMinute - officeClosedArrivalMinute)}
         coffeePrice={OFFICE_CANTEEN_COFFEE_PRICE}
         canAffordCoffee={player.money >= OFFICE_CANTEEN_COFFEE_PRICE}
+        canWaitForOpening={getWorkSchedule(player).workday && officeClosedArrivalMinute !== null && officeClosedArrivalMinute < getWorkSchedule(player).startMinute}
         onClose={() => { setOfficeClosedArrivalMinute(null); setIsCityWorldMapOpen(true); }}
         onGoHome={() => {
           setOfficeClosedArrivalMinute(null);
-          beginLifeTravel({ origin: 'OFFICE', destination: 'HOME', reason: 'GO_HOME' });
+          beginLifeTravel({ origin: 'CURRENT', destination: 'HOME', reason: 'GO_HOME' });
         }}
         onCoffee={() => {
           if (officeClosedArrivalMinute === null || player.money < OFFICE_CANTEEN_COFFEE_PRICE) return;
