@@ -16,6 +16,7 @@ import { readCurrentPlayerSnapshot } from '../../lib/professionalRpg';
 import { readPlayerGender, usePlayerDisplayName } from '../../lib/playerTreatment';
 import {
   completeProfessionalEmploymentOnboarding,
+  declineProfessionalEmploymentOffer,
   PROFESSIONAL_EMPLOYMENT_UPDATED_EVENT,
   readProfessionalEmploymentState,
   reconcilePostOabCareerBeforeContract,
@@ -122,6 +123,14 @@ export const PostOabEmploymentExperience: React.FC = () => {
     }
     setDialogueIndex(0);
     setStage('CONTRACT');
+  };
+
+  const declineOffer = () => {
+    sound.playClick();
+    declineProfessionalEmploymentOffer(player);
+    setEmployment(readProfessionalEmploymentState(player));
+    setStage(null);
+    window.dispatchEvent(new CustomEvent('rota:open-law-firm-market'));
   };
 
   const signContract = () => {
@@ -271,9 +280,12 @@ export const PostOabEmploymentExperience: React.FC = () => {
                 <input type="checkbox" checked={contractRead} onChange={(event) => setContractRead(event.target.checked)} />
                 <span>Li o contrato e aceito a proposta de trabalho no universo do jogo.</span>
               </label>
-              <button type="button" disabled={!contractRead} onClick={signContract}>
-                <FileSignature size={16} /> Assinar contrato
-              </button>
+              <div className={styles.contractActions}>
+                <button type="button" onClick={declineOffer}>Recusar e entrar no mercado</button>
+                <button type="button" disabled={!contractRead} onClick={signContract}>
+                  <FileSignature size={16} /> Assinar contrato
+                </button>
+              </div>
             </footer>
           </section>
         </div>
