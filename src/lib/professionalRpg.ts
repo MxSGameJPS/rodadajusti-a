@@ -466,3 +466,23 @@ export function readCurrentPlayerSnapshot(): PlayerProfile | null {
     return null;
   }
 }
+
+export type ProfessionalChallengeKind='LEGAL_ANALYSIS'|'INVESTIGATION'|'PERCEPTION'|'NEGOTIATION'|'NETWORKING'|'PRESSURE';
+export interface ProfessionalChallengeResult{attributeId:ProfessionalAttributeId;effectiveLevel:number;difficulty:number;outcome:'STRONG'|'ADEQUATE'|'LIMITED';bonus:number;unlockedOptions:string[]}
+const CHALLENGE_ATTRIBUTE:Record<ProfessionalChallengeKind,ProfessionalAttributeId>={LEGAL_ANALYSIS:'LEGAL_KNOWLEDGE',INVESTIGATION:'INVESTIGATION',PERCEPTION:'PERCEPTION',NEGOTIATION:'PERSUASION',NETWORKING:'INFLUENCE',PRESSURE:'SELF_CONTROL'};
+export function evaluateProfessionalChallenge(profile:ProfessionalRpgProfile,kind:ProfessionalChallengeKind,difficulty=5):ProfessionalChallengeResult{
+ const attributeId=CHALLENGE_ATTRIBUTE[kind],effectiveLevel=getEffectiveAttributeLevel(profile,attributeId),margin=effectiveLevel-Math.max(1,Math.min(10,difficulty));
+ const outcome=margin>=2?'STRONG':margin>=0?'ADEQUATE':'LIMITED';
+ const unlockedOptions=outcome==='STRONG'?['ADVANCED','TACTICAL','SAFE']:outcome==='ADEQUATE'?['TACTICAL','SAFE']:['SAFE'];
+ return{attributeId,effectiveLevel,difficulty,outcome,bonus:Math.max(-2,Math.min(4,margin)),unlockedOptions};
+}
+export function getProfessionalGameplayModifiers(profile:ProfessionalRpgProfile){
+ return{
+  legalStrategyBonus:evaluateProfessionalChallenge(profile,'LEGAL_ANALYSIS',5).bonus,
+  investigationBonus:evaluateProfessionalChallenge(profile,'INVESTIGATION',5).bonus,
+  perceptionBonus:evaluateProfessionalChallenge(profile,'PERCEPTION',5).bonus,
+  negotiationBonus:evaluateProfessionalChallenge(profile,'NEGOTIATION',5).bonus,
+  networkingBonus:evaluateProfessionalChallenge(profile,'NETWORKING',5).bonus,
+  pressureBonus:evaluateProfessionalChallenge(profile,'PRESSURE',5).bonus,
+ };
+}
