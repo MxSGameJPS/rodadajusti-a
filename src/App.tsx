@@ -75,7 +75,7 @@ import {
 import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
 import { persistPlayerCloudSave } from './lib/playerCloudSave';
 import { readProfessionalEmploymentState } from './lib/professionalEmployment';
-import { assignLongRunningProfessionalMatter, recordProfessionalMatterOutcome, recordProfessionalStrategy, updateMatterLifecycle } from './lib/professionalActTwo';
+import { assignLongRunningProfessionalMatter, recordProfessionalMatterOutcome, recordProfessionalNetworkInteraction, recordProfessionalStrategy, updateMatterLifecycle } from './lib/professionalActTwo';
 import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
 import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } from './lib/gameTime';
 import { sound } from './utils/sound';
@@ -1545,6 +1545,19 @@ export default function App() {
 
     if (player.oabRegistration && !isInternCareer(player)) {
       recordProfessionalMatterOutcome(player, activeCaseData.id, decision.success);
+    }
+
+    if (player.oabRegistration && !isInternCareer(player)) {
+      recordProfessionalNetworkInteraction(player, {
+        entityId: 'npc:ROBERTO',
+        name: 'Dr. Roberto Ramos',
+        role: 'Sócio responsável • Ramos & Associados',
+        gameDate: completedDate,
+        trustDelta: decision.success ? 5 : -4,
+        respectDelta: decision.success ? 5 : -2,
+        influenceDelta: decision.success ? 2 : 0,
+        opportunity: decision.success && decision.score >= 85,
+      });
     }
 
     applyRelationshipInteraction(player, {
