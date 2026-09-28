@@ -531,7 +531,9 @@ export default function App() {
       // Cache local é apenas recuperação rápida; Supabase é a persistência autoritativa.
     }
     if (!player.name) return;
-    const timer = window.setTimeout(() => { void persistPlayerCloudSave(player); }, 700);
+    const timer = window.setTimeout(() => { void persistPlayerCloudSave(player).then((result) => {
+      if (result.ok && result.careerId && !player.cloudCareerId) setPlayer((prev) => prev.cloudCareerId ? prev : { ...prev, cloudCareerId: result.careerId });
+    }); }, 700);
     return () => window.clearTimeout(timer);
   }, [player]);
 
