@@ -1442,6 +1442,19 @@ export default function App() {
     });
 
     const completedDate = formatGameDate(getPlayerGameDate(player));
+    if (player.oabRegistration && !isInternCareer(player)) {
+      const selectedStrategy = activeCaseData.strategies.find((strategy) => strategy.id === strategyId);
+      recordProfessionalStrategy(player, {
+        caseId: activeCaseData.id,
+        gameDate: completedDate,
+        decision: 'LITIGATE',
+        thesis: selectedStrategy?.title || 'Estratégia processual selecionada',
+        evidenceIds: selectedEvidenceIds,
+        risk: activeCaseData.difficultyStars >= 4 ? 'HIGH' : activeCaseData.difficultyStars >= 3 ? 'MEDIUM' : 'LOW',
+        rationale: selectedStrategy?.rationale || 'Estratégia registrada a partir da peça protocolada.',
+      });
+      updateMatterLifecycle(player, activeCaseData.id, 'DECISION', 'Aguardar decisão e avaliar continuidade processual', 'WAITING');
+    }
     const { review: supervisorReview, discipline: nextDiscipline } = buildSupervisorReview({
       decision,
       caseId: activeCaseData.id,
@@ -1538,6 +1551,10 @@ export default function App() {
     setVerdictCase(activeCaseData);
     setVerdictResult(resultRecord);
     setPromotedTierAnnouncement(promotionAnnouncement);
+
+    if (player.oabRegistration && !isInternCareer(player)) {
+      recordProfessionalMatterOutcome(player, activeCaseData.id, decision.success);
+    }
 
     applyRelationshipInteraction(player, {
       entityId: 'npc:ROBERTO',
