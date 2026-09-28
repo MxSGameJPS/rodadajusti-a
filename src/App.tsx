@@ -1508,10 +1508,6 @@ export default function App() {
     if (newSolvedCount >= 14 && player.careerTier === 'ADVOGADO_SENIOR') {
       newTier = 'SOCIO_ESCRITORIO';
       promotionAnnouncement = 'SOCIO_ESCRITORIO';
-    } else if (player.careerTier === 'ADVOGADO_CONTRATADO') {
-      // A elegibilidade é exibida no escritório, mas a promoção só ocorre
-      // depois da reunião formal de encerramento do Ato 2.
-      getSeniorReviewSnapshot(player);
     } else if (player.careerTier === 'ESTAGIARIO') {
       const projectedPlayer = {
         ...player,
