@@ -63,9 +63,7 @@ export function assignProfessionalMatter(player:PlayerProfile,input:Omit<Profess
 
 export function registerProfessionalArrival(player:PlayerProfile,gameDate:string){
  const state=readProfessionalWorkState(player);if(state.arrivalKeys.includes(gameDate))return state;
- const next={...state,arrivalKeys:[...state.arrivalKeys,gameDate].slice(-90),firstProfessionalDayCompleted:true} as ProfessionalWorkState;
- // firstProfessionalDayCompleted belongs to portfolio, not work; keep work arrival only.
- delete (next as any).firstProfessionalDayCompleted;
+ const next:ProfessionalWorkState={...state,arrivalKeys:[...state.arrivalKeys,gameDate].slice(-90)};
  saveProfessionalWorkState(player,next);
  const portfolio=readProfessionalPortfolio(player);
  if(!portfolio.firstProfessionalDayCompleted)saveProfessionalPortfolio(player,{...portfolio,firstProfessionalDayCompleted:true});
