@@ -13,13 +13,11 @@ import {
 interface PublicServiceCareerPanelProps {
   player: PlayerProfile;
   onCareerChange: (tier: PlayerProfile['careerTier']) => void;
-  onMoneyChange: (value: number) => void;
 }
 
 export function PublicServiceCareerPanel({
   player,
   onCareerChange,
-  onMoneyChange,
 }: PublicServiceCareerPanelProps) {
   const [state, setState] = useState<PublicServiceState>(() => readPublicService(player));
   const [message, setMessage] = useState('');
@@ -41,8 +39,7 @@ export function PublicServiceCareerPanel({
       }
 
       setState(result.state);
-      onMoneyChange(result.salary);
-      setMessage('Mês funcional concluído. Subsídio recebido e mérito atualizado.');
+      setMessage('Mês funcional concluído. Produção e mérito atualizados; o subsídio segue o fechamento financeiro mensal.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Não foi possível concluir a atividade funcional.');
     }
