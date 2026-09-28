@@ -593,8 +593,6 @@ export default function App() {
     const previousKey = player.personalFinances.lastCompensationMonthKey;
     if (previousKey === currentKey) return;
 
-    const monthCount = elapsedGameMonths(previousKey, currentKey);
-
     setPlayer((prev) => {
       const targetKey = gameMonthKey({
         month: prev.gameCurrentMonth,
