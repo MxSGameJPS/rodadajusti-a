@@ -178,6 +178,16 @@ export function readProfessionalEmploymentState(
   }
 }
 
+export async function hydrateProfessionalEmploymentState(player: PlayerProfile) {
+  if (!supabase || !player.cloudCareerId || !player.oabRegistration) return readProfessionalEmploymentState(player);
+  const { data, error } = await supabase.from('careers').select('professional_employment').eq('id', player.cloudCareerId).maybeSingle();
+  if (error || !data?.professional_employment || Object.keys(data.professional_employment).length === 0) return readProfessionalEmploymentState(player);
+  const state = normalizeState(data.professional_employment as Partial<ProfessionalEmploymentState>);
+  try { localStorage.setItem(storageKey(player), JSON.stringify(state)); } catch { /* cache opcional */ }
+  emitUpdate(player, state);
+  return state;
+}
+
 export function saveProfessionalEmploymentState(
   player: PlayerProfile,
   state: ProfessionalEmploymentState,
