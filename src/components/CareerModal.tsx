@@ -15,6 +15,7 @@ import { X, Award, CheckCircle2, Lock, Scale, Landmark, GraduationCap, Crown, Cl
 import { sound } from '../utils/sound';
 import { getLegalReputationSnapshot } from '../lib/professionalActTwo';
 import { MediaRepercussionPanel } from './MediaRepercussionPanel';
+import { getLegalPrestigeSnapshot, LEGAL_PRESTIGE_CONFIG } from '../lib/legalPrestige';
 
 interface CareerModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, playe
   const doctorateLevel = Number(extendedPlayer.doctorateLevel || 0);
   const performance = normalizeOfficePerformance(player.officePerformance);
   const legalReputation = getLegalReputationSnapshot(player);
+  const legalPrestige = getLegalPrestigeSnapshot(player);
   const internPromotion = getInternPromotionStatus({
     casesSolved: player.casesSolved,
     xp: player.xp,
@@ -77,6 +79,15 @@ export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, playe
               </div>
             </section>
           )}
+          {player.oabRegistration && <section className="space-y-3">
+            <SectionTitle icon={<Crown size={14}/>} title="Prestígio Jurídico" color="text-[#FBBF24]"/>
+            <div className="rounded-xl border border-[#FBBF24]/25 bg-[#FBBF24]/[0.04] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3"><div><span className="text-[10px] font-black uppercase tracking-[0.15em] text-[#FBBF24]">Alcance atual</span><h4 className="mt-1 text-xl font-serif font-bold text-[#F0E1B0]">{LEGAL_PRESTIGE_CONFIG[legalPrestige.tier].label}</h4><p className="mt-1 max-w-xl text-xs text-[#AAA]">{LEGAL_PRESTIGE_CONFIG[legalPrestige.tier].description}</p></div><div className="text-right"><strong className="font-mono text-[#FBBF24]">{legalPrestige.score}/100</strong><p className="text-[10px] text-[#777]">pico: {LEGAL_PRESTIGE_CONFIG[legalPrestige.peakTier].label}</p></div></div>
+              <div className="mt-4 grid grid-cols-4 gap-1">{(['LOCAL','REGIONAL','ESTADUAL','NACIONAL'] as const).map((tier)=><div key={tier} className={`rounded-md border px-2 py-2 text-center text-[9px] font-bold ${(['LOCAL','REGIONAL','ESTADUAL','NACIONAL'] as const).indexOf(tier)<=(['LOCAL','REGIONAL','ESTADUAL','NACIONAL'] as const).indexOf(legalPrestige.tier)?'border-[#FBBF24]/40 bg-[#FBBF24]/10 text-[#FBBF24]':'border-[#2A2A2E] text-[#666]'}`}>{LEGAL_PRESTIGE_CONFIG[tier].label.toUpperCase()}</div>)}</div>
+              {legalPrestige.nextTier&&<div className="mt-4"><div className="mb-2 flex justify-between text-[10px] text-[#888]"><span>Progresso para {LEGAL_PRESTIGE_CONFIG[legalPrestige.nextTier].label}</span><span>{legalPrestige.progress}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-[#222]"><div className="h-full bg-[#FBBF24]" style={{width:`${legalPrestige.progress}%`}}/></div><div className="mt-3 flex flex-wrap gap-1.5">{legalPrestige.requirements.map(req=><span key={req} className="rounded border border-[#333] bg-[#111] px-2 py-1 text-[10px] text-[#AAA]">{req}</span>)}</div></div>}
+              {legalPrestige.lastReason&&<p className="mt-3 text-[10px] text-[#9A8B65]">Último marco: {legalPrestige.lastReason}</p>}
+            </div>
+          </section>}
           {player.oabRegistration && <MediaRepercussionPanel player={player}/>} 
           <section className="space-y-3">
             <SectionTitle icon={<Scale size={14}/>} title="Estágio & Advocacia" color="text-[#C5A059]"/>
