@@ -1382,13 +1382,19 @@ export default function App() {
       }
     }
 
+    const taskMinutes = Math.max(30, task.challengeSteps.length * 25);
+    const taskConflict = getWorkTimeConflict(player, taskMinutes, 'OFFICE');
+    if (taskConflict) {
+      setLifeWarning(taskConflict);
+      return;
+    }
     setPlayer((prev) => ({
       ...prev,
+      ...gameClockFields(prev, taskMinutes),
       xp: nextXp,
       money: nextMoney,
       careerTier: nextTier,
       officePerformance: performance,
-      ...gameDayFields(prev, 1),
     }));
 
     if (nextTier === 'ESTAGIARIO_SENIOR' && player.careerTier === 'ESTAGIARIO' && promotionNarrative) {
