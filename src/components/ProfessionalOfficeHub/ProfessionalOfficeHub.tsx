@@ -23,7 +23,7 @@ import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import type { PlayerProfile } from '../../types/game';
 import { sound } from '../../utils/sound';
 import { ProfessionalDailyBrief } from './ProfessionalDailyBrief';
-import { professionalDaySummary, readProfessionalPortfolio, registerProfessionalArrival } from '../../lib/professionalActTwo';
+import { getProfessionalEconomySnapshot, getProfessionalWorkLifeConflict, getSeniorReviewSnapshot, professionalDaySummary, readProfessionalPortfolio, registerProfessionalArrival } from '../../lib/professionalActTwo';
 import styles from './ProfessionalOfficeHub.module.css';
 
 const OPEN_SOCIAL_JURIDICO_EVENT = 'rota:open-social-juridico';
@@ -58,6 +58,9 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
   useEffect(() => { if (!previewMode && employment?.contractStatus === 'SIGNED') registerProfessionalArrival(player, gameDate); }, [player.cloudCareerId, gameDate, employment?.contractStatus, previewMode]);
   const portfolio = useMemo(() => readProfessionalPortfolio(player), [player, gameDate]);
   const daySummary = useMemo(() => professionalDaySummary(player), [player, gameDate]);
+  const seniorReview = useMemo(() => getSeniorReviewSnapshot(player), [player, portfolio]);
+  const workLife = useMemo(() => getProfessionalWorkLifeConflict(player), [player, daySummary]);
+  const economy = useMemo(() => getProfessionalEconomySnapshot(player, employment?.salaryMonthly || 0), [player, portfolio, employment?.salaryMonthly]);
 
   const openDevice = (eventName: string) => {
     sound.playClick();
@@ -181,6 +184,16 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
             </button>
           </article>
         )}
+      </section>
+
+      <section className={styles.caseSection} aria-label="Evolução para advogado sênior">
+        <div className={styles.sectionTitle}><div><span>Ato 2 • consolidação profissional</span><h3>Avaliação para Advogado Sênior</h3></div><div className={styles.assignmentFlow}><span>{seniorReview.progress}%</span><span>{seniorReview.eligible ? 'Pronto para avaliação final' : 'Em desenvolvimento'}</span></div></div>
+        {seniorReview.requirements.map((item)=><article key={item.label} className={item.met ? styles.activeCaseCard : styles.waitingCaseCard}><div><span>{item.met ? 'REQUISITO ATINGIDO' : 'EM DESENVOLVIMENTO'}</span><h4>{item.label}</h4><p>{item.current}</p></div></article>)}
+      </section>
+      <section className={styles.caseSection} aria-label="Equilíbrio e economia profissional">
+        <div className={styles.sectionTitle}><div><span>Vida real da advocacia</span><h3>Rotina e economia</h3></div></div>
+        <article className={workLife.severity==='CRITICAL'?styles.activeCaseCard:styles.waitingCaseCard}><div><span>{workLife.severity}</span><h4>Equilíbrio pessoal x profissional</h4><p>{workLife.message}</p></div></article>
+        <article className={styles.waitingCaseCard}><div><span>PROJEÇÃO DO MÊS</span><h4>Economia profissional</h4><p>Salário JR$ {economy.salary.toLocaleString('pt-BR')} • êxito estimado JR$ {economy.estimatedSuccessFees.toLocaleString('pt-BR')} • custos profissionais JR$ {economy.professionalCosts.toLocaleString('pt-BR')} • líquido projetado JR$ {economy.netProjection.toLocaleString('pt-BR')}.</p></div></article>
       </section>
 
       <section className={styles.caseSection} aria-label="Reputação profissional">
