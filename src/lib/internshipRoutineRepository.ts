@@ -92,7 +92,9 @@ export async function loadOabPreparation(player:PlayerProfile):Promise<OabPrepar
  if(!eligible(player)||!supabase)return emptyOabPreparation();
  const {data,error}=await supabase.from('internship_routines').select('oab_preparation').eq('career_id',player.cloudCareerId!).maybeSingle();
  if(error){console.warn('[internship] OAB preparation load',error.message);return emptyOabPreparation()}
- return data?.oab_preparation&&typeof data.oab_preparation==='object'?{...emptyOabPreparation(),...data.oab_preparation}:emptyOabPreparation();
+ if(!data?.oab_preparation||typeof data.oab_preparation!=='object')return emptyOabPreparation();
+ const base=emptyOabPreparation();const raw=data.oab_preparation as Partial<OabPreparationState>;
+ return {...base,...raw,studyPoints:{...base.studyPoints,...(raw.studyPoints||{})},sessions:Array.isArray(raw.sessions)?raw.sessions:[],mocks:Array.isArray(raw.mocks)?raw.mocks:[]};
 }
 export async function persistOabPreparation(player:PlayerProfile,state:OabPreparationState){
  if(!eligible(player)||!supabase)return false;const {data:{user}}=await supabase.auth.getUser();if(!user)return false;
