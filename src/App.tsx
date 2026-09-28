@@ -1505,9 +1505,9 @@ export default function App() {
     let newTier = player.careerTier;
     let promotionAnnouncement: CareerTierId | null = null;
 
-    if (newSolvedCount >= 14 && player.careerTier === 'ADVOGADO_SENIOR') {
-      newTier = 'SOCIO_ESCRITORIO';
-      promotionAnnouncement = 'SOCIO_ESCRITORIO';
+    if (player.careerTier === 'ADVOGADO_SENIOR') {
+      // A progressão societária pertence ao arco posterior ao Ato 2.
+      // Não promovemos automaticamente apenas por quantidade de vitórias.
     } else if (player.careerTier === 'ESTAGIARIO') {
       const projectedPlayer = {
         ...player,
