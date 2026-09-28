@@ -18,6 +18,7 @@ import { MediaRepercussionPanel } from './MediaRepercussionPanel';
 import { getLegalPrestigeSnapshot, LEGAL_PRESTIGE_CONFIG } from '../lib/legalPrestige';
 import { readPublicCareerState } from '../lib/publicCareerOpportunities';
 import { PublicServiceCareerPanel } from './PublicServiceCareerPanel';
+import { ApexCareerPanel } from './ApexCareerPanel';
 
 interface CareerModalProps {
   isOpen: boolean;
@@ -176,6 +177,8 @@ export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, playe
               {tiers.filter(t => t.category === 'magistratura' || t.category === 'ministerio_publico').map((tier) => <CareerTierCard key={tier.id} title={tier.title} description={tier.description} current={player.careerTier === tier.id} unlocked={player.careerTier === tier.id} salary={tier.salaryBaseMonthly} requirements={tier.id === 'DESEMBARGADOR' ? 'Promoção na magistratura ou quinto constitucional' : tier.id === 'MINISTRO_STF' ? 'Cargo especial por convite' : tier.category === 'ministerio_publico' ? 'Via progressão do Ministério Público' : 'Via progressão da magistratura'} perks={tier.perks}/>) }
             </div>
           </section>
+
+          {onCareerChange && <ApexCareerPanel player={player} onCareerChange={onCareerChange}/>} 
 
           <section className="space-y-3">
             <SectionTitle icon={<Crown size={14}/>} title="Carreiras Especiais por Convite • módulos futuros" color="text-[#FBBF24]"/>
