@@ -18,6 +18,7 @@ import {
   completeProfessionalEmploymentOnboarding,
   declineProfessionalEmploymentOffer,
   PROFESSIONAL_EMPLOYMENT_UPDATED_EVENT,
+  hydrateProfessionalEmploymentState,
   readProfessionalEmploymentState,
   reconcilePostOabCareerBeforeContract,
   signProfessionalEmploymentContract,
@@ -84,6 +85,8 @@ export const PostOabEmploymentExperience: React.FC = () => {
     };
 
     sync();
+    const initial = readCurrentPlayerSnapshot();
+    if (initial?.oabRegistration) void hydrateProfessionalEmploymentState(initial).then(() => sync());
     const timer = window.setInterval(sync, 700);
     const onEmploymentUpdate = () => sync();
     window.addEventListener(PROFESSIONAL_EMPLOYMENT_UPDATED_EVENT, onEmploymentUpdate);
