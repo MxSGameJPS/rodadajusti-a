@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { GAME_CASES } from '../../data/cases';
 import {
+  hydrateIndependentPracticeState,
   isSocialJuridicoProActive,
   openOwnOffice,
   readIndependentPracticeState,
@@ -43,10 +44,18 @@ export const IndependentProfessionalHub: React.FC<IndependentProfessionalHubProp
   onOpenConcursoModal,
 }) => {
   const displayName = usePlayerDisplayName(player, 'Advogado');
-  const practice = readIndependentPracticeState(player);
+  const [practiceRevision, setPracticeRevision] = useState(0);
+  const practice = useMemo(() => readIndependentPracticeState(player), [player, practiceRevision]);
   const sjActive = isSocialJuridicoProActive(player, practice);
   const activeCase = GAME_CASES.find((item) => item.id === player.activeCase?.caseId) || null;
   const [showOfficeSetup, setShowOfficeSetup] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void hydrateIndependentPracticeState(player).then(() => {
+      if (active) setPracticeRevision((value) => value + 1);
+    });
+    return () => { active = false; };
+  }, [player.cloudCareerId, player.oabRegistration?.code]);
   const [showJobMarket, setShowJobMarket] = useState(false);
   useEffect(() => {
     const openMarket = () => setShowJobMarket(true);
@@ -74,7 +83,7 @@ export const IndependentProfessionalHub: React.FC<IndependentProfessionalHubProp
     }
     sound.playStamp();
     if (!openOwnOffice(player, officeName)) {
-      setOfficeError('Não foi possível registrar o escritório no save local.');
+      setOfficeError('Não foi possível registrar o escritório.');
       return;
     }
     window.location.reload();
