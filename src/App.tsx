@@ -94,6 +94,7 @@ import {
   worldLocationForLifePlace,
 } from './lib/lifeTravel';
 import { supabase } from './lib/supabase';
+import { isProfessionalPracticeBlocked, loadDisciplinaryState } from './lib/disciplinarySystem';
 import { canManageOwnOffice } from './lib/independentPractice';
 import { addLegalKnowledge, CAMPUS_ACTIVITIES, type CampusActivityId } from './lib/academicLife';
 import { applyRelationshipInteraction, seedCoreRelationships } from './lib/relationshipEngine';
@@ -799,6 +800,13 @@ export default function App() {
 
   const handleAcceptCase = (caseItem: LegalCase) => {
     if (!ensureLifeReady()) return;
+    if (player.oabRegistration && !isInternCareer(player)) {
+      const disciplinary = loadDisciplinaryState(player);
+      if (isProfessionalPracticeBlocked(disciplinary.professionalStatus)) {
+        setLifeWarning('Sua situação disciplinar atual impede o exercício da advocacia. Regularize a inscrição antes de assumir novos casos.');
+        return;
+      }
+    }
     if (isInternCareer(player) && !ensureOfficeGameplayAvailable()) return;
     if (player.oabRegistration && !isInternCareer(player)) {
       if (player.activeCase && player.activeCase.caseId !== caseItem.id) stashProfessionalCaseState(player, player.activeCase);
@@ -1463,6 +1471,14 @@ export default function App() {
 
   const handleSubmitPetition = (strategyId: string, selectedEvidenceIds: string[]) => {
     if (!player.activeCase || !activeCaseData) return;
+    if (player.oabRegistration && !isInternCareer(player)) {
+      const disciplinary = loadDisciplinaryState(player);
+      if (isProfessionalPracticeBlocked(disciplinary.professionalStatus)) {
+        setIsCourtroomOpen(false);
+        setLifeWarning('Sua inscrição profissional está impedida de atuar. O protocolo não pode ser realizado enquanto durar a sanção.');
+        return;
+      }
+    }
 
     setIsCourtroomOpen(false);
 
