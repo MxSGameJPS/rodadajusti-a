@@ -752,16 +752,7 @@ export default function App() {
     if (!ensureLifeReady()) return;
     if (isInternCareer(player) && !ensureOfficeGameplayAvailable()) return;
     if (player.oabRegistration && !isInternCareer(player)) {
-      assignProfessionalMatter(player, {
-        caseId: caseItem.id,
-        title: caseItem.title,
-        clientName: caseItem.client.name,
-        area: caseItem.area,
-        status: 'ACTIVE',
-        responsibility: 'LEAD',
-        nextAction: 'Analisar o dossiê e definir a estratégia inicial',
-        officePriority: caseItem.difficultyStars >= 4 ? 'URGENT' : caseItem.difficultyStars >= 3 ? 'IMPORTANT' : 'NORMAL',
-      }, currentGameDateLabel(player));
+      assignLongRunningProfessionalMatter(player, caseItem, currentGameDateLabel(player));
     }
     const initialState: ActiveCaseState = {
       caseId: caseItem.id,
