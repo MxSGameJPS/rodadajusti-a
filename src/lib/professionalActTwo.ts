@@ -246,6 +246,10 @@ function syncLegacyPlayerReputation(score:number){
   if(current.reputation===score)return;
   localStorage.setItem('rota_da_justica_save_v1',JSON.stringify({...current,reputation:score}));
   window.dispatchEvent(new CustomEvent('rota:player-save-external-updated'));
+  if(supabase&&current.cloudCareerId){
+   void supabase.from('careers').update({reputation:score,last_played_at:new Date().toISOString()}).eq('id',current.cloudCareerId)
+    .then(({error})=>{if(error)console.warn('[Ato 3] Falha ao sincronizar índice geral de reputação.',error.message)});
+  }
  }catch{/* compatibilidade opcional */}
 }
 export function getLegalReputationSnapshot(player:PlayerProfile){
