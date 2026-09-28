@@ -13,6 +13,7 @@ import { getInternPromotionStatus, normalizeOfficePerformance } from '../lib/int
 import { usePlayerDisplayName } from '../lib/playerTreatment';
 import { X, Award, CheckCircle2, Lock, Scale, Landmark, GraduationCap, Crown, ClipboardCheck } from 'lucide-react';
 import { sound } from '../utils/sound';
+import { getLegalReputationSnapshot } from '../lib/professionalActTwo';
 
 interface CareerModalProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, playe
   const masterLevel = Number(extendedPlayer.masterLevel || 0);
   const doctorateLevel = Number(extendedPlayer.doctorateLevel || 0);
   const performance = normalizeOfficePerformance(player.officePerformance);
+  const legalReputation = getLegalReputationSnapshot(player);
   const internPromotion = getInternPromotionStatus({
     casesSolved: player.casesSolved,
     xp: player.xp,
@@ -58,6 +60,22 @@ export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, playe
         </div>
 
         <div className="p-6 overflow-y-auto space-y-7 flex-1 bg-[#0A0A0B]">
+          {player.oabRegistration && (
+            <section className="space-y-3">
+              <SectionTitle icon={<Award size={14}/>} title="Reputação Jurídica" color="text-[#60A5FA]"/>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <StatusCard label="Técnica" value={`${legalReputation.technical}/100`}/>
+                <StatusCard label="Pública" value={`${legalReputation.publicRecognition}/100`}/>
+                <StatusCard label="Clientes" value={`${legalReputation.clientReputation}/100`}/>
+                <StatusCard label="Mercado" value={`${legalReputation.marketPrestige}/100`}/>
+                <StatusCard label="Institucional" value={`${legalReputation.institutionalRespect}/100`}/>
+              </div>
+              <div className="rounded-xl border border-[#2A2A2E] bg-[#111113] p-4 text-xs text-[#AAAAAA]">
+                <strong className="text-[#E0E0E0]">Índice geral: {legalReputation.overall}/100.</strong> Casos e audiências afetam dimensões diferentes; clientes, mercado e instituições deixam de interpretar sua carreira pelo mesmo número.
+                {legalReputation.lastReason && <span className="mt-1 block text-[#7FA8DC]">Último impacto: {legalReputation.lastReason}.</span>}
+              </div>
+            </section>
+          )}
           <section className="space-y-3">
             <SectionTitle icon={<Scale size={14}/>} title="Estágio & Advocacia" color="text-[#C5A059]"/>
             <div className="p-4 rounded-xl border border-[#2A2A2E] bg-[#111113] text-xs text-[#AAAAAA]">
