@@ -92,8 +92,9 @@ export function assignProfessionalMatter(player:PlayerProfile,input:Omit<Profess
  if(state.matters.some(m=>m.caseId===input.caseId&&m.status!=='CLOSED'))return state;
  const matter:ProfessionalMatter={...input,id:`matter:${input.caseId}:${gameDate}`,assignedGameDate:gameDate,clientTrust:55};
  const agenda:ProfessionalAgendaTask={id:`deadline:${input.caseId}:${gameDate}`,caseId:input.caseId,title:`Revisar prazo inicial • ${input.title}`,kind:'DEADLINE',dueGameDate:gameDate,dueMinute:17*60,status:'PENDING',critical:true,createdAtGameDate:gameDate};
- const existingClient=state.clients.find(client=>client.clientName===input.clientName);
- const clientId=existingClient?.id||`client:${input.clientName.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`;
+ const normalizedClientName=input.clientName.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+ const existingClient=state.clients.find(client=>client.id===`client:${normalizedClientName}`||client.clientName.trim().toLocaleLowerCase('pt-BR')===input.clientName.trim().toLocaleLowerCase('pt-BR'));
+ const clientId=existingClient?.id||`client:${normalizedClientName||input.caseId}`;
  const client:ProfessionalClientRelationship=existingClient?{...existingClient,matterIds:Array.from(new Set([...existingClient.matterIds,matter.id])),mood:existingClient.trust<40?'ANXIOUS':existingClient.mood}:{id:clientId,clientName:input.clientName,trust:55,satisfaction:55,communication:50,mood:'NEUTRAL',matterIds:[matter.id],successfulMatterIds:[],referrals:0,lastContactGameDate:null,notes:['Relacionamento iniciado com a distribuição do processo.']};
  const clients=[...state.clients.filter(item=>item.id!==client.id),client];
  const existingSpec=state.specializations.find(spec=>spec.area===input.area);
