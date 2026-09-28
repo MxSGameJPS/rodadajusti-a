@@ -1066,6 +1066,9 @@ export default function App() {
       scope: 'WORKPLACE', intensity: result.record.status === 'LATE' ? 24 : 10,
       dimensions: { professionalTrust: result.record.status === 'LATE' ? -2 : 1, affinity: result.record.status === 'LATE' ? -1 : 0 }, bond: 'PROFESSIONAL',
     });
+    if (player.careerTier === 'ESTAGIARIO_SENIOR' && !hasReceivedDailyBriefing(player)) {
+      setSeniorGuidanceDialogues(buildSeniorFirstDayDialogues(player));
+    }
     if (!hasReceivedDailyBriefing(player)) {
       const tasks = getTasksForTier(player.careerTier);
       const assignedIds = getDailyTaskIds(player, tasks.map((task) => task.id));
@@ -2072,6 +2075,9 @@ export default function App() {
             scope: 'WORKPLACE', intensity: resultArrival.record.status === 'LATE' ? 24 : 10,
             dimensions: { professionalTrust: resultArrival.record.status === 'LATE' ? -2 : 1, affinity: resultArrival.record.status === 'LATE' ? -1 : 0 }, bond: 'PROFESSIONAL',
           });
+          if (projectedPlayer.careerTier === 'ESTAGIARIO_SENIOR' && !hasReceivedDailyBriefing(projectedPlayer)) {
+            setSeniorGuidanceDialogues(buildSeniorFirstDayDialogues(projectedPlayer));
+          }
           if (!hasReceivedDailyBriefing(projectedPlayer)) {
             const tasks = getTasksForTier(projectedPlayer.careerTier);
             const assignedIds = getDailyTaskIds(projectedPlayer, tasks.map((task) => task.id));
@@ -2768,7 +2774,7 @@ export default function App() {
         isOpen={isInternPromotionCeremonyOpen}
         playerName={player.name || 'Colega'}
         narrative={internPromotionNarrative}
-        onClose={() => { setIsInternPromotionCeremonyOpen(false); setInternPromotionNarrative(null); setSeniorGuidanceDialogues(buildSeniorFirstDayDialogues(player)); }}
+        onClose={() => { setIsInternPromotionCeremonyOpen(false); setInternPromotionNarrative(null); }}
       />
 
       <CareerModal
