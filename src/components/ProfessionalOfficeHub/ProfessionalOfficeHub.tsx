@@ -183,6 +183,11 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
         )}
       </section>
 
+      <section className={styles.caseSection} aria-label="Reputação profissional">
+        <div className={styles.sectionTitle}><div><span>Posicionamento profissional</span><h3>Reputação e rede</h3></div><div className={styles.assignmentFlow}><span>Técnica {portfolio.reputation.technical}</span><span>Interna {portfolio.reputation.internalTrust}</span><span>Pública {portfolio.reputation.publicRecognition}</span><span>Mercado {portfolio.reputation.marketPrestige}</span></div></div>
+        {portfolio.network.slice().sort((a,b)=>b.respect+b.trust-a.respect-a.trust).slice(0,4).map((contact)=><article key={contact.entityId} className={styles.waitingCaseCard}><div><span>{contact.role}</span><h4>{contact.name}</h4><p>Confiança {contact.trust}% • Respeito {contact.respect}% • Influência {contact.influence}% • Oportunidades {contact.opportunities}</p></div></article>)}
+      </section>
+
       <section className={styles.caseSection} aria-label="Clientes e especializações">
         <div className={styles.sectionTitle}><div><span>Construção de carreira</span><h3>Clientes e especialização</h3></div></div>
         {portfolio.clients.slice(-3).map((client)=><article key={client.id} className={styles.waitingCaseCard}><div><span>{client.mood} • Confiança {client.trust}%</span><h4>{client.clientName}</h4><p>Satisfação {client.satisfaction}% • Comunicação {client.communication}% • {client.matterIds.length} atendimento(s)</p></div></article>)}
