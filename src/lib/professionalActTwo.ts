@@ -1,6 +1,7 @@
 import type { ActiveCaseState, PlayerProfile } from '../types/game';
 import { supabase } from './supabase';
 import { getAppealOfCaseId, getProceduralStage } from './caseMetadata';
+import { isEmployedProfessional } from './professionalEmployment';
 import type { LegalCase } from '../types/game';
 
 export type ProfessionalTaskKind = 'DEADLINE'|'HEARING'|'CLIENT_RETURN'|'MEETING'|'DILIGENCE'|'DOCUMENT';
@@ -326,8 +327,9 @@ export function markSeniorReviewCompleted(player:PlayerProfile){
 export function settleProfessionalCaseEconomy(player:PlayerProfile,caseId:string,success:boolean){
  const state=readProfessionalPortfolio(player),work=readProfessionalWorkState(player),matter=state.matters.find(item=>item.caseId===caseId);
  if(!matter||work.settledEconomyCaseIds.includes(caseId))return{successFee:0,professionalCost:0,net:0};
- const professionalCost=matter.officePriority==='CRITICAL'?180:matter.officePriority==='URGENT'?120:65;
- const successFee=success?Math.max(100,Math.round((state.reputation.technical+state.reputation.marketPrestige)*2.25)):0;
+ const employed=isEmployedProfessional(player);
+ const professionalCost=employed?0:(matter.officePriority==='CRITICAL'?180:matter.officePriority==='URGENT'?120:65);
+ const successFee=!employed&&success?Math.max(100,Math.round((state.reputation.technical+state.reputation.marketPrestige)*2.25)):0;
  const nextWork={...work,settledEconomyCaseIds:[...work.settledEconomyCaseIds,caseId].slice(-160)};
  saveProfessionalWorkState(player,nextWork);return{successFee,professionalCost,net:successFee-professionalCost};
 }
