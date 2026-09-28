@@ -1,10 +1,12 @@
 import type { CareerTierId, PlayerProfile } from '../types/game';
 import { emitPlayerSaveExternalUpdated } from './playerSaveEvents';
 import { getProfessionalOwnerKey } from './professionalRpg';
+import { supabase } from './supabase';
 
 const PLAYER_SAVE_KEY = 'rota_da_justica_save_v1';
 const EMPLOYMENT_STORAGE_PREFIX = 'rota_professional_employment_v1:';
 const LAWYER_TIERS = new Set<CareerTierId>([
+  'ADVOGADO_HABILITADO',
   'ADVOGADO_CONTRATADO',
   'ADVOGADO_SENIOR',
   'SOCIO_ESCRITORIO',
@@ -13,6 +15,7 @@ const LAWYER_TIERS = new Set<CareerTierId>([
 const VALID_CAREER_TIERS = new Set<CareerTierId>([
   'ESTAGIARIO',
   'ESTAGIARIO_SENIOR',
+  'ADVOGADO_HABILITADO',
   'ADVOGADO_CONTRATADO',
   'ADVOGADO_SENIOR',
   'SOCIO_ESCRITORIO',
@@ -189,6 +192,10 @@ export function saveProfessionalEmploymentState(
   }
 
   emitUpdate(player, state);
+  if (supabase && player.cloudCareerId) {
+    void supabase.from('careers').update({ professional_employment: normalizeState(state) }).eq('id', player.cloudCareerId)
+      .then(({ error }) => { if (error) console.warn('[Ato 2] Falha ao salvar vínculo profissional.', error.message); });
+  }
 }
 
 export function reconcilePostOabCareerBeforeContract(player: PlayerProfile) {
@@ -196,8 +203,7 @@ export function reconcilePostOabCareerBeforeContract(player: PlayerProfile) {
   const employment = readProfessionalEmploymentState(player);
   if (employment?.contractStatus === 'SIGNED') return false;
   if (player.careerTier !== 'ADVOGADO_CONTRATADO') return false;
-
-  return patchWorkingPlayer({ careerTier: 'ESTAGIARIO_SENIOR' });
+  return patchWorkingPlayer({ careerTier: 'ADVOGADO_HABILITADO' });
 }
 
 export function signProfessionalEmploymentContract(player: PlayerProfile, signedAt: string) {
