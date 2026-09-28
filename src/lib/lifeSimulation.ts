@@ -311,20 +311,27 @@ export function getPantryCapacity(household: PlayerHouseholdState) {
 
 export function getHouseholdServiceStatus(player: PlayerProfile) {
   const summary = getHouseholdBillSummary(player);
-  const suspended = summary.dueMonths >= 2;
+  const due = summary.dueMonths;
+  const internet = due < 2;
+  const gas = due < 2;
+  const water = due < 3;
+  const electricity = due < 3;
+  const suspended = !internet || !gas || !water || !electricity;
 
   return {
-    dueMonths: summary.dueMonths,
-    water: !suspended,
-    electricity: !suspended,
-    internet: !suspended,
-    gas: !suspended,
+    dueMonths: due,
+    water,
+    electricity,
+    internet,
+    gas,
     suspended,
-    warning: summary.dueMonths === 1
+    warning: due === 1
       ? 'Contas da competência atual ainda estão pendentes.'
-      : suspended
-        ? 'Serviços domésticos suspensos até a regularização das contas.'
-        : '',
+      : due === 2
+        ? 'Internet e gás foram suspensos. Água e energia estão em risco de corte.'
+        : due >= 3
+          ? 'Serviços essenciais estão suspensos até a regularização das contas.'
+          : '',
   };
 }
 
