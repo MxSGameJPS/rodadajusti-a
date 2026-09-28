@@ -129,6 +129,8 @@ import {
   registerAuthorizedOfficeDeparture,
   excuseTodayAbsence,
   buildInternPromotionNarrative,
+  hasProcessedAttendanceDiscipline,
+  markAttendanceDisciplineProcessed,
   type InternPromotionNarrative,
 } from './lib/internshipRoutine';
 import {
@@ -537,18 +539,23 @@ export default function App() {
     const { state, added } = reconcileMissedWorkdays(player);
     if (added <= 0) return;
     const missed = state.attendance.filter((item) => item.status === 'ABSENT').slice(-added);
-    const penalty = missed.reduce(
-      (total, record) => {
-        const delta = attendancePerformanceDelta(record);
-        return {
-          diligence: total.diligence + (delta.diligence || 0),
-          deadlineManagement: total.deadlineManagement + (delta.deadlineManagement || 0),
-          supervisorTrust: total.supervisorTrust + (delta.supervisorTrust || 0),
-        };
-      },
-      { diligence: 0, deadlineManagement: 0, supervisorTrust: 0 },
-    );
-    setPlayer((prev) => ({ ...prev, officePerformance: applyRoutinePerformance(prev.officePerformance, penalty) }));
+    const unprocessed = missed.filter((record) => !state.excusedAbsenceKeys.includes(record.date) && !hasProcessedAttendanceDiscipline(player, record));
+    if (unprocessed.length === 0) return;
+    let projected = player;
+    for (const record of unprocessed) {
+      const assessment = assessArrivalDiscipline(projected, record);
+      if (!assessment) continue;
+      applyRoutineDiscipline(assessment, record.date);
+      markAttendanceDisciplineProcessed(player, record);
+      projected = {
+        ...projected,
+        officeDiscipline: {
+          ...projected.officeDiscipline,
+          warningCount: Math.min(2, projected.officeDiscipline.warningCount + assessment.warningDelta),
+          employmentStatus: assessment.level === 'TERMINATION' || projected.officeDiscipline.warningCount + assessment.warningDelta >= 2 ? 'TERMINATED' : projected.officeDiscipline.employmentStatus,
+        },
+      };
+    }
   }, [player.name, player.careerTier, player.gameCurrentDay, player.gameCurrentMonth, player.gameCurrentYear]);
 
   useEffect(() => {
@@ -996,10 +1003,19 @@ export default function App() {
     return false;
   };
 
-  const applyRoutineDiscipline = (assessment: RoutineDisciplineAssessment) => {
+  const applyRoutineDiscipline = (assessment: RoutineDisciplineAssessment, attendanceDate = currentGameDateLabel(player)) => {
     setPlayer((prev) => {
       const nextWarningCount = prev.officeDiscipline.warningCount + assessment.warningDelta;
       const terminated = assessment.level === 'TERMINATION' || nextWarningCount >= 2;
+      const incident = assessment.level === 'NOTE' ? null : {
+        id: `routine:${attendanceDate}:${assessment.title}`,
+        caseId: 'INTERNSHIP_ROUTINE',
+        caseTitle: assessment.title,
+        completedDate: attendanceDate,
+        severity: assessment.level === 'TERMINATION' ? 'GRAVE' as const : 'ADVERTENCIA' as const,
+        warningIssued: assessment.warningDelta > 0,
+        issueCodes: [],
+      };
       return {
         ...prev,
         officePerformance: applyRoutinePerformance(prev.officePerformance, {
@@ -1010,8 +1026,18 @@ export default function App() {
           ...prev.officeDiscipline,
           warningCount: Math.min(2, nextWarningCount),
           employmentStatus: terminated ? 'TERMINATED' : prev.officeDiscipline.employmentStatus,
+          incidents: incident && !prev.officeDiscipline.incidents.some((item) => item.id === incident.id)
+            ? [...prev.officeDiscipline.incidents, incident]
+            : prev.officeDiscipline.incidents,
         },
       };
+    });
+    applyRelationshipInteraction(player, {
+      entityId: 'npc:ROBERTO', entityType: 'NPC', name: 'Dr. Roberto Ramos', role: 'Sócio responsável • Ramos & Associados',
+      gameDate: attendanceDate, kind: 'ROUTINE_DISCIPLINE', title: assessment.title, description: assessment.message,
+      scope: 'WORKPLACE', intensity: assessment.level === 'TERMINATION' ? 60 : assessment.level === 'WARNING' ? 40 : 18,
+      dimensions: { professionalTrust: assessment.trustDelta, professionalRespect: assessment.diligenceDelta, conflict: assessment.level === 'NOTE' ? 1 : 4 },
+      bond: 'PROFESSIONAL',
     });
     setRoutineDisciplineDialogues([
       { eyebrow: assessment.level === 'NOTE' ? 'Registro de rotina' : 'Conversa com o supervisor', text: assessment.message },
