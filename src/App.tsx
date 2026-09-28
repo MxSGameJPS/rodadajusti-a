@@ -1646,7 +1646,7 @@ export default function App() {
       });
     }
 
-    if (isRamosEmploymentActive(player)) applyRelationshipInteraction(player, {
+    if (isInternCareer(player) || isRamosEmploymentActive(player)) applyRelationshipInteraction(player, {
       entityId: 'npc:ROBERTO',
       entityType: 'NPC',
       name: 'Dr. Roberto Ramos',
