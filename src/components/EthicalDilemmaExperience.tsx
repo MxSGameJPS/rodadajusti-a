@@ -13,6 +13,7 @@ import type { LegalCase, PlayerProfile } from '../types/game';
 import {
   evaluateAndOpenEthicalDilemma,
   getEthicalDilemmaDefinition,
+  hydrateEthicalDilemmaState,
   loadEthicalDilemmaState,
   resolveEthicalDilemmaChoice,
   type EthicalChoiceResolution,
@@ -111,8 +112,12 @@ export const EthicalDilemmaExperience: React.FC = () => {
     };
 
     const initial = readCurrentPlayerSnapshot();
-    if (initial?.oabRegistration) void hydrateProfessionalProfile(initial).then(() => sync());
-    else sync();
+    if (initial?.oabRegistration) {
+      void Promise.all([
+        hydrateProfessionalProfile(initial),
+        hydrateEthicalDilemmaState(initial),
+      ]).then(() => sync());
+    } else sync();
     const timer = window.setInterval(sync, 900);
 
     const handleOpened = () => {
