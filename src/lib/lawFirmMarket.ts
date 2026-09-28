@@ -501,7 +501,19 @@ async function persistOffer(player: PlayerProfile, offer: LawFirmOffer): Promise
       if (normalized) return normalized;
     }
 
-    if (error?.code !== '23505') {
+    if (error?.code === '23505') {
+      const { data: existing } = await supabase
+        .from('career_law_firm_offers')
+        .select('*')
+        .eq('career_id', offer.careerId)
+        .eq('law_firm_id', offer.lawFirmId)
+        .eq('role_id', offer.roleId)
+        .eq('offer_type', offer.offerType)
+        .eq('status', 'PENDING')
+        .maybeSingle();
+      const normalized = existing ? normalizeOffer(existing as RawOffer) : null;
+      if (normalized) return normalized;
+    } else {
       console.warn('[Rota da Justiça] Oferta não pôde ser persistida no Supabase. Usando fallback local.', error);
     }
   }
@@ -593,6 +605,18 @@ export async function loadLawFirmMarket(player: PlayerProfile): Promise<LawFirmM
   const localOffers = readLocalOffers(player);
   let offers = [...remoteOffers, ...localOffers]
     .filter((offer, index, array) => array.findIndex((candidate) => candidate.id === offer.id) === index);
+
+  const marketDate = gameDateIso(player);
+  for (const offer of offers) {
+    if (offer.status !== 'PENDING' || !offer.expiresGameDate || offer.expiresGameDate >= marketDate) continue;
+    await updateRemoteOfferStatus(offer, 'EXPIRED');
+    upsertLocalOffer(player, { ...offer, status: 'EXPIRED' });
+  }
+  offers = offers.map((offer) => (
+    offer.status === 'PENDING' && offer.expiresGameDate && offer.expiresGameDate < marketDate
+      ? { ...offer, status: 'EXPIRED' as LawFirmOfferStatus }
+      : offer
+  ));
 
   const employment = readProfessionalEmploymentState(player);
   const currentEmployerId = employment?.officeId || null;
