@@ -56,10 +56,10 @@ export const CAREER_TIERS: Record<CareerTierId, CareerTier> = {
     minCasesSolved: 4,
     minXp: 1000,
     minReputation: 50,
-    salaryBaseMonthly: 5500,
+    salaryBaseMonthly: 5800,
     description: 'Aprovado no Exame da OAB! Agora possui carteira regular e assina petições, sustenta em audiências e recebe participação em honorários.',
     perks: [
-      'Salário fixo de R$ 5.500 + 20% de honorários de êxito',
+      'Salário fixo de R$ 5.800 + 20% de honorários de êxito',
       'Poder de requerer certidões com fé pública',
       'Desbloqueia inscrição em Pós-Graduação e Concursos'
     ],
