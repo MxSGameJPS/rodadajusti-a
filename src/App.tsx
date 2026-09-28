@@ -73,6 +73,7 @@ import {
   normalizeOfficePerformance,
 } from './lib/internCareerEngine';
 import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
+import { persistPlayerCloudSave } from './lib/playerCloudSave';
 import { readProfessionalEmploymentState } from './lib/professionalEmployment';
 import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
 import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } from './lib/gameTime';
@@ -523,8 +524,11 @@ export default function App() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(player));
     } catch {
-      // ignore
+      // Cache local é apenas recuperação rápida; Supabase é a persistência autoritativa.
     }
+    if (!player.name) return;
+    const timer = window.setTimeout(() => { void persistPlayerCloudSave(player); }, 700);
+    return () => window.clearTimeout(timer);
   }, [player]);
 
   useEffect(() => {
