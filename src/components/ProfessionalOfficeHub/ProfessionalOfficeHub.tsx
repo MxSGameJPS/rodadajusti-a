@@ -110,8 +110,8 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
             <div><span className={styles.caseCode}>{task.kind}{task.critical ? ' • PRIORIDADE' : ''}</span><h4>{task.title}</h4><p>Prazo: {task.dueGameDate}{task.dueMinute != null ? ` • ${String(Math.floor(task.dueMinute/60)).padStart(2,'0')}:${String(task.dueMinute%60).padStart(2,'0')}` : ''}</p></div><button type="button" onClick={()=>{completeProfessionalAgendaTask(player,task.id);setProfessionalRevision(value=>value+1)}}>Concluir obrigação <ArrowRight size={14}/></button>
           </article>
         )) : <article className={styles.waitingCaseCard}><div><span>Agenda organizada</span><h4>Nenhuma obrigação profissional pendente</h4><p>Novas atribuições e compromissos aparecerão aqui conforme sua carteira crescer.</p></div></article>}
-        {portfolio.matters.filter((matter)=>matter.status!=='CLOSED').slice(0,4).map((matter)=>(
-          <article key={matter.id} className={styles.activeCaseCard}><div><span className={styles.caseCode}>{matter.area} • {matter.officePriority}</span><h4>{matter.title}</h4><p><strong>Cliente:</strong> {matter.clientName} • Próxima ação: {matter.nextAction} • Confiança: {matter.clientTrust}%</p></div></article>
+        {portfolio.matters.filter((matter)=>matter.status!=='CLOSED').slice(0,6).map((matter)=>(
+          <article key={matter.id} className={styles.activeCaseCard}><div><span className={styles.caseCode}>{matter.area} • {matter.officePriority}</span><h4>{matter.title}</h4><p><strong>Cliente:</strong> {matter.clientName} • Próxima ação: {matter.nextAction} • Confiança: {matter.clientTrust}%</p></div>{player.activeCase?.caseId===matter.caseId?<span className={styles.caseCode}>EM ANDAMENTO</span>:<button type="button" onClick={()=>window.dispatchEvent(new CustomEvent('rota:switch-professional-case',{detail:{caseId:matter.caseId}}))}>Abrir processo <ArrowRight size={14}/></button>}</article>
         ))}
       </section>
 
