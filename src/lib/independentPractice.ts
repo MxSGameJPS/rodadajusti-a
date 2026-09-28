@@ -15,21 +15,27 @@ export const INDEPENDENT_PRACTICE_UPDATED_EVENT = 'rota:independent-practice-upd
 export const SOCIAL_JURIDICO_PRO_MONTHLY_PRICE = 150;
 
 export interface IndependentPracticeState {
-  version: 1;
+  version: 2;
   socialJuridicoPlan: 'NONE' | 'PRO';
   socialJuridicoSubscribedAt: string | null;
   socialJuridicoPaidThrough: string | null;
   independentCaseIds: string[];
   ownOfficeOpenedAt: string | null;
+  socialMediaVisibility: number;
+  socialMediaLeadCredits: number;
+  lastSocialMediaCampaignDate: string | null;
 }
 
 const DEFAULT_STATE: IndependentPracticeState = {
-  version: 1,
+  version: 2,
   socialJuridicoPlan: 'NONE',
   socialJuridicoSubscribedAt: null,
   socialJuridicoPaidThrough: null,
   independentCaseIds: [],
   ownOfficeOpenedAt: null,
+  socialMediaVisibility: 0,
+  socialMediaLeadCredits: 0,
+  lastSocialMediaCampaignDate: null,
 };
 
 function storageKey(player: PlayerProfile) {
@@ -72,7 +78,7 @@ export function readIndependentPracticeState(player: PlayerProfile | null | unde
     return {
       ...DEFAULT_STATE,
       ...parsed,
-      version: 1,
+      version: 2,
       independentCaseIds: Array.isArray(parsed.independentCaseIds)
         ? parsed.independentCaseIds.filter((id): id is string => typeof id === 'string').slice(-80)
         : [],
@@ -122,7 +128,7 @@ export async function hydrateIndependentPracticeState(player: PlayerProfile) {
   const state: IndependentPracticeState = {
     ...DEFAULT_STATE,
     ...parsed,
-    version: 1,
+    version: 2,
     independentCaseIds: Array.isArray(parsed.independentCaseIds)
       ? parsed.independentCaseIds.filter((id): id is string => typeof id === 'string').slice(-80)
       : [],
@@ -176,26 +182,79 @@ export function subscribeSocialJuridicoPro(player: PlayerProfile) {
   }
 }
 
+export const SOCIAL_MEDIA_CAMPAIGN_COST = 40;
+
+export function runSocialMediaCampaign(player: PlayerProfile) {
+  if (typeof window === 'undefined') return { ok: false as const, reason: 'STORAGE' as const };
+  if (!isIndependentProfessional(player)) return { ok: false as const, reason: 'EMPLOYED' as const };
+  if (isProfessionalPracticeBlocked(loadDisciplinaryState(player).professionalStatus)) {
+    return { ok: false as const, reason: 'BLOCKED' as const };
+  }
+
+  const today = formatIsoDate(currentGameDate(player));
+  const state = readIndependentPracticeState(player);
+  if (state.lastSocialMediaCampaignDate === today) {
+    return { ok: false as const, reason: 'COOLDOWN' as const };
+  }
+
+  try {
+    const raw = window.localStorage.getItem(PLAYER_SAVE_KEY);
+    if (!raw) return { ok: false as const, reason: 'STORAGE' as const };
+    const current = JSON.parse(raw) as PlayerProfile;
+    if ((Number(current.money) || 0) < SOCIAL_MEDIA_CAMPAIGN_COST) {
+      return { ok: false as const, reason: 'MONEY' as const };
+    }
+
+    const visibilityGain = Math.max(4, Math.min(12, 4 + Math.floor((current.reputation || 0) / 12)));
+    const nextState: IndependentPracticeState = {
+      ...state,
+      socialMediaVisibility: Math.min(100, state.socialMediaVisibility + visibilityGain),
+      socialMediaLeadCredits: Math.min(5, state.socialMediaLeadCredits + 1),
+      lastSocialMediaCampaignDate: today,
+    };
+
+    window.localStorage.setItem(PLAYER_SAVE_KEY, JSON.stringify({
+      ...current,
+      money: Math.max(0, (Number(current.money) || 0) - SOCIAL_MEDIA_CAMPAIGN_COST),
+    }));
+    saveIndependentPracticeState(current, nextState);
+    emitPlayerSaveExternalUpdated();
+    return { ok: true as const, state: nextState, visibilityGain };
+  } catch {
+    return { ok: false as const, reason: 'STORAGE' as const };
+  }
+}
+
+function getEligibleIndependentCases(player: PlayerProfile, catalog: LegalCase[]) {
+  const handled = new Set(player.history.map((record) => record.caseId));
+  const lawyerRank = getCareerRank('ADVOGADO_CONTRATADO');
+  return getAvailableCasesForCareer(catalog, player.careerTier)
+    .filter((caseItem) => !getAppealOfCaseId(caseItem))
+    .filter((caseItem) => !handled.has(caseItem.id))
+    .filter((caseItem) => getCareerRank(caseItem.minCareerTier) >= lawyerRank);
+}
+
+export function getSocialMediaLeadCase(player: PlayerProfile, catalog: LegalCase[]) {
+  if (player.activeCase || !isIndependentProfessional(player)) return null;
+  const state = readIndependentPracticeState(player);
+  if (state.socialMediaLeadCredits <= 0) return null;
+  return getEligibleIndependentCases(player, catalog)[0] || null;
+}
+
 export function getIndependentMarketplaceCase(player: PlayerProfile, catalog: LegalCase[]) {
   if (player.activeCase) return null;
   const state = readIndependentPracticeState(player);
   if (!isSocialJuridicoProActive(player, state)) return null;
 
-  const handled = new Set(player.history.map((record) => record.caseId));
-  const lawyerRank = getCareerRank('ADVOGADO_CONTRATADO');
-  const eligible = getAvailableCasesForCareer(catalog, player.careerTier)
-    .filter((caseItem) => !getAppealOfCaseId(caseItem))
-    .filter((caseItem) => !handled.has(caseItem.id))
-    .filter((caseItem) => getCareerRank(caseItem.minCareerTier) >= lawyerRank);
-
-  return eligible[0] || null;
+  return getEligibleIndependentCases(player, catalog)[0] || null;
 }
 
-export function startIndependentMarketplaceCase(player: PlayerProfile, caseItem: LegalCase) {
+export function startIndependentMarketplaceCase(player: PlayerProfile, caseItem: LegalCase, source: 'SOCIAL_JURIDICO' | 'SOCIAL_MEDIA' = 'SOCIAL_JURIDICO') {
   if (typeof window === 'undefined') return false;
   if (isProfessionalPracticeBlocked(loadDisciplinaryState(player).professionalStatus)) return false;
   const state = readIndependentPracticeState(player);
-  if (!isSocialJuridicoProActive(player, state)) return false;
+  if (source === 'SOCIAL_JURIDICO' && !isSocialJuridicoProActive(player, state)) return false;
+  if (source === 'SOCIAL_MEDIA' && (!isIndependentProfessional(player) || state.socialMediaLeadCredits <= 0)) return false;
 
   const firstLocation = caseItem.locations.find((location) => location.unlockedByDefault) || caseItem.locations[0];
   const activeCase: ActiveCaseState = {
@@ -210,7 +269,7 @@ export function startIndependentMarketplaceCase(player: PlayerProfile, caseItem:
       {
         id: `log-sj-pro-${Date.now()}`,
         timestampGameHours: 0,
-        message: `Caso aceito pela conta própria do Social Jurídico Pro: ${caseItem.title}`,
+        message: `Caso aceito por ${source === 'SOCIAL_MEDIA' ? 'captação nas redes sociais' : 'Social Jurídico Pro'}: ${caseItem.title}`,
         type: 'alerta',
       },
     ],
@@ -228,6 +287,9 @@ export function startIndependentMarketplaceCase(player: PlayerProfile, caseItem:
     saveIndependentPracticeState(player, {
       ...state,
       independentCaseIds: [...new Set([...state.independentCaseIds, caseItem.id])].slice(-80),
+      socialMediaLeadCredits: source === 'SOCIAL_MEDIA'
+        ? Math.max(0, state.socialMediaLeadCredits - 1)
+        : state.socialMediaLeadCredits,
     });
     emitPlayerSaveExternalUpdated();
     return true;
