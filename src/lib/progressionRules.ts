@@ -9,6 +9,14 @@ export const CAREER_LEVEL_SUMMARY = {
   advocacy: {
     label: 'Advocacia',
     levels: ['Advogado Contratado', 'Advogado Sênior', 'Sócio do Escritório'],
+
+  },
+  PROMOTOR: {
+    label: 'Concurso para Promotor de Justiça',
+    examType: 'concurso_promotor',
+    questions: 20,
+    minLegalPracticeYears: 3,
+    requirementText: '3 anos de atividade jurídica',
   },
 };
 
@@ -34,8 +42,8 @@ export const PUBLIC_EXAM_RULES = {
     label: 'Concurso para Juiz',
     examType: 'concurso_juiz',
     questions: 20,
-    minDoctorateLevel: 4,
-    requirementText: 'Doutorado superior ao nível 3 (nível 4 ou 5)',
+    minLegalPracticeYears: 3,
+    requirementText: '3 anos de atividade jurídica',
   },
 };
 
@@ -78,8 +86,8 @@ export const SPECIAL_CAREER_RULES = [
   },
 ];
 
-export function isPublicExamEligible(doctorateLevel: number) {
-  return doctorateLevel >= 4;
+export function isPublicExamEligible(legalPracticeMonths: number) {
+  return legalPracticeMonths >= 36;
 }
 
 export function isSpecialCareerEligible(
