@@ -75,7 +75,7 @@ import {
 import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
 import { persistPlayerCloudSave } from './lib/playerCloudSave';
 import { readProfessionalEmploymentState } from './lib/professionalEmployment';
-import { assignLongRunningProfessionalMatter, recordProfessionalMatterOutcome, recordProfessionalNetworkInteraction, recordProfessionalStrategy, updateMatterLifecycle } from './lib/professionalActTwo';
+import { assignLongRunningProfessionalMatter, recordProfessionalMatterOutcome, getSeniorReviewSnapshot, recordProfessionalNetworkInteraction, recordProfessionalStrategy, updateMatterLifecycle } from './lib/professionalActTwo';
 import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
 import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } from './lib/gameTime';
 import { sound } from './utils/sound';
@@ -1494,9 +1494,12 @@ export default function App() {
     if (newSolvedCount >= 14 && player.careerTier === 'ADVOGADO_SENIOR') {
       newTier = 'SOCIO_ESCRITORIO';
       promotionAnnouncement = 'SOCIO_ESCRITORIO';
-    } else if (newSolvedCount >= 9 && player.careerTier === 'ADVOGADO_CONTRATADO') {
-      newTier = 'ADVOGADO_SENIOR';
-      promotionAnnouncement = 'ADVOGADO_SENIOR';
+    } else if (player.careerTier === 'ADVOGADO_CONTRATADO') {
+      const seniorReview = getSeniorReviewSnapshot(player);
+      if (seniorReview.eligible) {
+        newTier = 'ADVOGADO_SENIOR';
+        promotionAnnouncement = 'ADVOGADO_SENIOR';
+      }
     } else if (player.careerTier === 'ESTAGIARIO') {
       const projectedPlayer = {
         ...player,
