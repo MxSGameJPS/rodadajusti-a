@@ -75,6 +75,7 @@ import {
 import { PLAYER_SAVE_EXTERNAL_UPDATED_EVENT } from './lib/playerSaveEvents';
 import { persistPlayerCloudSave } from './lib/playerCloudSave';
 import { readProfessionalEmploymentState } from './lib/professionalEmployment';
+import { assignProfessionalMatter } from './lib/professionalActTwo';
 import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalizeGameDate } from './lib/gameDate';
 import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } from './lib/gameTime';
 import { sound } from './utils/sound';
@@ -750,6 +751,18 @@ export default function App() {
   const handleAcceptCase = (caseItem: LegalCase) => {
     if (!ensureLifeReady()) return;
     if (isInternCareer(player) && !ensureOfficeGameplayAvailable()) return;
+    if (player.oabRegistration && !isInternCareer(player)) {
+      assignProfessionalMatter(player, {
+        caseId: caseItem.id,
+        title: caseItem.title,
+        clientName: caseItem.client.name,
+        area: caseItem.area,
+        status: 'ACTIVE',
+        responsibility: 'LEAD',
+        nextAction: 'Analisar o dossiê e definir a estratégia inicial',
+        officePriority: caseItem.difficultyStars >= 4 ? 'URGENT' : caseItem.difficultyStars >= 3 ? 'IMPORTANT' : 'NORMAL',
+      }, currentGameDateLabel(player));
+    }
     const initialState: ActiveCaseState = {
       caseId: caseItem.id,
       hoursSpent: 0,
