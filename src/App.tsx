@@ -3019,7 +3019,7 @@ export default function App() {
       />
 
       <OfficeManagementModal
-        isOpen={isOfficeModalOpen && Boolean(player.oabRegistration)}
+        isOpen={isOfficeModalOpen && Boolean(player.oabRegistration) && !['MAGISTRADO_SUBSTITUTO','JUIZ_TITULAR','DESEMBARGADOR','PROMOTOR_SUBSTITUTO','PROMOTOR_JUSTICA','PROCURADOR_JUSTICA','MINISTRO_STF'].includes(player.careerTier)}
         onClose={() => setIsOfficeModalOpen(false)}
         player={player}
         onHireEmployee={handleHireEmployee}
