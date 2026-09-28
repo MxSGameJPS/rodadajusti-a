@@ -1505,11 +1505,9 @@ export default function App() {
       newTier = 'SOCIO_ESCRITORIO';
       promotionAnnouncement = 'SOCIO_ESCRITORIO';
     } else if (player.careerTier === 'ADVOGADO_CONTRATADO') {
-      const seniorReview = getSeniorReviewSnapshot(player);
-      if (seniorReview.eligible) {
-        newTier = 'ADVOGADO_SENIOR';
-        promotionAnnouncement = 'ADVOGADO_SENIOR';
-      }
+      // A elegibilidade é exibida no escritório, mas a promoção só ocorre
+      // depois da reunião formal de encerramento do Ato 2.
+      getSeniorReviewSnapshot(player);
     } else if (player.careerTier === 'ESTAGIARIO') {
       const projectedPlayer = {
         ...player,
