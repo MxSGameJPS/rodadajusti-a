@@ -53,13 +53,13 @@ export interface ProfessionalPortfolioState {
 export interface ProfessionalWorkState {
   version:1; workdayStartMinute:number; workdayEndMinute:number; weeklyHours:number;
   arrivalKeys:string[]; completedResponsibilityKeys:string[]; missedDeadlineKeys:string[];
-  processedAgendaKeys:string[]; seniorReviewCompleted:boolean; actTwoCompleted:boolean;
+  processedAgendaKeys:string[]; seniorReviewCompleted:boolean; actTwoCompleted:boolean; settledEconomyCaseIds:string[];
 }
 
 const PORTFOLIO_PREFIX='rota_act_two_portfolio_v1:';
 const WORK_PREFIX='rota_act_two_work_v1:';
 const emptyPortfolio=():ProfessionalPortfolioState=>({version:1,matters:[],agenda:[],firstProfessionalDayCompleted:false,firstMatterAssigned:false,clients:[],hearings:[],strategies:[],specializations:[],reputation:{technical:20,internalTrust:20,publicRecognition:5,marketPrestige:10,lastReason:null},network:[]});
-const emptyWork=():ProfessionalWorkState=>({version:1,workdayStartMinute:9*60,workdayEndMinute:18*60,weeklyHours:40,arrivalKeys:[],completedResponsibilityKeys:[],missedDeadlineKeys:[],processedAgendaKeys:[],seniorReviewCompleted:false,actTwoCompleted:false});
+const emptyWork=():ProfessionalWorkState=>({version:1,workdayStartMinute:9*60,workdayEndMinute:18*60,weeklyHours:40,arrivalKeys:[],completedResponsibilityKeys:[],missedDeadlineKeys:[],processedAgendaKeys:[],seniorReviewCompleted:false,actTwoCompleted:false,settledEconomyCaseIds:[]});
 const owner=(p:PlayerProfile)=>p.cloudCareerId||p.oabRegistration?.code||p.name||'player';
 function read<T>(key:string,fallback:T):T{if(typeof window==='undefined')return fallback;try{const raw=localStorage.getItem(key);return raw?{...fallback,...JSON.parse(raw)}:fallback}catch{return fallback}}
 function write(key:string,value:unknown){if(typeof window==='undefined')return;try{localStorage.setItem(key,JSON.stringify(value))}catch{/* cache opcional */}}
@@ -68,7 +68,7 @@ function normalizePortfolio(value:Partial<ProfessionalPortfolioState>|null|undef
  const base=emptyPortfolio(); return {...base,...(value||{}),matters:Array.isArray(value?.matters)?value!.matters:[],agenda:Array.isArray(value?.agenda)?value!.agenda:[],clients:Array.isArray(value?.clients)?value!.clients:[],hearings:Array.isArray(value?.hearings)?value!.hearings:[],strategies:Array.isArray(value?.strategies)?value!.strategies:[],specializations:Array.isArray(value?.specializations)?value!.specializations:[],reputation:{...base.reputation,...(value?.reputation||{})},network:Array.isArray(value?.network)?value!.network:[]};
 }
 export function readProfessionalPortfolio(player:PlayerProfile){return normalizePortfolio(read(PORTFOLIO_PREFIX+owner(player),emptyPortfolio()))}
-export function readProfessionalWorkState(player:PlayerProfile){const value=read(WORK_PREFIX+owner(player),emptyWork());return {...emptyWork(),...value,arrivalKeys:Array.isArray(value.arrivalKeys)?value.arrivalKeys:[],completedResponsibilityKeys:Array.isArray(value.completedResponsibilityKeys)?value.completedResponsibilityKeys:[],missedDeadlineKeys:Array.isArray(value.missedDeadlineKeys)?value.missedDeadlineKeys:[],processedAgendaKeys:Array.isArray(value.processedAgendaKeys)?value.processedAgendaKeys:[]}}
+export function readProfessionalWorkState(player:PlayerProfile){const value=read(WORK_PREFIX+owner(player),emptyWork());return {...emptyWork(),...value,arrivalKeys:Array.isArray(value.arrivalKeys)?value.arrivalKeys:[],completedResponsibilityKeys:Array.isArray(value.completedResponsibilityKeys)?value.completedResponsibilityKeys:[],missedDeadlineKeys:Array.isArray(value.missedDeadlineKeys)?value.missedDeadlineKeys:[],processedAgendaKeys:Array.isArray(value.processedAgendaKeys)?value.processedAgendaKeys:[],settledEconomyCaseIds:Array.isArray(value.settledEconomyCaseIds)?value.settledEconomyCaseIds:[]}}
 export function saveProfessionalPortfolio(player:PlayerProfile,state:ProfessionalPortfolioState){write(PORTFOLIO_PREFIX+owner(player),state);void persistActTwoState(player,{professional_portfolio:state})}
 export function saveProfessionalWorkState(player:PlayerProfile,state:ProfessionalWorkState){write(WORK_PREFIX+owner(player),state);void persistActTwoState(player,{professional_work_state:state})}
 
@@ -83,7 +83,7 @@ export async function hydrateActTwoState(player:PlayerProfile){
  const {data,error}=await supabase.from('careers').select('professional_portfolio,professional_work_state').eq('id',player.cloudCareerId).maybeSingle();
  if(error||!data)return {portfolio:readProfessionalPortfolio(player),work:readProfessionalWorkState(player)};
  const portfolio=normalizePortfolio(data.professional_portfolio as Partial<ProfessionalPortfolioState>);
- const rawWork=(data.professional_work_state||{}) as Partial<ProfessionalWorkState>; const work={...emptyWork(),...rawWork,arrivalKeys:Array.isArray(rawWork.arrivalKeys)?rawWork.arrivalKeys:[],completedResponsibilityKeys:Array.isArray(rawWork.completedResponsibilityKeys)?rawWork.completedResponsibilityKeys:[],missedDeadlineKeys:Array.isArray(rawWork.missedDeadlineKeys)?rawWork.missedDeadlineKeys:[],processedAgendaKeys:Array.isArray(rawWork.processedAgendaKeys)?rawWork.processedAgendaKeys:[]} as ProfessionalWorkState;
+ const rawWork=(data.professional_work_state||{}) as Partial<ProfessionalWorkState>; const work={...emptyWork(),...rawWork,arrivalKeys:Array.isArray(rawWork.arrivalKeys)?rawWork.arrivalKeys:[],completedResponsibilityKeys:Array.isArray(rawWork.completedResponsibilityKeys)?rawWork.completedResponsibilityKeys:[],missedDeadlineKeys:Array.isArray(rawWork.missedDeadlineKeys)?rawWork.missedDeadlineKeys:[],processedAgendaKeys:Array.isArray(rawWork.processedAgendaKeys)?rawWork.processedAgendaKeys:[],settledEconomyCaseIds:Array.isArray(rawWork.settledEconomyCaseIds)?rawWork.settledEconomyCaseIds:[]} as ProfessionalWorkState;
  write(PORTFOLIO_PREFIX+owner(player),portfolio);write(WORK_PREFIX+owner(player),work);return{portfolio,work};
 }
 
@@ -293,4 +293,13 @@ export function recordProfessionalHearingResult(player:PlayerProfile,hearingId:s
 export function markSeniorReviewCompleted(player:PlayerProfile){
  const work=readProfessionalWorkState(player);if(work.seniorReviewCompleted&&work.actTwoCompleted)return work;
  const next={...work,seniorReviewCompleted:true,actTwoCompleted:true};saveProfessionalWorkState(player,next);return next;
+}
+
+export function settleProfessionalCaseEconomy(player:PlayerProfile,caseId:string,success:boolean){
+ const state=readProfessionalPortfolio(player),work=readProfessionalWorkState(player),matter=state.matters.find(item=>item.caseId===caseId);
+ if(!matter||work.settledEconomyCaseIds.includes(caseId))return{successFee:0,professionalCost:0,net:0};
+ const professionalCost=matter.officePriority==='CRITICAL'?180:matter.officePriority==='URGENT'?120:65;
+ const successFee=success?Math.max(100,Math.round((state.reputation.technical+state.reputation.marketPrestige)*2.25)):0;
+ const nextWork={...work,settledEconomyCaseIds:[...work.settledEconomyCaseIds,caseId].slice(-160)};
+ saveProfessionalWorkState(player,nextWork);return{successFee,professionalCost,net:successFee-professionalCost};
 }
