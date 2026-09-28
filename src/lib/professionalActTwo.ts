@@ -41,11 +41,14 @@ export interface ProfessionalMatter {
   nextAction:string; clientTrust:number; officePriority:'NORMAL'|'IMPORTANT'|'URGENT'|'CRITICAL';
   lifecycleStage?:string; predecessorCaseId?:string|null;
 }
+export interface ProfessionalReputationState { technical:number; internalTrust:number; publicRecognition:number; marketPrestige:number; lastReason:string|null }
+export interface ProfessionalNetworkContact { entityId:string; name:string; role:string; trust:number; respect:number; influence:number; opportunities:number; lastInteractionGameDate:string|null }
 export interface ProfessionalPortfolioState {
   version:1; matters:ProfessionalMatter[]; agenda:ProfessionalAgendaTask[];
   firstProfessionalDayCompleted:boolean; firstMatterAssigned:boolean;
   clients:ProfessionalClientRelationship[]; hearings:ProfessionalHearing[];
   strategies:ProfessionalStrategyRecord[]; specializations:ProfessionalSpecialization[];
+  reputation:ProfessionalReputationState; network:ProfessionalNetworkContact[];
 }
 export interface ProfessionalWorkState {
   version:1; workdayStartMinute:number; workdayEndMinute:number; weeklyHours:number;
@@ -54,14 +57,14 @@ export interface ProfessionalWorkState {
 
 const PORTFOLIO_PREFIX='rota_act_two_portfolio_v1:';
 const WORK_PREFIX='rota_act_two_work_v1:';
-const emptyPortfolio=():ProfessionalPortfolioState=>({version:1,matters:[],agenda:[],firstProfessionalDayCompleted:false,firstMatterAssigned:false,clients:[],hearings:[],strategies:[],specializations:[]});
+const emptyPortfolio=():ProfessionalPortfolioState=>({version:1,matters:[],agenda:[],firstProfessionalDayCompleted:false,firstMatterAssigned:false,clients:[],hearings:[],strategies:[],specializations:[],reputation:{technical:20,internalTrust:20,publicRecognition:5,marketPrestige:10,lastReason:null},network:[]});
 const emptyWork=():ProfessionalWorkState=>({version:1,workdayStartMinute:9*60,workdayEndMinute:18*60,weeklyHours:40,arrivalKeys:[],completedResponsibilityKeys:[],missedDeadlineKeys:[]});
 const owner=(p:PlayerProfile)=>p.cloudCareerId||p.oabRegistration?.code||p.name||'player';
 function read<T>(key:string,fallback:T):T{if(typeof window==='undefined')return fallback;try{const raw=localStorage.getItem(key);return raw?{...fallback,...JSON.parse(raw)}:fallback}catch{return fallback}}
 function write(key:string,value:unknown){if(typeof window==='undefined')return;try{localStorage.setItem(key,JSON.stringify(value))}catch{/* cache opcional */}}
 
 function normalizePortfolio(value:Partial<ProfessionalPortfolioState>|null|undefined):ProfessionalPortfolioState {
- const base=emptyPortfolio(); return {...base,...(value||{}),matters:Array.isArray(value?.matters)?value!.matters:[],agenda:Array.isArray(value?.agenda)?value!.agenda:[],clients:Array.isArray(value?.clients)?value!.clients:[],hearings:Array.isArray(value?.hearings)?value!.hearings:[],strategies:Array.isArray(value?.strategies)?value!.strategies:[],specializations:Array.isArray(value?.specializations)?value!.specializations:[]};
+ const base=emptyPortfolio(); return {...base,...(value||{}),matters:Array.isArray(value?.matters)?value!.matters:[],agenda:Array.isArray(value?.agenda)?value!.agenda:[],clients:Array.isArray(value?.clients)?value!.clients:[],hearings:Array.isArray(value?.hearings)?value!.hearings:[],strategies:Array.isArray(value?.strategies)?value!.strategies:[],specializations:Array.isArray(value?.specializations)?value!.specializations:[],reputation:{...base.reputation,...(value?.reputation||{})},network:Array.isArray(value?.network)?value!.network:[]};
 }
 export function readProfessionalPortfolio(player:PlayerProfile){return normalizePortfolio(read(PORTFOLIO_PREFIX+owner(player),emptyPortfolio()))}
 export function readProfessionalWorkState(player:PlayerProfile){return read(WORK_PREFIX+owner(player),emptyWork())}
@@ -153,7 +156,9 @@ export function recordProfessionalMatterOutcome(player:PlayerProfile,caseId:stri
  const state=readProfessionalPortfolio(player); const matter=state.matters.find(item=>item.caseId===caseId); if(!matter)return state;
  const clients=state.clients.map(client=>client.matterIds.includes(matter.id)?{...client,trust:Math.max(0,Math.min(100,client.trust+(success?10:-8))),satisfaction:Math.max(0,Math.min(100,client.satisfaction+(success?12:-10))),mood:success?'SATISFIED':'ANXIOUS' as ClientMood,successfulMatterIds:success?Array.from(new Set([...client.successfulMatterIds,matter.id])):client.successfulMatterIds}:client);
  const specializations=state.specializations.map(spec=>spec.area===matter.area?withSpecializationLevel({...spec,experiencePoints:spec.experiencePoints+(success?25:12),successfulMatters:spec.successfulMatters+(success?1:0)}):spec);
- const next={...state,clients,specializations,matters:state.matters.map(item=>item.id===matter.id?{...item,status:'CLOSED' as const,nextAction:'Processo encerrado'}:item)};saveProfessionalPortfolio(player,next);return next;
+ const rep=state.reputation;
+ const reputation={technical:clamp100(rep.technical+(success?4:1)),internalTrust:clamp100(rep.internalTrust+(success?3:-3)),publicRecognition:clamp100(rep.publicRecognition+(success?2:0)),marketPrestige:clamp100(rep.marketPrestige+(success?2:-1)),lastReason:success?'Resultado profissional favorável':'Resultado profissional desfavorável'};
+ const next={...state,clients,specializations,reputation,matters:state.matters.map(item=>item.id===matter.id?{...item,status:'CLOSED' as const,nextAction:'Processo encerrado'}:item)};saveProfessionalPortfolio(player,next);return next;
 }
 
 export function addSpecializationStudy(player:PlayerProfile,area:string,points=10){
@@ -170,4 +175,20 @@ export function assignLongRunningProfessionalMatter(player:PlayerProfile,caseIte
  if(!predecessor)return state;
  const next={...state,matters:state.matters.map(m=>m.caseId===predecessorCaseId?{...m,status:'APPEAL' as const,nextAction:`Processo prossegue em ${getProceduralStage(caseItem)}`}:m)};
  saveProfessionalPortfolio(player,next);return next;
+}
+
+const clamp100=(value:number)=>Math.max(0,Math.min(100,Math.round(value)));
+export function applyProfessionalReputation(player:PlayerProfile,delta:Partial<Omit<ProfessionalReputationState,'lastReason'>>,reason:string){
+ const state=readProfessionalPortfolio(player),r=state.reputation;
+ const reputation={technical:clamp100(r.technical+(delta.technical||0)),internalTrust:clamp100(r.internalTrust+(delta.internalTrust||0)),publicRecognition:clamp100(r.publicRecognition+(delta.publicRecognition||0)),marketPrestige:clamp100(r.marketPrestige+(delta.marketPrestige||0)),lastReason:reason};
+ const next={...state,reputation};saveProfessionalPortfolio(player,next);return next;
+}
+export function recordProfessionalNetworkInteraction(player:PlayerProfile,input:{entityId:string;name:string;role:string;gameDate:string;trustDelta?:number;respectDelta?:number;influenceDelta?:number;opportunity?:boolean}){
+ const state=readProfessionalPortfolio(player),current=state.network.find(item=>item.entityId===input.entityId)||{entityId:input.entityId,name:input.name,role:input.role,trust:20,respect:20,influence:10,opportunities:0,lastInteractionGameDate:null};
+ const contact={...current,name:input.name,role:input.role,trust:clamp100(current.trust+(input.trustDelta||0)),respect:clamp100(current.respect+(input.respectDelta||0)),influence:clamp100(current.influence+(input.influenceDelta||0)),opportunities:current.opportunities+(input.opportunity?1:0),lastInteractionGameDate:input.gameDate};
+ const next={...state,network:[...state.network.filter(item=>item.entityId!==input.entityId),contact]};saveProfessionalPortfolio(player,next);return next;
+}
+export function professionalMarketScore(player:PlayerProfile){
+ const state=readProfessionalPortfolio(player),topSpec=state.specializations.reduce((best,spec)=>Math.max(best,spec.experiencePoints+spec.studyPoints+spec.successfulMatters*15),0);
+ return Math.round(state.reputation.technical*.3+state.reputation.internalTrust*.2+state.reputation.publicRecognition*.15+state.reputation.marketPrestige*.2+Math.min(100,topSpec)*.15);
 }
