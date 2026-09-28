@@ -26,7 +26,7 @@ const VALID_CAREER_TIERS = new Set<CareerTierId>([
 
 export const PROFESSIONAL_EMPLOYMENT_UPDATED_EVENT = 'rota:professional-employment-updated';
 
-export type ProfessionalEmploymentContractStatus = 'PENDING' | 'SIGNED';
+export type ProfessionalEmploymentContractStatus = 'PENDING' | 'SIGNED' | 'DECLINED';
 
 export interface ProfessionalEmploymentState {
   version: 2;
@@ -205,6 +205,31 @@ export function reconcilePostOabCareerBeforeContract(player: PlayerProfile) {
   return patchWorkingPlayer({ careerTier: 'ADVOGADO_HABILITADO' });
 }
 
+export function declineProfessionalEmploymentOffer(player: PlayerProfile) {
+  const current = readProfessionalEmploymentState(player) || { ...DEFAULT_STATE };
+  const next: ProfessionalEmploymentState = {
+    ...current,
+    contractStatus: 'DECLINED',
+    signedAt: null,
+    onboardingCompleted: true,
+    devicesUnlocked: true,
+    officeId: null,
+    officeSlug: '',
+    officeName: 'Atuação independente',
+    roleId: null,
+    roleCode: 'ADVOGADO_INDEPENDENTE',
+    role: 'Advogado Independente',
+    salaryMonthly: 0,
+    weeklyHours: 0,
+    exclusiveDedication: false,
+    workRegime: 'AUTONOMO',
+    benefits: {},
+  };
+  saveProfessionalEmploymentState(player, next);
+  patchWorkingPlayer({ careerTier: 'ADVOGADO_HABILITADO' });
+  return next;
+}
+
 export function signProfessionalEmploymentContract(player: PlayerProfile, signedAt: string) {
   const current = readProfessionalEmploymentState(player) || { ...DEFAULT_STATE };
   const next: ProfessionalEmploymentState = {
@@ -288,7 +313,6 @@ export function isProfessionalEmploymentActive(player: PlayerProfile | null | un
   const state = readProfessionalEmploymentState(player);
   return Boolean(
     player?.oabRegistration &&
-      state?.contractStatus === 'SIGNED' &&
       state.onboardingCompleted &&
       state.devicesUnlocked,
   );
@@ -298,6 +322,7 @@ export function isEmployedProfessional(player: PlayerProfile | null | undefined)
   if (isProfessionalPreviewMode()) return true;
   return Boolean(
     isProfessionalEmploymentActive(player) &&
+      readProfessionalEmploymentState(player)?.contractStatus === 'SIGNED' &&
       player?.officeDiscipline?.employmentStatus !== 'TERMINATED',
   );
 }
