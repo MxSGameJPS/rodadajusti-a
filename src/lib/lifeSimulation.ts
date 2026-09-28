@@ -415,6 +415,22 @@ export function restoreAfterShower(household: PlayerHouseholdState) {
   };
 }
 
+export function getMealEligibility(player: PlayerProfile, pantryItemId: string) {
+  const item = player.household.pantry.find((entry) => entry.id === pantryItemId);
+  if (!item || item.quantity <= 0) return { allowed: false, reason: 'Este alimento não está mais disponível na despensa.' };
+  if (player.household.needs.hunger >= 92) return { allowed: false, reason: 'Você ainda está satisfeito. Espere a fome aumentar antes de fazer outra refeição.' };
+  const minute = Math.max(0, player.gameCurrentMinutes || 0);
+  const hour = Math.floor(minute / 60) % 24;
+  const compatible = item.mealType === 'ANY'
+    || (item.mealType === 'BREAKFAST' && hour >= 5 && hour < 11)
+    || (item.mealType === 'LUNCH_DINNER' && ((hour >= 11 && hour < 16) || (hour >= 18 && hour < 23)))
+    || item.mealType === 'SNACK';
+  if (!compatible) return { allowed: false, reason: 'Este alimento não combina com o horário atual. Escolha outra opção da despensa.' };
+  const services = getHouseholdServiceStatus(player);
+  if (item.requiresCooking && !services.gas) return { allowed: false, reason: 'Este alimento precisa de preparo, mas o gás está suspenso.' };
+  return { allowed: true, reason: '' };
+}
+
 export function restoreAfterMeal(
   household: PlayerHouseholdState,
   pantryItemId: string,
