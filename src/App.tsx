@@ -2179,6 +2179,13 @@ export default function App() {
       return fallback;
     };
 
+    if (['BED', 'FURNITURE', 'STUDY_FURNITURE', 'APPLIANCE'].includes(kind) && player.household.furniture.some((item) => item.offerId === offer.id)) {
+      return { ok: false, message: 'Você já possui este item na residência. Venda ou substituição de móveis será tratada pela gestão patrimonial.' };
+    }
+    if (kind === 'VEHICLE' && player.household.vehicles.some((item) => item.offerId === offer.id && !item.title.includes('(alugado)'))) {
+      return { ok: false, message: 'Este veículo já faz parte do seu patrimônio.' };
+    }
+
     if (kind === 'FOOD' || action === 'TAKEAWAY' || action === 'BUY_GROCERIES') {
       const units = action === 'TAKEAWAY' ? 1 : Math.max(1, Math.floor(numberEffect('foodUnits', 1)));
       const capacity = getPantryCapacity(player.household);
