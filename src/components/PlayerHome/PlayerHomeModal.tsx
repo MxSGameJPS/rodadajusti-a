@@ -28,6 +28,7 @@ import {
   getHouseholdEquipmentBonuses,
   getHouseholdMonthlyBills,
   getHouseholdServiceStatus,
+  getMealEligibility,
   getPantryCapacity,
   getSleepPlan,
   isHouseholdBillPaid,
@@ -116,6 +117,7 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
   const pantryCapacity = getPantryCapacity(household);
   const services = getHouseholdServiceStatus(player);
   const sleepPlan = getSleepPlan(player);
+  const mealEligibility = selectedPantryItem ? getMealEligibility(player, selectedPantryItem.id) : { allowed: false, reason: 'Despensa vazia.' };
   const isIntern = player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR';
   const [selectedPantryItemId, setSelectedPantryItemId] = React.useState<string>('');
   const selectedPantryItem = household.pantry.find((item) => item.id === selectedPantryItemId)
@@ -276,7 +278,7 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
                   }}
                   disabled={
                     !selectedPantryItem
-                    || (selectedPantryItem.requiresCooking && !services.gas)
+                    || !mealEligibility.allowed
                   }
                   className="rounded-xl border border-[#5D5231] bg-[#211D12] p-4 text-left transition hover:border-[#8A7844] disabled:cursor-not-allowed disabled:opacity-45"
                 >
@@ -285,8 +287,8 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
                   <span className="mt-1 block text-[10px] leading-4 text-[#A99B75]">
                     {!selectedPantryItem
                       ? 'Despensa vazia.'
-                      : selectedPantryItem.requiresCooking && !services.gas
-                        ? 'Este alimento precisa de preparo, mas o gás está suspenso.'
+                      : !mealEligibility.allowed
+                        ? mealEligibility.reason
                         : selectedPantryItem.title + ' • +' + Math.round(selectedPantryItem.hungerRestore + equipment.mealBonus) + ' saciedade.'}
                   </span>
                 </button>
