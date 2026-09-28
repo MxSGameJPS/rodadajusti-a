@@ -117,12 +117,12 @@ export const PlayerHomeModal: React.FC<PlayerHomeModalProps> = ({
   const pantryCapacity = getPantryCapacity(household);
   const services = getHouseholdServiceStatus(player);
   const sleepPlan = getSleepPlan(player);
-  const mealEligibility = selectedPantryItem ? getMealEligibility(player, selectedPantryItem.id) : { allowed: false, reason: 'Despensa vazia.' };
   const isIntern = player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR';
   const [selectedPantryItemId, setSelectedPantryItemId] = React.useState<string>('');
   const selectedPantryItem = household.pantry.find((item) => item.id === selectedPantryItemId)
     || household.pantry.find((item) => item.quantity > 0)
     || null;
+  const mealEligibility = selectedPantryItem ? getMealEligibility(player, selectedPantryItem.id) : { allowed: false, reason: 'Despensa vazia.' };
 
   React.useEffect(() => {
     if (!isOpen) return;
