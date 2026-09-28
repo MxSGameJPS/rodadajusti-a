@@ -535,11 +535,16 @@ export function OfficeScene({
               )}
 
               {drawer === 'AGENDA' && !isIntern && (
-                <div className={styles.simpleDrawerGrid}>
-                  <button type="button" onClick={onOpenCareerModal}><Award size={22} /><strong>Plano de carreira</strong><span>Acompanhe progressão, experiência e próximos marcos.</span></button>
-                  <button type="button" onClick={onOpenAcademicModal}><GraduationCap size={22} /><strong>Carreira acadêmica</strong><span>Especializações, titulação e desenvolvimento profissional.</span></button>
-                  <button type="button" onClick={onOpenConcursoModal}><Landmark size={22} /><strong>Magistratura</strong><span>Acompanhe requisitos e etapas da carreira pública.</span></button>
-                </div>
+                <OfficeHub
+                  player={player}
+                  onSelectCaseToView={onSelectCaseToView}
+                  onResumeActiveCase={onResumeActiveCase}
+                  onOpenCareerModal={onOpenCareerModal}
+                  onOpenAcademicModal={onOpenAcademicModal}
+                  onOpenConcursoModal={onOpenConcursoModal}
+                  onOpenOfficeModal={onOpenOfficeModal}
+                  onOpenOabExam={onOpenOabExam}
+                />
               )}
 
               {drawer === 'FINANCE' && (
