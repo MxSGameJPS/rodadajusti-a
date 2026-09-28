@@ -210,3 +210,34 @@ export function applyConductReputationImpact(player:PlayerProfile,ethics:number,
  if(penalty) applyProfessionalReputation(player,{internalTrust:penalty,marketPrestige:penalty,publicRecognition:Math.ceil(penalty/2)},reason);
  return risk;
 }
+
+export interface SeniorReviewSnapshot{eligible:boolean;progress:number;requirements:{label:string;current:string;met:boolean}[];strengths:string[];gaps:string[]}
+export function getSeniorReviewSnapshot(player:PlayerProfile):SeniorReviewSnapshot{
+ const state=readProfessionalPortfolio(player),rep=state.reputation,closed=state.matters.filter(m=>m.status==='CLOSED').length;
+ const strongClients=state.clients.filter(c=>c.trust>=60&&c.satisfaction>=60).length;
+ const bestSpec=state.specializations.reduce((best,s)=>Math.max(best,s.experiencePoints+s.studyPoints+s.successfulMatters*15),0);
+ const requirements=[
+  {label:'Experiência como advogado',current:`${closed} processos profissionais encerrados`,met:closed>=6},
+  {label:'Maturidade técnica',current:`${rep.technical}/100`,met:rep.technical>=55},
+  {label:'Confiança do escritório',current:`${rep.internalTrust}/100`,met:rep.internalTrust>=55},
+  {label:'Clientes consolidados',current:`${strongClients}`,met:strongClients>=2},
+  {label:'Especialização em formação',current:`${bestSpec} pontos`,met:bestSpec>=80},
+ ];
+ const met=requirements.filter(r=>r.met).length,progress=Math.round(met/requirements.length*100);
+ return{eligible:requirements.every(r=>r.met),progress,requirements,strengths:requirements.filter(r=>r.met).map(r=>r.label),gaps:requirements.filter(r=>!r.met).map(r=>r.label)};
+}
+export interface WorkLifeConflict{severity:'NONE'|'WARNING'|'CRITICAL';performancePenalty:number;clientPenalty:number;message:string}
+export function getProfessionalWorkLifeConflict(player:PlayerProfile):WorkLifeConflict{
+ const {energy,hunger,hygiene}=player.household.needs; const pending=professionalDaySummary(player);
+ const strain=(energy<35?2:0)+(hunger<25?1:0)+(hygiene<25?1:0)+(pending.criticalTasks>=2?2:pending.criticalTasks?1:0);
+ if(strain>=4)return{severity:'CRITICAL',performancePenalty:-3,clientPenalty:-8,message:'Exaustão e obrigações críticas estão comprometendo sua atuação profissional.'};
+ if(strain>=2)return{severity:'WARNING',performancePenalty:-1,clientPenalty:-3,message:'Sua rotina pessoal e a carga profissional estão começando a colidir.'};
+ return{severity:'NONE',performancePenalty:0,clientPenalty:0,message:'Rotina pessoal e profissional sob controle.'};
+}
+export interface ProfessionalEconomySnapshot{salary:number;estimatedSuccessFees:number;professionalCosts:number;netProjection:number}
+export function getProfessionalEconomySnapshot(player:PlayerProfile,salary:number):ProfessionalEconomySnapshot{
+ const state=readProfessionalPortfolio(player),active=state.matters.filter(m=>m.status!=='CLOSED').length,urgent=state.matters.filter(m=>m.status!=='CLOSED'&&(m.officePriority==='URGENT'||m.officePriority==='CRITICAL')).length;
+ const estimatedSuccessFees=state.reputation.technical>=65?Math.round(active*180):Math.round(active*90);
+ const professionalCosts=Math.round(active*65+urgent*120);
+ return{salary,estimatedSuccessFees,professionalCosts,netProjection:salary+estimatedSuccessFees-professionalCosts};
+}
