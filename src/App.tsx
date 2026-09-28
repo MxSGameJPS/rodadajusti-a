@@ -463,7 +463,7 @@ export default function App() {
   const [absenceJustificationDialogues, setAbsenceJustificationDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
 
   const openOfficeManagement = () => {
-    if (!player.oabRegistration) {
+    if (!player.oabRegistration || ['MAGISTRADO_SUBSTITUTO','JUIZ_TITULAR','DESEMBARGADOR','PROMOTOR_SUBSTITUTO','PROMOTOR_JUSTICA','PROCURADOR_JUSTICA','MINISTRO_STF'].includes(player.careerTier)) {
       setIsOfficeModalOpen(false);
       return;
     }
