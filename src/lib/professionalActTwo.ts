@@ -129,6 +129,8 @@ function withSpecializationLevel(spec:ProfessionalSpecialization):ProfessionalSp
 
 export function recordClientContact(player:PlayerProfile,clientId:string,gameDate:string,quality:'GOOD'|'NEUTRAL'|'POOR'='GOOD'){
  const state=readProfessionalPortfolio(player); const current=state.clients.find(client=>client.id===clientId); if(!current)return state;
+ // Um retorno por cliente/data: impede farm de confiança ao clicar repetidamente no mesmo dia.
+ if(current.lastContactGameDate===gameDate)return state;
  const delta=quality==='GOOD'?8:quality==='POOR'?-10:2;
  const client={...current,lastContactGameDate:gameDate,communication:Math.max(0,Math.min(100,current.communication+delta)),trust:Math.max(0,Math.min(100,current.trust+Math.round(delta/2))),mood:quality==='POOR'?'UPSET':quality==='GOOD'?'SATISFIED':current.mood} as ProfessionalClientRelationship;
  const next={...state,clients:state.clients.map(item=>item.id===clientId?client:item)};saveProfessionalPortfolio(player,next);return next;
@@ -158,7 +160,13 @@ export function updateMatterLifecycle(player:PlayerProfile,caseId:string,stage:s
 
 export function recordProfessionalMatterOutcome(player:PlayerProfile,caseId:string,success:boolean){
  const state=readProfessionalPortfolio(player); const matter=state.matters.find(item=>item.caseId===caseId); if(!matter||matter.status==='CLOSED')return state;
- const clients=state.clients.map(client=>client.matterIds.includes(matter.id)?{...client,trust:Math.max(0,Math.min(100,client.trust+(success?10:-8))),satisfaction:Math.max(0,Math.min(100,client.satisfaction+(success?12:-10))),mood:success?'SATISFIED':'ANXIOUS' as ClientMood,successfulMatterIds:success?Array.from(new Set([...client.successfulMatterIds,matter.id])):client.successfulMatterIds}:client);
+ const clients=state.clients.map(client=>{
+  if(!client.matterIds.includes(matter.id))return client;
+  const nextTrust=Math.max(0,Math.min(100,client.trust+(success?10:-8)));
+  const nextSatisfaction=Math.max(0,Math.min(100,client.satisfaction+(success?12:-10)));
+  const earnedReferral=success&&nextTrust>=70&&nextSatisfaction>=70&&!client.successfulMatterIds.includes(matter.id);
+  return{...client,trust:nextTrust,satisfaction:nextSatisfaction,mood:success?'SATISFIED':'ANXIOUS' as ClientMood,successfulMatterIds:success?Array.from(new Set([...client.successfulMatterIds,matter.id])):client.successfulMatterIds,referrals:client.referrals+(earnedReferral?1:0),notes:earnedReferral?[...client.notes,`Cliente indicou o trabalho após resultado favorável em ${matter.title}.`].slice(-20):client.notes};
+ });
  const specializations=state.specializations.map(spec=>spec.area===matter.area?withSpecializationLevel({...spec,experiencePoints:spec.experiencePoints+(success?25:12),successfulMatters:spec.successfulMatters+(success?1:0)}):spec);
  const rep=state.reputation;
  const reputation={technical:clamp100(rep.technical+(success?4:1)),internalTrust:clamp100(rep.internalTrust+(success?3:-3)),publicRecognition:clamp100(rep.publicRecognition+(success?2:0)),marketPrestige:clamp100(rep.marketPrestige+(success?2:-1)),lastReason:success?'Resultado profissional favorável':'Resultado profissional desfavorável'};
