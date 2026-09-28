@@ -682,6 +682,14 @@ export async function applyToLawFirm(
   firm: LawFirmMarketFirm,
   currentOffers: LawFirmOffer[],
 ) {
+  const employment = readProfessionalEmploymentState(player);
+  if (isEmployedProfessional(player) && (employment?.officeId === firm.id || employment?.officeSlug === firm.slug)) {
+    return {
+      offer: null as LawFirmOffer | null,
+      reasons: ['Você já possui vínculo ativo com este escritório.'],
+    };
+  }
+
   const eligibility = evaluateMarketPolicy(player, firm, 'applications');
   if (!eligibility.eligible || !eligibility.role) {
     return { offer: null as LawFirmOffer | null, reasons: eligibility.reasons };
