@@ -1,4 +1,5 @@
 import type { CaseHistoryRecord, PlayerProfile, ProfessionalExamAttemptRecord } from '../types/game';
+import { supabase } from './supabase';
 
 export type ProfessionalAttributeId =
   | 'LEGAL_KNOWLEDGE'
@@ -284,6 +285,20 @@ export function loadProfessionalProfile(player: ProfessionalProfileOwner): Profe
 export function saveProfessionalProfile(player: ProfessionalProfileOwner, profile: ProfessionalRpgProfile): void {
   localStorage.setItem(getStorageKey(player), JSON.stringify(profile));
   window.dispatchEvent(new CustomEvent('rota:professional-profile-updated', { detail: profile }));
+  if (supabase && player.cloudCareerId) {
+    void supabase.from('careers').update({ professional_rpg: profile }).eq('id', player.cloudCareerId)
+      .then(({ error }) => { if (error) console.warn('[Ato 2] Falha ao salvar RPG profissional.', error.message); });
+  }
+}
+
+export async function hydrateProfessionalProfile(player: PlayerProfile) {
+  if (!supabase || !player.cloudCareerId) return loadProfessionalProfile(player);
+  const { data, error } = await supabase.from('careers').select('professional_rpg').eq('id', player.cloudCareerId).maybeSingle();
+  if (error || !data?.professional_rpg || Object.keys(data.professional_rpg).length === 0) return syncProfessionalProfileWithPlayer(player);
+  const profile = data.professional_rpg as ProfessionalRpgProfile;
+  localStorage.setItem(getStorageKey(player), JSON.stringify(profile));
+  window.dispatchEvent(new CustomEvent('rota:professional-profile-updated', { detail: profile }));
+  return profile;
 }
 
 function advanceModifiersAfterCase(profile: ProfessionalRpgProfile): ProfessionalRpgProfile {
