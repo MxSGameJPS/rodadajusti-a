@@ -3,6 +3,8 @@ import { getCareerRank, getAvailableCasesForCareer } from './caseRules';
 import { getAppealOfCaseId } from './caseMetadata';
 import { getProfessionalOwnerKey } from './professionalRpg';
 import { isIndependentProfessional } from './professionalEmployment';
+import { emitPlayerSaveExternalUpdated } from './playerSaveEvents';
+import { supabase } from './supabase';
 
 const PLAYER_SAVE_KEY = 'rota_da_justica_save_v1';
 const STORAGE_PREFIX = 'rota_independent_practice_v1:';
@@ -83,9 +85,49 @@ export function saveIndependentPracticeState(player: PlayerProfile, state: Indep
   try {
     window.localStorage.setItem(storageKey(player), JSON.stringify(state));
   } catch {
-    // Mantém a sessão funcional mesmo quando o armazenamento local falhar.
+    // Cache local opcional; a fonte persistente é a nuvem quando existe carreira vinculada.
   }
   emitUpdate(player, state);
+  if (supabase && player.cloudCareerId) {
+    void supabase.from('careers').select('professional_work_state').eq('id', player.cloudCareerId).maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn('[Ato 2] Falha ao ler estado independente na nuvem.', error.message);
+          return;
+        }
+        const workState = data?.professional_work_state && typeof data.professional_work_state === 'object'
+          ? data.professional_work_state as Record<string, unknown>
+          : {};
+        void supabase!.from('careers').update({
+          professional_work_state: { ...workState, independentPractice: state },
+        }).eq('id', player.cloudCareerId)
+          .then(({ error: updateError }) => {
+            if (updateError) console.warn('[Ato 2] Falha ao salvar advocacia independente.', updateError.message);
+          });
+      });
+  }
+}
+
+export async function hydrateIndependentPracticeState(player: PlayerProfile) {
+  if (!supabase || !player.cloudCareerId) return readIndependentPracticeState(player);
+  const { data, error } = await supabase.from('careers').select('professional_work_state').eq('id', player.cloudCareerId).maybeSingle();
+  if (error || !data?.professional_work_state || typeof data.professional_work_state !== 'object') {
+    return readIndependentPracticeState(player);
+  }
+  const raw = (data.professional_work_state as Record<string, unknown>).independentPractice;
+  if (!raw || typeof raw !== 'object') return readIndependentPracticeState(player);
+  const parsed = raw as Partial<IndependentPracticeState>;
+  const state: IndependentPracticeState = {
+    ...DEFAULT_STATE,
+    ...parsed,
+    version: 1,
+    independentCaseIds: Array.isArray(parsed.independentCaseIds)
+      ? parsed.independentCaseIds.filter((id): id is string => typeof id === 'string').slice(-80)
+      : [],
+  };
+  try { window.localStorage.setItem(storageKey(player), JSON.stringify(state)); } catch { /* cache opcional */ }
+  emitUpdate(player, state);
+  return state;
 }
 
 export function isSocialJuridicoProActive(player: PlayerProfile, state = readIndependentPracticeState(player)) {
@@ -125,6 +167,7 @@ export function subscribeSocialJuridicoPro(player: PlayerProfile) {
       money: Math.max(0, (Number(current.money) || 0) - SOCIAL_JURIDICO_PRO_MONTHLY_PRICE),
     }));
     saveIndependentPracticeState(current, nextState);
+    emitPlayerSaveExternalUpdated();
     return { ok: true as const, state: nextState, paidThrough: nextState.socialJuridicoPaidThrough };
   } catch {
     return { ok: false as const, reason: 'STORAGE' as const };
@@ -181,6 +224,7 @@ export function startIndependentMarketplaceCase(player: PlayerProfile, caseItem:
       ...state,
       independentCaseIds: [...new Set([...state.independentCaseIds, caseItem.id])].slice(-80),
     });
+    emitPlayerSaveExternalUpdated();
     return true;
   } catch {
     return false;
@@ -269,6 +313,7 @@ export function openOwnOffice(player: PlayerProfile, officeName: string) {
       ...state,
       ownOfficeOpenedAt: state.ownOfficeOpenedAt || formatIsoDate(currentGameDate(current)),
     });
+    emitPlayerSaveExternalUpdated();
     return true;
   } catch {
     return false;
