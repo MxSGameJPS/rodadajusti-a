@@ -124,6 +124,9 @@ export async function ensurePublicAssignment(p: PlayerProfile) {
   const state = readPublicServiceGameplay(p);
   if (!isPublicServiceTier(p.careerTier)) return state;
   if (state.assignment) return state;
+  const today = date(p);
+  const completedToday = state.completedAssignments.filter(id => id.includes(':'+today+':')).length;
+  if (completedToday >= 3) return state;
   const next = { ...state, branch: publicBranchForTier(p.careerTier), assignment: makeAssignment(p, state) };
   await persist(p, next); return next;
 }
