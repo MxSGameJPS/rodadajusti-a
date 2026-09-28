@@ -265,7 +265,17 @@ export function reconcileProfessionalAgenda(player:PlayerProfile){
  const clients=state.clients.map(client=>client.matterIds.some(matterId=>state.matters.some(m=>m.id===matterId&&affectedCases.has(m.caseId)))?{...client,trust:clamp100(client.trust-8),satisfaction:clamp100(client.satisfaction-10),mood:'UPSET' as ClientMood}:client);
  const reputation={...state.reputation,internalTrust:clamp100(state.reputation.internalTrust-expired.length*4),technical:clamp100(state.reputation.technical-expired.filter(task=>task.critical).length*2),lastReason:'Prazo ou compromisso profissional perdido'};
  const nextPortfolio={...state,agenda,clients,reputation};
- const nextWork={...work,missedDeadlineKeys:Array.from(new Set([...work.missedDeadlineKeys,...expired.filter(task=>task.kind==='DEADLINE').map(task=>task.id])).values()).slice(-120),processedAgendaKeys:Array.from(new Set([...work.processedAgendaKeys,...expired.map(task=>task.id)]).values()).slice(-240)};
+ const nextWork={
+  ...work,
+  missedDeadlineKeys:Array.from(new Set([
+    ...work.missedDeadlineKeys,
+    ...expired.filter(task=>task.kind==='DEADLINE').map(task=>task.id),
+  ])).slice(-120),
+  processedAgendaKeys:Array.from(new Set([
+    ...work.processedAgendaKeys,
+    ...expired.map(task=>task.id),
+  ])).slice(-240),
+};
  saveProfessionalPortfolio(player,nextPortfolio);saveProfessionalWorkState(player,nextWork);return{portfolio:nextPortfolio,work:nextWork,missed:expired};
 }
 export function completeProfessionalAgendaTask(player:PlayerProfile,taskId:string){
