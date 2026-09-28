@@ -1195,7 +1195,10 @@ export default function App() {
     const next=completeOabStudy(oabPreparation,area,portfolioDate(player));
     if(next===oabPreparation){setLifeWarning('Você já estudou esta área duas vezes hoje. Alterne a matéria ou continue a preparação em outro dia.');return}
     setOabPreparation(next);
-    setPlayer(prev=>({...prev,...gameClockFields(prev,minutes),household:{...gameClockFields(prev,minutes).household,needs:{...gameClockFields(prev,minutes).household.needs,energy:Math.max(0,gameClockFields(prev,minutes).household.needs.energy-5)}}}));
+    setPlayer(prev=>{
+      const clock=gameClockFields(prev,minutes);
+      return {...prev,...clock,household:{...clock.household,needs:{...clock.household.needs,energy:Math.max(0,clock.household.needs.energy-5)}}};
+    });
     await persistOabPreparation(player,next);
   };
 
