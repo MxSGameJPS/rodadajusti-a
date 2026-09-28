@@ -593,3 +593,7 @@
     width: 100%;
   }
 }
+
+.contractActions { display:flex; gap:10px; align-items:center; justify-content:flex-end; flex-wrap:wrap; }
+.contractActions > button:first-child { background:transparent; border:1px solid rgba(197,160,89,.35); color:#c9b98f; }
+@media (max-width:720px){ .contractActions { width:100%; } .contractActions > button { flex:1 1 100%; } }
