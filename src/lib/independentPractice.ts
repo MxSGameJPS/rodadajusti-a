@@ -4,6 +4,7 @@ import { getAppealOfCaseId } from './caseMetadata';
 import { getProfessionalOwnerKey } from './professionalRpg';
 import { isIndependentProfessional } from './professionalEmployment';
 import { assignLongRunningProfessionalMatter } from './professionalActTwo';
+import { isProfessionalPracticeBlocked, loadDisciplinaryState } from './disciplinarySystem';
 import { emitPlayerSaveExternalUpdated } from './playerSaveEvents';
 import { supabase } from './supabase';
 
@@ -192,6 +193,7 @@ export function getIndependentMarketplaceCase(player: PlayerProfile, catalog: Le
 
 export function startIndependentMarketplaceCase(player: PlayerProfile, caseItem: LegalCase) {
   if (typeof window === 'undefined') return false;
+  if (isProfessionalPracticeBlocked(loadDisciplinaryState(player).professionalStatus)) return false;
   const state = readIndependentPracticeState(player);
   if (!isSocialJuridicoProActive(player, state)) return false;
 
