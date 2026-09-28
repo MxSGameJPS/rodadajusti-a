@@ -1,4 +1,4 @@
-import type { PlayerProfile } from '../types/game';
+import type { ActiveCaseState, PlayerProfile } from '../types/game';
 import { supabase } from './supabase';
 import { getAppealOfCaseId, getProceduralStage } from './caseMetadata';
 import type { LegalCase } from '../types/game';
@@ -39,7 +39,7 @@ export interface ProfessionalMatter {
   status:'NEW'|'ACTIVE'|'WAITING'|'APPEAL'|'CLOSED';
   responsibility:'LEAD'|'SUPPORT'; assignedGameDate:string;
   nextAction:string; clientTrust:number; officePriority:'NORMAL'|'IMPORTANT'|'URGENT'|'CRITICAL';
-  lifecycleStage?:string; predecessorCaseId?:string|null;
+  lifecycleStage?:string; predecessorCaseId?:string|null; activeState?:ActiveCaseState|null;
 }
 export interface ProfessionalReputationState { technical:number; internalTrust:number; publicRecognition:number; marketPrestige:number; lastReason:string|null }
 export interface ProfessionalNetworkContact { entityId:string; name:string; role:string; trust:number; respect:number; influence:number; opportunities:number; lastInteractionGameDate:string|null }
@@ -156,6 +156,18 @@ export function recordProfessionalStrategy(player:PlayerProfile,input:Omit<Profe
 
 export function updateMatterLifecycle(player:PlayerProfile,caseId:string,stage:string,nextAction:string,status:ProfessionalMatter['status']='ACTIVE'){
  const state=readProfessionalPortfolio(player); const next={...state,matters:state.matters.map(m=>m.caseId===caseId?{...m,lifecycleStage:stage,nextAction,status}:m)};saveProfessionalPortfolio(player,next);return next;
+}
+
+export function stashProfessionalCaseState(player:PlayerProfile,activeState:ActiveCaseState){
+ const state=readProfessionalPortfolio(player);
+ const matter=state.matters.find(item=>item.caseId===activeState.caseId);
+ if(!matter)return state;
+ const next={...state,matters:state.matters.map(item=>item.caseId===activeState.caseId?{...item,activeState}:item)};
+ saveProfessionalPortfolio(player,next);return next;
+}
+
+export function readProfessionalCaseState(player:PlayerProfile,caseId:string){
+ return readProfessionalPortfolio(player).matters.find(item=>item.caseId===caseId)?.activeState||null;
 }
 
 export function recordProfessionalMatterOutcome(player:PlayerProfile,caseId:string,success:boolean){
