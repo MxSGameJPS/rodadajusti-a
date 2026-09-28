@@ -23,7 +23,7 @@ import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import type { PlayerProfile } from '../../types/game';
 import { sound } from '../../utils/sound';
 import { ProfessionalDailyBrief } from './ProfessionalDailyBrief';
-import { completeProfessionalAgendaTask, getActTwoClosure, getProfessionalEconomySnapshot, getProfessionalWorkLifeConflict, getSeniorReviewSnapshot, hydrateActTwoState, markSeniorReviewCompleted, professionalDaySummary, readProfessionalPortfolio, reconcileProfessionalAgenda, registerProfessionalArrival } from '../../lib/professionalActTwo';
+import { completeProfessionalAgendaTask, getActTwoClosure, recordClientContact, getProfessionalEconomySnapshot, getProfessionalWorkLifeConflict, getSeniorReviewSnapshot, hydrateActTwoState, markSeniorReviewCompleted, professionalDaySummary, readProfessionalPortfolio, reconcileProfessionalAgenda, registerProfessionalArrival } from '../../lib/professionalActTwo';
 import styles from './ProfessionalOfficeHub.module.css';
 
 const OPEN_SOCIAL_JURIDICO_EVENT = 'rota:open-social-juridico';
@@ -213,7 +213,7 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
 
       <section className={styles.caseSection} aria-label="Clientes e especializações">
         <div className={styles.sectionTitle}><div><span>Construção de carreira</span><h3>Clientes e especialização</h3></div></div>
-        {portfolio.clients.slice(-3).map((client)=><article key={client.id} className={styles.waitingCaseCard}><div><span>{client.mood} • Confiança {client.trust}%</span><h4>{client.clientName}</h4><p>Satisfação {client.satisfaction}% • Comunicação {client.communication}% • {client.matterIds.length} atendimento(s)</p></div></article>)}
+        {portfolio.clients.slice(-3).map((client)=><article key={client.id} className={styles.waitingCaseCard}><div><span>{client.mood} • Confiança {client.trust}%</span><h4>{client.clientName}</h4><p>Satisfação {client.satisfaction}% • Comunicação {client.communication}% • {client.matterIds.length} atendimento(s)</p></div><button type="button" onClick={()=>{recordClientContact(player,client.id,gameDate,'GOOD');setProfessionalRevision(value=>value+1)}}>Retornar cliente <Phone size={14}/></button></article>)}
         {portfolio.specializations.slice().sort((a,b)=>b.experiencePoints+b.studyPoints-a.experiencePoints-a.studyPoints).slice(0,4).map((spec)=><article key={spec.area} className={styles.activeCaseCard}><div><span className={styles.caseCode}>{spec.level.replaceAll('_',' ')}</span><h4>{spec.area}</h4><p>{spec.handledMatters} processo(s) • {spec.successfulMatters} resultado(s) favorável(is) • {spec.experiencePoints+spec.studyPoints} pontos de experiência.</p></div></article>)}
       </section>
 
