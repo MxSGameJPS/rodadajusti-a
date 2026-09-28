@@ -241,3 +241,9 @@ export function getProfessionalEconomySnapshot(player:PlayerProfile,salary:numbe
  const professionalCosts=Math.round(active*65+urgent*120);
  return{salary,estimatedSuccessFees,professionalCosts,netProjection:salary+estimatedSuccessFees-professionalCosts};
 }
+
+export interface ActTwoClosure{ready:boolean;title:string;summary:string;dialogues:string[];unlocks:string[]}
+export function getActTwoClosure(player:PlayerProfile):ActTwoClosure{
+ const review=getSeniorReviewSnapshot(player);
+ return{ready:review.eligible,title:'Consolidação Profissional',summary:review.eligible?'Sua atuação deixou de ser apenas promessa. Você construiu carteira, clientes, confiança interna e uma identidade técnica própria.':'A sociedade ainda acompanha sua consolidação antes de entregar responsabilidades de Advogado Sênior.',dialogues:review.eligible?['Roberto: Você já não trabalha como alguém que acabou de sair da OAB.','Mariana: Os clientes começaram a procurar você pelo seu nome, não apenas pelo escritório.','Roberto: A partir de agora, quero você conduzindo casos de maior responsabilidade e ajudando a orientar os mais novos.']:review.gaps.map(gap=>`Avaliação pendente: ${gap}.`),unlocks:review.eligible?['Casos de maior complexidade','Maior autonomia estratégica','Orientação de profissionais juniores','Elegibilidade para trajetória societária']:[]};
+}
