@@ -3,6 +3,7 @@ import { getCareerRank, getAvailableCasesForCareer } from './caseRules';
 import { getAppealOfCaseId } from './caseMetadata';
 import { getProfessionalOwnerKey } from './professionalRpg';
 import { isIndependentProfessional } from './professionalEmployment';
+import { assignLongRunningProfessionalMatter } from './professionalActTwo';
 import { emitPlayerSaveExternalUpdated } from './playerSaveEvents';
 import { supabase } from './supabase';
 
@@ -220,6 +221,8 @@ export function startIndependentMarketplaceCase(player: PlayerProfile, caseItem:
     const raw = window.localStorage.getItem(PLAYER_SAVE_KEY);
     const current = raw ? (JSON.parse(raw) as PlayerProfile) : player;
     window.localStorage.setItem(PLAYER_SAVE_KEY, JSON.stringify({ ...current, activeCase }));
+    const gameDate = `${String(current.gameCurrentDay).padStart(2, '0')}/${String(current.gameCurrentMonth).padStart(2, '0')}/${current.gameCurrentYear}`;
+    assignLongRunningProfessionalMatter(current, caseItem, gameDate);
     saveIndependentPracticeState(player, {
       ...state,
       independentCaseIds: [...new Set([...state.independentCaseIds, caseItem.id])].slice(-80),
