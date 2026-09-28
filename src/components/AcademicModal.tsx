@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { PlayerProfile, AcademicCourse } from '../types/game';
 import { ACADEMIC_COURSES } from '../data/careers';
 import { ACADEMIC_TRACKS } from '../lib/progressionRules';
@@ -6,7 +6,7 @@ import { X, GraduationCap, CheckCircle2, BookOpen, Lock, FileQuestion } from 'lu
 import { sound } from '../utils/sound';
 import { LEGAL_KNOWLEDGE_LABELS, normalizeLegalKnowledge } from '../lib/academicLife';
 import { AcademicTeachingPanel } from './AcademicTeachingPanel';
-import { readAcademicCareer } from '../lib/academicCareer';
+import { hydrateAcademicCareer, readAcademicCareer, type AcademicCareerState } from '../lib/academicCareer';
 
 interface AcademicModalProps {
   isOpen: boolean;
@@ -19,7 +19,14 @@ interface AcademicModalProps {
 export const AcademicModal: React.FC<AcademicModalProps> = ({ isOpen, onClose, player, onEnrollCourse, onAcademicMoneyChange }) => {
   if (!isOpen) return null;
 
-  const academicCareer = readAcademicCareer(player);
+  const [academicCareer, setAcademicCareer] = useState<AcademicCareerState>(() => readAcademicCareer(player));
+  useEffect(() => {
+    if (!isOpen) return;
+    void hydrateAcademicCareer(player).then(setAcademicCareer);
+    const sync = (event: Event) => setAcademicCareer((event as CustomEvent<AcademicCareerState>).detail);
+    window.addEventListener('rota:academic-career-updated', sync);
+    return () => window.removeEventListener('rota:academic-career-updated', sync);
+  }, [isOpen, player.cloudCareerId]);
   const masterLevel = academicCareer.masterLevel;
   const doctorateLevel = academicCareer.doctorateLevel;
   const regularCourses = ACADEMIC_COURSES.filter((course) => !['MESTRE', 'DOUTOR'].includes(course.degree));
