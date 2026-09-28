@@ -37,13 +37,6 @@ export const PUBLIC_EXAM_RULES = {
     minDoctorateLevel: 4,
     requirementText: 'Doutorado superior ao nível 3 (nível 4 ou 5)',
   },
-  DESEMBARGADOR: {
-    label: 'Concurso para Desembargador',
-    examType: 'concurso_desembargador',
-    questions: 20,
-    minDoctorateLevel: 4,
-    requirementText: 'Doutorado superior ao nível 3 (nível 4 ou 5)',
-  },
 };
 
 export const SPECIAL_CAREER_RULES = [
