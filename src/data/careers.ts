@@ -33,6 +33,22 @@ export const CAREER_TIERS: Record<CareerTierId, CareerTier> = {
     ],
     badgeColor: 'from-blue-600 to-blue-800'
   },
+  ADVOGADO_HABILITADO: {
+    id: 'ADVOGADO_HABILITADO',
+    title: 'Advogado Habilitado',
+    category: 'advocacia',
+    minCasesSolved: 0,
+    minXp: 0,
+    minReputation: 0,
+    salaryBaseMonthly: 0,
+    description: 'Profissional aprovado no Exame da Ordem e habilitado para advogar, ainda sem vínculo empregatício ativo.',
+    perks: [
+      'Inscrição profissional simulada ativa',
+      'Acesso ao mercado jurídico',
+      'Pode aceitar emprego ou iniciar atuação independente'
+    ],
+    badgeColor: 'from-teal-600 to-emerald-800'
+  },
   ADVOGADO_CONTRATADO: {
     id: 'ADVOGADO_CONTRATADO',
     title: 'Advogado Contratado',
