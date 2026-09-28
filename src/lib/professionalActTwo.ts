@@ -192,3 +192,21 @@ export function professionalMarketScore(player:PlayerProfile){
  const state=readProfessionalPortfolio(player),topSpec=state.specializations.reduce((best,spec)=>Math.max(best,spec.experiencePoints+spec.studyPoints+spec.successfulMatters*15),0);
  return Math.round(state.reputation.technical*.3+state.reputation.internalTrust*.2+state.reputation.publicRecognition*.15+state.reputation.marketPrestige*.2+Math.min(100,topSpec)*.15);
 }
+
+export interface ProfessionalConductRisk { band:'LOW'|'WATCH'|'HIGH'|'CRITICAL'; score:number; reasons:string[] }
+export function getProfessionalConductRisk(player:PlayerProfile,ethics:number,exposure:number):ProfessionalConductRisk {
+ const state=readProfessionalPortfolio(player),reasons:string[]=[];
+ const unhappy=state.clients.filter(client=>client.trust<35||client.satisfaction<30).length;
+ const score=clamp100(exposure*.55+(100-ethics)*.3+(100-state.reputation.internalTrust)*.15+unhappy*5);
+ if(exposure>=60) reasons.push('Exposição profissional elevada.');
+ if(ethics<45) reasons.push('Histórico ético fragilizado.');
+ if(state.reputation.internalTrust<35) reasons.push('Confiança interna baixa.');
+ if(unhappy) reasons.push('Existem clientes com confiança crítica.');
+ return{band:score>=80?'CRITICAL':score>=60?'HIGH':score>=35?'WATCH':'LOW',score,reasons};
+}
+export function applyConductReputationImpact(player:PlayerProfile,ethics:number,exposure:number,reason:string){
+ const risk=getProfessionalConductRisk(player,ethics,exposure);
+ const penalty=risk.band==='CRITICAL'?-12:risk.band==='HIGH'?-7:risk.band==='WATCH'?-3:0;
+ if(penalty) applyProfessionalReputation(player,{internalTrust:penalty,marketPrestige:penalty,publicRecognition:Math.ceil(penalty/2)},reason);
+ return risk;
+}
