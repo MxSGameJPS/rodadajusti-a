@@ -261,7 +261,7 @@ export function getLegalReputationSnapshot(player:PlayerProfile){
    ['technical',reputation.technical],['publicRecognition',reputation.publicRecognition],
    ['clientReputation',reputation.clientReputation],['marketPrestige',reputation.marketPrestige],
    ['institutionalRespect',reputation.institutionalRespect],
-  ] as const).sort((a,b)=>b[1]-a[1])[0][0],
+  ] as const).reduce((best,current)=>current[1]>best[1]?current:best)[0],
  };
 }
 export function applyProfessionalReputation(
