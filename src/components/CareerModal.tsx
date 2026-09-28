@@ -25,10 +25,9 @@ interface CareerModalProps {
   player: PlayerProfile;
   onSelectCareerPath?: (tierId: CareerTierId) => void;
   onCareerChange?: (tierId: CareerTierId) => void;
-  onMoneyChange?: (delta: number) => void;
 }
 
-export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, player, onCareerChange, onMoneyChange }) => {
+export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, player, onCareerChange }) => {
   const displayName = usePlayerDisplayName(player);
   if (!isOpen) return null;
 
@@ -160,7 +159,7 @@ export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, playe
             </div>
           </section>
 
-          {['MAGISTRADO_SUBSTITUTO','JUIZ_TITULAR','DESEMBARGADOR','PROMOTOR_SUBSTITUTO','PROMOTOR_JUSTICA','PROCURADOR_JUSTICA'].includes(player.careerTier) && onCareerChange && onMoneyChange && <PublicServiceCareerPanel player={player} onCareerChange={onCareerChange} onMoneyChange={onMoneyChange}/>} 
+          {['MAGISTRADO_SUBSTITUTO','JUIZ_TITULAR','DESEMBARGADOR','PROMOTOR_SUBSTITUTO','PROMOTOR_JUSTICA','PROCURADOR_JUSTICA'].includes(player.careerTier) && onCareerChange && <PublicServiceCareerPanel player={player} onCareerChange={onCareerChange}/>} 
 
           <section className="space-y-3">
             <SectionTitle icon={<Landmark size={14}/>} title="Carreiras Públicas" color="text-[#F87171]"/>
