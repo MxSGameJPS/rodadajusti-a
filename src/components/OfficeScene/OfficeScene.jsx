@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   Award,
@@ -120,6 +120,11 @@ export function OfficeScene({
 }) {
   const [drawer, setDrawer] = useState(null);
   const [showJobMarket, setShowJobMarket] = useState(false);
+  useEffect(() => {
+    const openMarket = () => setShowJobMarket(true);
+    window.addEventListener('rota:open-law-firm-market', openMarket);
+    return () => window.removeEventListener('rota:open-law-firm-market', openMarket);
+  }, []);
   const currentTier = CAREER_TIERS[player.careerTier] || CAREER_TIERS.ESTAGIARIO;
   const displayName = usePlayerDisplayName(player, 'Profissional');
   const independent = isIndependentProfessional(player);
