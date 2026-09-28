@@ -1217,7 +1217,7 @@ export default function App() {
     const score=Math.round(result.score/result.totalQuestions*100);
     const next=recordOabMock(oabPreparation,{gameDate:portfolioDate(player),mode:'QUICK',questions:result.totalQuestions,correct:result.score,score});
     setOabPreparation(next);
-    setPlayer(prev=>({...prev,...gameClockFields(prev,75),energy:Math.max(0,prev.energy-8)}));
+    setPlayer(prev=>{const clock=gameClockFields(prev,75);return {...prev,...clock,household:{...clock.household,needs:{...clock.household.needs,energy:Math.max(0,clock.household.needs.energy-8)}}};});
     void persistOabPreparation(player,next);
     setIsOabPreparationMockOpen(false);
   };
