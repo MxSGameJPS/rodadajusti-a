@@ -428,6 +428,7 @@ export default function App() {
   const [isConcursoModalOpen, setIsConcursoModalOpen] = useState<boolean>(false);
   const [isOfficeModalOpen, setIsOfficeModalOpen] = useState<boolean>(false);
   const [isOabExamOpen, setIsOabExamOpen] = useState<boolean>(false);
+  const [oabExamPurpose, setOabExamPurpose] = useState<'GENERAL' | 'ACT_ONE_FINAL'>('GENERAL');
   const [isOabPreparationMockOpen, setIsOabPreparationMockOpen] = useState<boolean>(false);
   const [actOneFinaleDialogues, setActOneFinaleDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
   const [actOneClosingDialogues, setActOneClosingDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
@@ -1220,7 +1221,7 @@ export default function App() {
     ]);
   };
 
-  const beginFinalOabExam = () => {setActOneFinaleDialogues(null);setIsOabExamOpen(true)};
+  const beginFinalOabExam = () => {setActOneFinaleDialogues(null);setOabExamPurpose('ACT_ONE_FINAL');setIsOabExamOpen(true)};
 
   const handleSeniorOabReadinessReview = () => {
     if(player.careerTier!=='ESTAGIARIO_SENIOR'||!ensureOfficeGameplayAvailable())return;
@@ -1562,12 +1563,13 @@ export default function App() {
         return;
       }
     }
+    setOabExamPurpose('GENERAL');
     setIsOabExamOpen(true);
   };
 
   const handleOabExamComplete = (result: ProfessionalExamResult, exam: ProfessionalExam) => {
     const completedDate = formatGameDate(getPlayerGameDate(player));
-    if(player.careerTier==='ESTAGIARIO_SENIOR'&&oabPreparation.unlocked){
+    if(oabExamPurpose === 'ACT_ONE_FINAL' && player.careerTier==='ESTAGIARIO_SENIOR'&&oabPreparation.unlocked){
       const next=recordFinalOabExam(oabPreparation,result.passed,portfolioDate(player));
       setOabPreparation(next); void persistOabPreparation(player,next);
       if(result.passed){
@@ -3056,8 +3058,8 @@ export default function App() {
         isOpen={isOabExamOpen}
         onClose={() => setIsOabExamOpen(false)}
         player={player}
-        officialOnly={player.careerTier === 'ESTAGIARIO_SENIOR' && oabPreparation.unlocked}
-        contextLabel={player.careerTier === 'ESTAGIARIO_SENIOR' && oabPreparation.unlocked ? 'Exame da Ordem • encerramento do Ato 1' : undefined}
+        officialOnly={oabExamPurpose === 'ACT_ONE_FINAL'}
+        contextLabel={oabExamPurpose === 'ACT_ONE_FINAL' ? 'Exame da Ordem • encerramento do Ato 1' : undefined}
         onComplete={handleOabExamComplete}
       />
 
