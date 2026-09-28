@@ -7,7 +7,8 @@ import {
   type PlayableHearingResult,
 } from '../lib/reactiveWorldStore';
 import { getSocialProfessionalCondition } from '../lib/socialLife';
-import { readCurrentPlayerSnapshot } from '../lib/professionalRpg';
+import { getProfessionalGameplayModifiers, loadProfessionalProfile, readCurrentPlayerSnapshot } from '../lib/professionalRpg';
+import { getProfessionalWorkLifeConflict } from '../lib/professionalActTwo';
 import { sound } from '../utils/sound';
 
 interface HearingChoice {
@@ -316,11 +317,19 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
     () => buildRounds(currentCase, activeState, selectedEvidenceIds),
     [currentCase, activeState, selectedEvidenceIds],
   );
-  const socialCondition = useMemo(() => {
-    if (!isOpen) return null;
+  const hearingContext = useMemo(() => {
+    if (!isOpen) return { socialCondition: null, professionalModifier: 0, workLifePenalty: 0 };
     const player = readCurrentPlayerSnapshot();
-    return player ? getSocialProfessionalCondition(player) : null;
+    if (!player) return { socialCondition: null, professionalModifier: 0, workLifePenalty: 0 };
+    const profile = player.oabRegistration ? loadProfessionalProfile(player) : null;
+    const modifiers = profile ? getProfessionalGameplayModifiers(profile) : null;
+    const professionalModifier = modifiers
+      ? Math.max(-3, Math.min(4, Math.round((modifiers.negotiationBonus + modifiers.pressureBonus) / 2)))
+      : 0;
+    const workLifePenalty = player.oabRegistration ? getProfessionalWorkLifeConflict(player).performancePenalty : 0;
+    return { socialCondition: getSocialProfessionalCondition(player), professionalModifier, workLifePenalty };
   }, [isOpen, currentCase.id, activeState.hoursSpent]);
+  const socialCondition = hearingContext.socialCondition;
   const [roundIndex, setRoundIndex] = useState(0);
   const [answers, setAnswers] = useState<PlayableHearingAnswer[]>([]);
   const [selectedChoice, setSelectedChoice] = useState<HearingChoice | null>(null);
@@ -331,7 +340,9 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
   const round = rounds[roundIndex];
   const runningImpact = answers.reduce((sum, answer) => sum + answer.impact, 0) + (selectedChoice?.impact || 0);
   const socialModifier = socialCondition?.hearingModifier || 0;
-  const effectiveRunningImpact = runningImpact + (isFinished ? socialModifier : 0);
+  const professionalModifier = hearingContext.professionalModifier;
+  const workLifePenalty = hearingContext.workLifePenalty;
+  const effectiveRunningImpact = runningImpact + (isFinished ? socialModifier + professionalModifier + workLifePenalty : 0);
   const choiceFeedback = selectedChoice ? getChoiceFeedback(selectedChoice) : null;
 
   const choose = (choice: HearingChoice) => {
@@ -359,13 +370,13 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
 
   const finish = () => {
     const totalImpact = answers.reduce((sum, answer) => sum + answer.impact, 0);
-    const adjustedImpact = totalImpact + socialModifier;
+    const adjustedImpact = totalImpact + socialModifier + professionalModifier + workLifePenalty;
     const positive = answers.filter((answer) => answer.impact > 0).length;
     const minPossible = rounds.reduce((sum, item) => sum + Math.min(...item.choices.map((choice) => choice.impact)), 0);
     const maxPossible = rounds.reduce((sum, item) => sum + Math.max(...item.choices.map((choice) => choice.impact)), 0);
     const range = Math.max(1, maxPossible - minPossible);
     const technicalPerformance = Math.max(0, Math.min(100, Math.round(((totalImpact - minPossible) / range) * 100)));
-    const performancePercent = Math.max(0, Math.min(100, technicalPerformance + socialModifier * 6));
+    const performancePercent = Math.max(0, Math.min(100, technicalPerformance + socialModifier * 6 + professionalModifier * 4 + workLifePenalty * 4));
     const technicalSummary = technicalPerformance >= 75
       ? 'Sua condução foi técnica, objetiva e coerente com o que realmente estava nos autos.'
       : technicalPerformance >= 55
@@ -385,7 +396,7 @@ export const PlayableHearingModal: React.FC<PlayableHearingModalProps> = ({
       performancePercent,
       correctAnswers: positive,
       totalRounds: rounds.length,
-      summary: `${technicalSummary}${conditionSummary}`,
+      summary: `${technicalSummary}${conditionSummary}${professionalModifier > 0 ? ' Sua experiência em negociação e controle de pressão fortaleceu a atuação oral.' : professionalModifier < 0 ? ' Sua formação profissional ainda limitou algumas respostas sob pressão.' : ''}${workLifePenalty < 0 ? ' A sobrecarga da rotina profissional também prejudicou sua concentração.' : ''}`,
       answers,
       completedAt: new Date().toISOString(),
     });
