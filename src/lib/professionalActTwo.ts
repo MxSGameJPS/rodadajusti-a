@@ -303,7 +303,7 @@ export function reconcileProfessionalAgenda(player:PlayerProfile){
  saveProfessionalPortfolio(player,nextPortfolio);saveProfessionalWorkState(player,nextWork);return{portfolio:nextPortfolio,work:nextWork,missed:expired};
 }
 export function completeProfessionalAgendaTask(player:PlayerProfile,taskId:string){
- const state=readProfessionalPortfolio(player),task=state.agenda.find(item=>item.id===taskId);if(!task||task.status!=='PENDING')return state;
+ const state=readProfessionalPortfolio(player),task=state.agenda.find(item=>item.id===taskId);if(!task||task.status!=='PENDING'||task.kind==='HEARING')return state;
  const next={...state,agenda:state.agenda.map(item=>item.id===taskId?{...item,status:'DONE' as const}:item),reputation:{...state.reputation,internalTrust:clamp100(state.reputation.internalTrust+(task.critical?2:1)),lastReason:'Obrigação profissional cumprida'}};
  saveProfessionalPortfolio(player,next);return next;
 }
