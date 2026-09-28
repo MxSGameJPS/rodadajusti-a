@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   ArrowRight,
   Award,
@@ -23,6 +23,7 @@ import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import type { PlayerProfile } from '../../types/game';
 import { sound } from '../../utils/sound';
 import { ProfessionalDailyBrief } from './ProfessionalDailyBrief';
+import { professionalDaySummary, readProfessionalPortfolio, registerProfessionalArrival } from '../../lib/professionalActTwo';
 import styles from './ProfessionalOfficeHub.module.css';
 
 const OPEN_SOCIAL_JURIDICO_EVENT = 'rota:open-social-juridico';
@@ -53,6 +54,10 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
   const officeName = employment?.officeName || 'Escritório atual';
   const roleTitle = employment?.role || 'Advogado';
   const socialJuridicoIncluded = employmentIncludesSocialJuridico(player);
+  const gameDate = `${String(player.gameCurrentDay).padStart(2,'0')}/${String(player.gameCurrentMonth).padStart(2,'0')}/${player.gameCurrentYear}`;
+  useEffect(() => { if (!previewMode && employment?.contractStatus === 'SIGNED') registerProfessionalArrival(player, gameDate); }, [player.cloudCareerId, gameDate, employment?.contractStatus, previewMode]);
+  const portfolio = useMemo(() => readProfessionalPortfolio(player), [player, gameDate]);
+  const daySummary = useMemo(() => professionalDaySummary(player), [player, gameDate]);
 
   const openDevice = (eventName: string) => {
     sound.playClick();
@@ -85,6 +90,18 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
       </section>
 
       <ProfessionalDailyBrief player={player} onResumeActiveCase={onResumeActiveCase} />
+
+      <section className={styles.caseSection} aria-label="Carteira e agenda profissional">
+        <div className={styles.sectionTitle}><div><span>Responsabilidade profissional</span><h3>Minha carteira e agenda</h3></div><div className={styles.assignmentFlow}><span>{daySummary.activeMatters} processos</span><span>{daySummary.pendingTasks} tarefas</span><span>{daySummary.criticalTasks} críticas</span></div></div>
+        {daySummary.nextTasks.length > 0 ? daySummary.nextTasks.map((task) => (
+          <article key={task.id} className={task.critical ? styles.activeCaseCard : styles.waitingCaseCard}>
+            <div><span className={styles.caseCode}>{task.kind}{task.critical ? ' • PRIORIDADE' : ''}</span><h4>{task.title}</h4><p>Prazo: {task.dueGameDate}{task.dueMinute != null ? ` • ${String(Math.floor(task.dueMinute/60)).padStart(2,'0')}:${String(task.dueMinute%60).padStart(2,'0')}` : ''}</p></div>
+          </article>
+        )) : <article className={styles.waitingCaseCard}><div><span>Agenda organizada</span><h4>Nenhuma obrigação profissional pendente</h4><p>Novas atribuições e compromissos aparecerão aqui conforme sua carteira crescer.</p></div></article>}
+        {portfolio.matters.filter((matter)=>matter.status!=='CLOSED').slice(0,4).map((matter)=>(
+          <article key={matter.id} className={styles.activeCaseCard}><div><span className={styles.caseCode}>{matter.area} • {matter.officePriority}</span><h4>{matter.title}</h4><p><strong>Cliente:</strong> {matter.clientName} • Próxima ação: {matter.nextAction} • Confiança: {matter.clientTrust}%</p></div></article>
+        ))}
+      </section>
 
       <section className={styles.deviceGrid} aria-label="Dispositivos profissionais">
         <button type="button" className={styles.notebookCard} onClick={() => openDevice(OPEN_SOCIAL_JURIDICO_EVENT)}>
@@ -156,7 +173,7 @@ export const ProfessionalOfficeHub: React.FC<ProfessionalOfficeHubProps> = ({
               <h4>Aguarde uma nova atribuição no CRM</h4>
               <p>
                 Os casos não ficam mais expostos para escolha. A coordenação de {officeName} define a distribuição e disponibiliza
-                <strong> um atendimento por vez</strong> no ambiente profissional.
+                <strong> atendimentos compatíveis com sua capacidade</strong> no ambiente profissional.
               </p>
             </div>
             <button type="button" onClick={() => openDevice(OPEN_SOCIAL_JURIDICO_EVENT)}>
