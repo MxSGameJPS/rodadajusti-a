@@ -5,20 +5,23 @@ import { ACADEMIC_TRACKS } from '../lib/progressionRules';
 import { X, GraduationCap, CheckCircle2, BookOpen, Lock, FileQuestion } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { LEGAL_KNOWLEDGE_LABELS, normalizeLegalKnowledge } from '../lib/academicLife';
+import { AcademicTeachingPanel } from './AcademicTeachingPanel';
+import { readAcademicCareer } from '../lib/academicCareer';
 
 interface AcademicModalProps {
   isOpen: boolean;
   onClose: () => void;
   player: PlayerProfile;
   onEnrollCourse: (course: AcademicCourse) => void;
+  onAcademicMoneyChange: (delta: number) => void;
 }
 
-export const AcademicModal: React.FC<AcademicModalProps> = ({ isOpen, onClose, player, onEnrollCourse }) => {
+export const AcademicModal: React.FC<AcademicModalProps> = ({ isOpen, onClose, player, onEnrollCourse, onAcademicMoneyChange }) => {
   if (!isOpen) return null;
 
-  const extended = player as PlayerProfile & { masterLevel?: number; doctorateLevel?: number };
-  const masterLevel = Number(extended.masterLevel || 0);
-  const doctorateLevel = Number(extended.doctorateLevel || 0);
+  const academicCareer = readAcademicCareer(player);
+  const masterLevel = academicCareer.masterLevel;
+  const doctorateLevel = academicCareer.doctorateLevel;
   const regularCourses = ACADEMIC_COURSES.filter((course) => !['MESTRE', 'DOUTOR'].includes(course.degree));
   const knowledge = normalizeLegalKnowledge(player.legalKnowledge);
 
@@ -45,6 +48,8 @@ export const AcademicModal: React.FC<AcademicModalProps> = ({ isOpen, onClose, p
           <section className="p-4 rounded-xl border border-[#C5A059]/25 bg-[#C5A059]/[0.05] text-xs text-[#CFC5AD]">
             O antigo botão que concedia Mestrado ou Doutorado instantaneamente foi removido. Esses títulos passam a depender das provas de progressão criadas no painel administrativo.
           </section>
+
+          <AcademicTeachingPanel player={player} onMoneyChange={onAcademicMoneyChange}/>
 
           <section className="p-5 rounded-xl border border-[#34D399]/20 bg-[#34D399]/[0.04]">
             <div className="flex items-center justify-between gap-3 mb-4">
