@@ -86,6 +86,7 @@ export interface EthicalChoiceResolution {
 
 const STORAGE_PREFIX = 'rota_ethical_dilemmas_v1:';
 const LAWYER_TIERS = new Set([
+  'ADVOGADO_HABILITADO',
   'ADVOGADO_CONTRATADO',
   'ADVOGADO_SENIOR',
   'SOCIO_ESCRITORIO',
