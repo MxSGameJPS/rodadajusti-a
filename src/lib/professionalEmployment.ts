@@ -6,7 +6,6 @@ import { supabase } from './supabase';
 const PLAYER_SAVE_KEY = 'rota_da_justica_save_v1';
 const EMPLOYMENT_STORAGE_PREFIX = 'rota_professional_employment_v1:';
 const LAWYER_TIERS = new Set<CareerTierId>([
-  'ADVOGADO_HABILITADO',
   'ADVOGADO_CONTRATADO',
   'ADVOGADO_SENIOR',
   'SOCIO_ESCRITORIO',
