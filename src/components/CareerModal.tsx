@@ -14,6 +14,7 @@ import { usePlayerDisplayName } from '../lib/playerTreatment';
 import { X, Award, CheckCircle2, Lock, Scale, Landmark, GraduationCap, Crown, ClipboardCheck } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { getLegalReputationSnapshot } from '../lib/professionalActTwo';
+import { MediaRepercussionPanel } from './MediaRepercussionPanel';
 
 interface CareerModalProps {
   isOpen: boolean;
@@ -76,6 +77,7 @@ export const CareerModal: React.FC<CareerModalProps> = ({ isOpen, onClose, playe
               </div>
             </section>
           )}
+          {player.oabRegistration && <MediaRepercussionPanel player={player}/>} 
           <section className="space-y-3">
             <SectionTitle icon={<Scale size={14}/>} title="Estágio & Advocacia" color="text-[#C5A059]"/>
             <div className="p-4 rounded-xl border border-[#2A2A2E] bg-[#111113] text-xs text-[#AAAAAA]">
