@@ -1,6 +1,7 @@
 import React, { useEffect, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { emitPlayerSaveExternalUpdated } from '../lib/playerSaveEvents';
 
 const WORKING_SAVE_KEY = 'rota_da_justica_save_v1';
 const ACCOUNT_SAVE_PREFIX = 'rota_da_justica_save_v2:';
@@ -34,19 +35,16 @@ function remove(key: string) {
   }
 }
 
-function activateSessionStorage(session: Session | null) {
+async function activateSessionStorage(session: Session | null) {
   const nextUserId = session?.user?.id || null;
   const previousUserId = read(ACTIVE_ACCOUNT_KEY);
   const workingSave = read(WORKING_SAVE_KEY);
 
-  // Se o navegador estava associado a outra conta, guarda primeiro o progresso dela.
   if (previousUserId && previousUserId !== nextUserId && workingSave) {
     write(accountSaveKey(previousUserId), workingSave);
   }
 
   if (!nextUserId) {
-    // Um save legado sem marcador de conta é preservado até o primeiro login,
-    // quando poderá ser migrado para o usuário autenticado sem perda de progresso.
     if (previousUserId) {
       remove(WORKING_SAVE_KEY);
       remove(ACTIVE_ACCOUNT_KEY);
@@ -54,33 +52,35 @@ function activateSessionStorage(session: Session | null) {
     return;
   }
 
-  const scopedSave = read(accountSaveKey(nextUserId));
-
-  if (previousUserId === nextUserId) {
-    // Mesmo usuário: o save de trabalho é a cópia mais recente durante a sessão.
-    if (workingSave) {
-      write(accountSaveKey(nextUserId), workingSave);
-    } else if (scopedSave) {
-      write(WORKING_SAVE_KEY, scopedSave);
+  let cloudSave: string | null = null;
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('game_saves')
+      .select('game_state,last_saved_at')
+      .eq('user_id', nextUserId)
+      .eq('slot', 1)
+      .order('last_saved_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!error && data?.game_state && typeof data.game_state === 'object') {
+      cloudSave = JSON.stringify(data.game_state);
     }
-    write(ACTIVE_ACCOUNT_KEY, nextUserId);
-    return;
   }
 
-  if (scopedSave) {
-    // Conta que já jogou neste navegador: restaura somente o progresso dela.
-    write(WORKING_SAVE_KEY, scopedSave);
-  } else if (!previousUserId && workingSave) {
-    // Migração única do save legado existente antes da separação por conta.
-    write(accountSaveKey(nextUserId), workingSave);
+  const scopedSave = read(accountSaveKey(nextUserId));
+  const fallback = previousUserId === nextUserId ? workingSave || scopedSave : scopedSave || (!previousUserId ? workingSave : null);
+  const selected = cloudSave || fallback;
+
+  if (selected) {
+    write(WORKING_SAVE_KEY, selected);
+    write(accountSaveKey(nextUserId), selected);
   } else {
-    // Conta nova neste navegador começa com uma carreira limpa.
     remove(WORKING_SAVE_KEY);
   }
 
   write(ACTIVE_ACCOUNT_KEY, nextUserId);
+  emitPlayerSaveExternalUpdated();
 }
-
 type AccountSaveBoundaryProps = {
   children: ReactNode;
 };
@@ -98,16 +98,14 @@ export function AccountSaveBoundary({ children }: AccountSaveBoundaryProps) {
 
     supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
-      activateSessionStorage(data.session);
-      setReady(true);
+      void activateSessionStorage(data.session).finally(() => { if (active) setReady(true); });
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
-      activateSessionStorage(session);
-      setReady(true);
+      void activateSessionStorage(session).finally(() => { if (active) setReady(true); });
     });
 
     return () => {
