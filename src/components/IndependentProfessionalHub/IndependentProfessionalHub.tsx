@@ -6,6 +6,7 @@ import {
   Building2,
   CheckCircle2,
   Laptop,
+  Megaphone,
   Search,
   Smartphone,
   UserRoundSearch,
@@ -13,11 +14,15 @@ import {
 } from 'lucide-react';
 import { GAME_CASES } from '../../data/cases';
 import {
+  getSocialMediaLeadCase,
   hydrateIndependentPracticeState,
   isSocialJuridicoProActive,
   openOwnOffice,
   readIndependentPracticeState,
+  runSocialMediaCampaign,
   SOCIAL_JURIDICO_PRO_MONTHLY_PRICE,
+  SOCIAL_MEDIA_CAMPAIGN_COST,
+  startIndependentMarketplaceCase,
 } from '../../lib/independentPractice';
 import { usePlayerDisplayName } from '../../lib/playerTreatment';
 import type { PlayerProfile } from '../../types/game';
@@ -48,6 +53,8 @@ export const IndependentProfessionalHub: React.FC<IndependentProfessionalHubProp
   const practice = useMemo(() => readIndependentPracticeState(player), [player, practiceRevision]);
   const sjActive = isSocialJuridicoProActive(player, practice);
   const activeCase = GAME_CASES.find((item) => item.id === player.activeCase?.caseId) || null;
+  const socialMediaLead = getSocialMediaLeadCase(player, GAME_CASES);
+  const [socialNotice, setSocialNotice] = useState('');
   const [showOfficeSetup, setShowOfficeSetup] = useState(false);
   useEffect(() => {
     let active = true;
@@ -75,6 +82,36 @@ export const IndependentProfessionalHub: React.FC<IndependentProfessionalHubProp
     window.dispatchEvent(new CustomEvent(eventName));
   };
 
+  const promoteOnSocialMedia = () => {
+    setSocialNotice('');
+    sound.playClick();
+    const result = runSocialMediaCampaign(player);
+    if (!result.ok) {
+      const messages: Record<string, string> = {
+        MONEY: `Saldo insuficiente. A divulgação custa ${SOCIAL_MEDIA_CAMPAIGN_COST} JR.`,
+        COOLDOWN: 'Você já fez uma ação de divulgação hoje. Avance o dia para publicar uma nova campanha.',
+        BLOCKED: 'Sua situação disciplinar atual impede captação de novos clientes.',
+        EMPLOYED: 'Esta captação é exclusiva da atuação autônoma.',
+        STORAGE: 'Não foi possível registrar a divulgação.',
+      };
+      setSocialNotice(messages[result.reason] || 'Não foi possível divulgar seu trabalho.');
+      return;
+    }
+    setSocialNotice(`Campanha publicada. Visibilidade +${result.visibilityGain} e uma nova oportunidade de contato foi gerada.`);
+    setPracticeRevision((value) => value + 1);
+  };
+
+  const acceptSocialMediaLead = () => {
+    if (!socialMediaLead || player.activeCase) return;
+    setSocialNotice('');
+    sound.playPaper();
+    if (!startIndependentMarketplaceCase(player, socialMediaLead, 'SOCIAL_MEDIA')) {
+      setSocialNotice('Não foi possível converter este contato em atendimento.');
+      return;
+    }
+    window.location.reload();
+  };
+
   const confirmOwnOffice = () => {
     setOfficeError('');
     if (!officeName.trim()) {
@@ -99,12 +136,12 @@ export const IndependentProfessionalHub: React.FC<IndependentProfessionalHubProp
             </div>
             <div>
               <div className="mb-2 flex flex-wrap gap-2 text-[9px] font-black uppercase tracking-[0.16em]">
-                <span className="rounded-full border border-[#F87171]/30 bg-[#F87171]/10 px-2.5 py-1 text-[#FCA5A5]">Vínculo encerrado • Ramos & Associados</span>
+                <span className="rounded-full border border-[#F87171]/30 bg-[#F87171]/10 px-2.5 py-1 text-[#FCA5A5]">{player.officeDiscipline?.employmentStatus === 'TERMINATED' ? 'Vínculo anterior encerrado' : 'Sem vínculo com escritório'}</span>
                 <span className="rounded-full border border-[#60A5FA]/30 bg-[#60A5FA]/10 px-2.5 py-1 text-[#93C5FD]">Advocacia independente</span>
               </div>
               <h2 className="font-serif text-2xl font-black text-[#F3F0E9]">Agora a carreira depende de você, {displayName}.</h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-[#AAA6A0]">
-                Seu contrato com o Ramos & Associados foi encerrado. O escritório não pode mais distribuir clientes, recursos ou novos casos para você. A partir daqui, você precisa captar clientes, buscar outra colocação, assinar ferramentas por conta própria ou abrir seu próprio escritório.
+                Você está atuando sem vínculo com um escritório. Sua carteira depende da sua própria captação: Social Jurídico, presença profissional nas redes sociais, indicações e reputação. Você continua livre para receber propostas ou se candidatar a outros escritórios.
               </p>
             </div>
           </div>
@@ -174,6 +211,27 @@ export const IndependentProfessionalHub: React.FC<IndependentProfessionalHubProp
           </div>
         </section>
       )}
+
+      <section className="rounded-2xl border border-[#334155] bg-[#11151B] p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#60A5FA]/25 bg-[#60A5FA]/10 text-[#93C5FD]"><Megaphone size={21} /></div>
+            <div>
+              <span className="text-[9px] font-black uppercase tracking-wider text-[#7FA8DC]">Captação própria • redes sociais</span>
+              <h3 className="mt-1 text-base font-black text-[#E8EEF7]">Construa sua presença profissional</h3>
+              <p className="mt-1 text-xs leading-5 text-[#8D99A8]">Visibilidade {practice.socialMediaVisibility}/100 • {practice.socialMediaLeadCredits} contato(s) disponível(is). Uma campanha por dia do jogo, com custo de {SOCIAL_MEDIA_CAMPAIGN_COST} JR.</p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button type="button" onClick={promoteOnSocialMedia} className="rounded-xl border border-[#3B526E] px-4 py-3 text-xs font-black text-[#93C5FD]">Divulgar nas redes</button>
+            {socialMediaLead && !player.activeCase && (
+              <button type="button" onClick={acceptSocialMediaLead} className="rounded-xl bg-[#2E765E] px-4 py-3 text-xs font-black text-white">Atender contato captado</button>
+            )}
+          </div>
+        </div>
+        {socialMediaLead && !player.activeCase && <p className="mt-3 rounded-xl border border-[#315246] bg-[#0D1713] p-3 text-xs text-[#A7D7C4]">Novo contato: <strong>{socialMediaLead.client.name}</strong> • {socialMediaLead.title}</p>}
+        {socialNotice && <p className="mt-3 text-xs font-bold text-[#D6DEE8]">{socialNotice}</p>}
+      </section>
 
       <section className="grid gap-3 md:grid-cols-3">
         <button type="button" onClick={() => openDevice(OPEN_SOCIAL_JURIDICO_EVENT)} className="rounded-2xl border border-[#2B2B30] bg-[#141416] p-4 text-left">
