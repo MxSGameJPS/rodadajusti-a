@@ -1459,6 +1459,15 @@ export default function App() {
       : `Você escolheu ${priority.title}. A demanda foi tratada, mas Roberto observará se prioridades mais urgentes ficaram para trás.`);
   };
 
+  const handleSaveOfficeTaskProgress = async (taskId: string, progress: { stepIndex: number; completedStepIds: string[] }): Promise<boolean> => {
+    if (!player.cloudCareerId || player.officePerformance.completedTaskIds.includes(taskId)) return false;
+    const next: PlayerProfile = { ...player, officeTaskProgress: { ...(player.officeTaskProgress || {}), [taskId]: progress } };
+    const saved = await persistPlayerCloudSave(next);
+    if (!saved.ok) return false;
+    setPlayer((previous) => ({ ...previous, officeTaskProgress: { ...(previous.officeTaskProgress || {}), [taskId]: progress } }));
+    return true;
+  };
+
   const handleCompleteOfficeTask = async (taskId: string): Promise<boolean> => {
     if (player.activeCase) return false;
     if (!ensureOfficeGameplayAvailable()) return false;
@@ -2869,6 +2878,7 @@ export default function App() {
           onOpenCityWorldMap={() => setIsCityWorldMapOpen(true)}
           onOpenPlayerHome={handleRequestGoHome}
           onCompleteOfficeTask={handleCompleteOfficeTask}
+          onSaveOfficeTaskProgress={handleSaveOfficeTaskProgress}
           onRegisterArrival={handleRegisterInternArrival}
           onRegisterDeparture={handleRegisterInternDeparture}
           onHandleOfficeEvent={handleOfficeRoutineEvent}
