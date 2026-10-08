@@ -5,7 +5,12 @@ import { sound } from '../utils/sound';
 interface OfficeWelcomeDialogProps {
   isOpen: boolean;
   playerName: string;
+  city: string;
+  initialFocus?: string;
+  initialStep: number;
+  onAdvance: (nextStep: number) => Promise<boolean>;
   onComplete: () => void;
+  isCompleting?: boolean;
 }
 
 interface DialogueStep {
@@ -16,40 +21,29 @@ interface DialogueStep {
 export const OfficeWelcomeDialog: React.FC<OfficeWelcomeDialogProps> = ({
   isOpen,
   playerName,
+  city,
+  initialFocus,
+  initialStep,
+  onAdvance,
   onComplete,
+  isCompleting = false,
 }) => {
-  const dialogues = useMemo<DialogueStep[]>(
-    () => [
-      {
-        eyebrow: 'Boas-vindas',
-        text: `Olá, ${playerName || 'estagiário(a)'}! Seja muito bem-vindo(a) ao Ramos & Associados. Meu nome é Mariana Duarte e eu sou a secretária do escritório.`,
-      },
-      {
-        eyebrow: 'Sua nova rotina',
-        text: 'A partir de agora, você inicia sua trajetória conosco como estagiário(a). Você vai acompanhar atendimentos, analisar documentos, auxiliar nas investigações e participar da preparação dos casos.',
-      },
-      {
-        eyebrow: 'Como trabalhamos',
-        text: 'Aqui valorizamos três coisas acima de tudo: ética, atenção aos detalhes e estratégia. Cada informação pode fazer diferença quando um caso chega às nossas mãos.',
-      },
-      {
-        eyebrow: 'O escritório',
-        text: 'Você poderá circular pelos setores do escritório, acompanhar sua evolução profissional e, com o tempo, assumir responsabilidades cada vez maiores dentro da carreira jurídica.',
-      },
-      {
-        eyebrow: 'Primeira demanda',
-        text: 'E como seu primeiro dia já começou de verdade, o Dr. Roberto separou algumas atividades supervisionadas para você. Antes de assumir casos maiores, queremos conhecer sua forma de trabalhar.',
-      },
-      {
-        eyebrow: 'Antes de começar',
-        text: 'Comece pela sua avaliação no escritório. Suas entregas, sua postura, os casos em que participar e a relação construída com a equipe definirão quando você estará pronto(a) para assumir mais autonomia. Bem-vindo(a) à sua Rota da Justiça.',
-      },
-    ],
-    [playerName],
-  );
+  const focus = initialFocus === 'consumidor' ? 'Direito do Consumidor' : initialFocus === 'empresarial' ? 'Direito Empresarial' : 'Direito Civil';
+  const dialogues = useMemo<DialogueStep[]>(() => [
+    { eyebrow: 'Boas-vindas', text: `Olá, ${playerName || 'colega'}! Seja bem-vindo(a) ao Ramos & Associados, em ${city || 'sua cidade'}. Eu sou Mariana Duarte, secretária do escritório. Vou mostrar como tudo funciona por aqui.` },
+    { eyebrow: 'Sua supervisão', text: 'O Dr. Roberto Ramos acompanha seu estágio. Você vai trabalhar sob orientação, receber tarefas e ser avaliado(a) por pontualidade, qualidade e conduta. Não precisa saber tudo: precisa perguntar e aprender.' },
+    { eyebrow: 'Conheça sua mesa', text: 'Na tela do escritório, a Agenda reúne presença, tarefas e avaliações. Em Casos você consulta as oportunidades supervisionadas, enquanto sua equipe e os outros setores ficam no menu lateral.' },
+    { eyebrow: 'Sua rotina', text: 'Fique de olho no relógio: registrar a chegada e a saída faz diferença. Atrasos, faltas e prazos têm consequências. Se precisar de orientação, consulte a agenda e seu supervisor.' },
+    { eyebrow: 'Primeiras diligências', text: `Você demonstrou interesse inicial em ${focus}. É um ponto de partida, não uma limitação. Algumas tarefas exigirão visitar lugares no mapa, conversar e reunir documentos antes de qualquer decisão.` },
+    { eyebrow: 'Além do trabalho', text: 'Sua carreira também depende da vida fora daqui. Cuide da energia, alimentação, higiene, faculdade e despesas. Você poderá ir para casa ou percorrer a cidade pelo mapa.' },
+    { eyebrow: 'Ética e confiança', text: 'A confiança da equipe e dos clientes é conquistada. Suas escolhas profissionais, relacionamentos e respeito às regras poderão abrir portas ou trazer consequências importantes.' },
+    { eyebrow: 'Sua primeira atividade', text: 'Agora vamos abrir o escritório. Comece pela Agenda e verifique se já é hora de registrar sua chegada. Depois, consulte as tarefas supervisionadas. Boa sorte: estamos torcendo por você!' },
+  ], [city, focus, playerName]);
 
-  const [stepIndex, setStepIndex] = useState(0);
+  const [stepIndex, setStepIndex] = useState(Math.max(0, Math.min(initialStep, dialogues.length - 1)));
   const [visibleCharacters, setVisibleCharacters] = useState(0);
+  const [isAdvancing, setIsAdvancing] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const currentDialogue = dialogues[stepIndex];
   const isLastStep = stepIndex === dialogues.length - 1;
@@ -57,7 +51,7 @@ export const OfficeWelcomeDialog: React.FC<OfficeWelcomeDialogProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    setStepIndex(0);
+    setStepIndex(Math.max(0, Math.min(initialStep, dialogues.length - 1)));
     setVisibleCharacters(0);
   }, [isOpen]);
 
@@ -79,7 +73,8 @@ export const OfficeWelcomeDialog: React.FC<OfficeWelcomeDialogProps> = ({
 
   if (!isOpen) return null;
 
-  const handleAdvance = () => {
+  const handleAdvance = async () => {
+    if (isAdvancing || isCompleting) return;
     sound.playClick();
 
     if (!isTextComplete) {
@@ -92,8 +87,16 @@ export const OfficeWelcomeDialog: React.FC<OfficeWelcomeDialogProps> = ({
       return;
     }
 
-    setStepIndex((current) => current + 1);
-    setVisibleCharacters(0);
+    setIsAdvancing(true);
+    setSaveError('');
+    try {
+      const saved = await onAdvance(stepIndex + 1);
+      if (!saved) { setSaveError('Não foi possível salvar a conversa. Tente novamente.'); return; }
+      setStepIndex((current) => current + 1);
+      setVisibleCharacters(0);
+    } catch {
+      setSaveError('Falha de conexão. Tente novamente.');
+    } finally { setIsAdvancing(false); }
   };
 
   return (
@@ -160,6 +163,7 @@ export const OfficeWelcomeDialog: React.FC<OfficeWelcomeDialogProps> = ({
               </div>
             </div>
 
+            {saveError && <p role="alert" className="px-5 py-2 text-sm text-[#FCA5A5]">{saveError}</p>}
             <div className="flex items-center justify-between gap-4 border-t border-[#2B2926] bg-[#0D0D0F] px-5 py-4 sm:px-6">
               <p className="hidden text-[11px] text-[#77737A] sm:block">
                 {isTextComplete ? 'Continue quando estiver pronto(a).' : 'Clique para exibir a fala completa.'}
@@ -167,7 +171,8 @@ export const OfficeWelcomeDialog: React.FC<OfficeWelcomeDialogProps> = ({
 
               <button
                 type="button"
-                onClick={handleAdvance}
+                disabled={isAdvancing || isCompleting}
+                onClick={() => void handleAdvance()}
                 className="ml-auto inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#C5A059] px-5 py-3 text-xs font-extrabold uppercase tracking-[0.12em] text-[#111113] shadow-lg shadow-[#C5A059]/15 transition hover:bg-[#D8B56B] active:scale-[0.98] sm:min-w-[190px]"
               >
                 {isLastStep && isTextComplete ? (
