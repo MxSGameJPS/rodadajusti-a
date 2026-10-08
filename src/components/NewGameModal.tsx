@@ -148,6 +148,13 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
       if (changedCity && !window.confirm('A residência está em uma cidade diferente da escolhida para iniciar a carreira. Deseja alterar a cidade-base para este endereço?')) return;
       const addressProfile = await validateResidence();
       setIsAcceptingOffer(true);
+      if (!supabase) throw new Error('Serviço indisponível. Tente novamente.');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Sua sessão expirou. Faça login novamente.');
+      const { error: cityError } = await supabase.from('player_onboarding').upsert({
+        user_id: user.id, city: city.trim(), state: state.trim().toUpperCase(),
+      }, { onConflict: 'user_id' });
+      if (cityError) throw cityError;
       const created = await onStartNewGame({
         name: normalizedPlayerName,
         street: street.trim(), number: number.trim(), city: city.trim(),
@@ -156,10 +163,6 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
         initialFocus: selectedFocus,
       });
       if (!created) throw new Error('Não foi possível registrar a contratação. Tente novamente.');
-      if (supabase) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) await supabase.from('player_onboarding').upsert({ user_id: user.id, city: city.trim(), state: state.trim().toUpperCase() }, { onConflict: 'user_id' });
-      }
       sound.playVictory();
       setIsOfficeWelcomeOpen(true);
     } catch (error) {
