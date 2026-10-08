@@ -1284,13 +1284,14 @@ export default function App() {
           energy: Math.max(0, player.household.needs.energy - Math.max(1, Math.round(choice.minutes / 25))),
         }},
       };
-      // Marcar o evento no banco evita reexecutá-lo após atualização de página.
-      if (!(await commitInternshipRoutine(player, nextRoutine))) {
-        setLifeWarning('Não foi possível registrar a decisão. Tente novamente.'); return;
-      }
+      // Estado e consequências ficam juntos no save autoritativo.
+      next.handledOfficeEventKeys = [...(player.handledOfficeEventKeys || []), event.key].slice(-120);
       const saved = await persistPlayerCloudSave(next);
-      if (!saved.ok) { setLifeWarning('Evento registrado; não foi possível confirmar os efeitos. Recarregue a carreira antes de continuar.'); return; }
-      setPlayer((prev) => ({ ...prev, ...clock, officePerformance: next.officePerformance, household: next.household }));
+      if (!saved.ok) { setLifeWarning('Não foi possível confirmar sua decisão. Tente novamente.'); return; }
+      setPlayer((prev) => ({ ...prev, ...clock, officePerformance: next.officePerformance,
+        household: next.household, handledOfficeEventKeys: next.handledOfficeEventKeys }));
+      // Replica no histórico da rotina; eventual falha não reabre um evento já concluído.
+      void commitInternshipRoutine(next, nextRoutine);
       applyRelationshipInteraction(player, {
         entityId: 'npc:MARIANA', entityType: 'NPC', name: 'Mariana Duarte', role: 'Secretária • Ramos & Associados',
         gameDate: currentGameDateLabel(player), kind: 'OFFICE_EVENT', title: event.title, description: choice.outcome,
