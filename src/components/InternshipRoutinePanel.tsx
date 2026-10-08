@@ -117,7 +117,12 @@ export const InternshipRoutinePanel: React.FC<Props> = ({ player, onRegisterArri
 
           <div className="rounded-xl border border-[#29292E] bg-[#0B0B0D] p-4">
             <div className="flex items-center gap-2"><Clock3 size={15} className="text-[#C5A059]" /><strong className="text-xs text-[#E0DDD6]">Como sua rotina é avaliada</strong></div>
-            <p className="mt-2 text-[10px] leading-relaxed text-[#898990]">Pontualidade influencia diligência, gestão de prazos e confiança. A cada bloco de dias trabalhados, Roberto pode chamar você para uma avaliação. Faltas e atrasos passam a fazer parte do histórico do estágio.</p>
+            <p className="mt-2 text-[10px] leading-relaxed text-[#898990]">Avaliação a cada cinco dias registrados. A nota utiliza a média de Técnica, Diligência, Ética, Prazos e Confiança. Nos últimos dez registros, são descontados dois pontos por atraso e seis por falta não justificada.</p>
+            <div className="mt-3 rounded-lg border border-[#333338] bg-[#09090B] p-3 text-[10px] leading-5 text-[#CCC7BD]">
+              <strong className="block text-[#D9C184]">Entenda sua avaliação</strong>
+              <span>Média dos cinco indicadores: {Math.round((player.officePerformance.technique + player.officePerformance.diligence + player.officePerformance.ethics + player.officePerformance.deadlineManagement + player.officePerformance.supervisorTrust) / 5)} pontos.</span>
+              <span className="mt-1 block">A nota final considera também atrasos e faltas do ciclo recente. As reuniões concluídas ficam registradas no histórico.</span>
+            </div>
           </div>
         </div>
       </div>
