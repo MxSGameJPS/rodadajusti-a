@@ -9,6 +9,7 @@ interface InternOfficeTaskModalProps {
   onClose: () => void;
   onComplete: (taskId: string) => Promise<boolean>;
   savedProgress?: { stepIndex: number; completedStepIds: string[] };
+  variationSeed?: string;
   onSaveProgress?: (taskId: string, next: { stepIndex: number; completedStepIds: string[] }) => Promise<boolean>;
 }
 
@@ -19,6 +20,7 @@ export const InternOfficeTaskModal: React.FC<InternOfficeTaskModalProps> = ({
   onComplete,
   savedProgress,
   onSaveProgress,
+  variationSeed = '',
 }) => {
   const [stepIndex, setStepIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -37,6 +39,17 @@ export const InternOfficeTaskModal: React.FC<InternOfficeTaskModalProps> = ({
   }, [task?.id, isOpen]);
 
   const currentStep = task?.challengeSteps[stepIndex] || null;
+  const presentedOptions = useMemo(() => {
+    if (!currentStep) return [];
+    const rank = (id: string) => {
+      const value = `${variationSeed}:${currentStep.id}:${id}`;
+      let n = 2166136261;
+      for (let index = 0; index < value.length; index += 1) n = Math.imul(n ^ value.charCodeAt(index), 16777619);
+      return n >>> 0;
+    };
+    return [...currentStep.options].sort((a, b) => rank(a.id) - rank(b.id));
+  }, [currentStep, variationSeed]);
+
   const isLastStep = !!task && stepIndex === task.challengeSteps.length - 1;
   const currentStepSolved = !!currentStep && completedSteps.includes(currentStep.id);
 
@@ -138,7 +151,7 @@ export const InternOfficeTaskModal: React.FC<InternOfficeTaskModalProps> = ({
           <div className="mt-5">
             <h3 className="text-sm font-bold leading-relaxed text-[#E5E2DB]">{currentStep.prompt}</h3>
             <div className="mt-3 space-y-2.5">
-              {currentStep.options.map((option) => {
+              {presentedOptions.map((option) => {
                 const selected = selectedOptionId === option.id;
                 return (
                   <button
