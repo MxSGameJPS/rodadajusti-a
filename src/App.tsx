@@ -121,6 +121,7 @@ import {
   hasHandledSeniorPriority,
   markSeniorPriorityHandled,
   getTodayAttendance,
+  readInternshipRoutine,
   minuteLabel,
   OFFICE_CANTEEN_COFFEE_PRICE,
   canUseOfficeGameplay,
@@ -3227,10 +3228,10 @@ export default function App() {
           contextLabel="Prioridades do expediente"
           dialogues={marianaArrivalDialogues}
           finalActionLabel="Começar expediente"
-          initialStep={readInternshipRoutine(player).briefingProgress?.[currentGameDateLabel(player)] || 0}
+          initialStep={readInternshipRoutine(player).briefingProgress?.[`${player.gameCurrentYear}-${String(player.gameCurrentMonth).padStart(2, '0')}-${String(player.gameCurrentDay).padStart(2, '0')}`] || 0}
           onStepChange={async (nextStep) => {
             const routine = readInternshipRoutine(player);
-            const date = currentGameDateLabel(player);
+            const date = `${player.gameCurrentYear}-${String(player.gameCurrentMonth).padStart(2, '0')}-${String(player.gameCurrentDay).padStart(2, '0')}`;
             const state = { ...routine, briefingProgress: { ...(routine.briefingProgress || {}), [date]: nextStep } };
             return commitInternshipRoutine(player, state);
           }}
