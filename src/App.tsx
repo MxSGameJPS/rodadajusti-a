@@ -1261,41 +1261,46 @@ export default function App() {
     setAbsenceJustificationDialogues(null);
   };
 
-  const handleOfficeRoutineEvent = (choiceId: OfficeEventChoiceId) => {
-    if (!ensureOfficeGameplayAvailable()) return;
+  const officeEventInFlightRef = React.useRef(false);
+  const handleOfficeRoutineEvent = async (choiceId: OfficeEventChoiceId) => {
+    if (officeEventInFlightRef.current || !ensureOfficeGameplayAvailable()) return;
     const event = getDailyOfficeEvent(player);
     if (!event) return;
     const choice = getOfficeEventChoices(event.kind).find((item) => item.id === choiceId);
     if (!choice) return;
     const conflict = getWorkTimeConflict(player, choice.minutes, 'OFFICE');
-    if (conflict) {
-      setLifeWarning(conflict);
-      return;
-    }
-    markOfficeEventHandled(player, event.key);
-    setPlayer((prev) => {
-      const clock = gameClockFields(prev, choice.minutes);
-      return {
-        ...prev,
+    if (conflict) { setLifeWarning(conflict); return; }
+    officeEventInFlightRef.current = true;
+    try {
+      const routine = readInternshipRoutine(player);
+      if (routine.handledEventKeys.includes(event.key)) return;
+      const nextRoutine = { ...routine, handledEventKeys: [...routine.handledEventKeys, event.key].slice(-120) };
+      const clock = gameClockFields(player, choice.minutes);
+      const next: PlayerProfile = {
+        ...player,
         ...clock,
-        officePerformance: applyRoutinePerformance(prev.officePerformance, choice.delta),
-        household: {
-          ...prev.household,
-          needs: {
-            ...prev.household.needs,
-            energy: Math.max(0, prev.household.needs.energy - Math.max(1, Math.round(choice.minutes / 25))),
-          },
-        },
+        officePerformance: applyRoutinePerformance(player.officePerformance, choice.delta),
+        household: { ...player.household, needs: {
+          ...player.household.needs,
+          energy: Math.max(0, player.household.needs.energy - Math.max(1, Math.round(choice.minutes / 25))),
+        }},
       };
-    });
-    applyRelationshipInteraction(player, {
-      entityId: 'npc:MARIANA', entityType: 'NPC', name: 'Mariana Duarte', role: 'Secretária • Ramos & Associados',
-      gameDate: currentGameDateLabel(player), kind: 'OFFICE_EVENT', title: event.title, description: choice.outcome,
-      scope: 'WORKPLACE', intensity: 22,
-      dimensions: { affinity: choice.marianaAffinity, professionalTrust: choice.marianaTrust },
-      bond: 'PROFESSIONAL',
-    });
-    setLifeWarning(choice.outcome);
+      // Marcar o evento no banco evita reexecutá-lo após atualização de página.
+      if (!(await commitInternshipRoutine(player, nextRoutine))) {
+        setLifeWarning('Não foi possível registrar a decisão. Tente novamente.'); return;
+      }
+      const saved = await persistPlayerCloudSave(next);
+      if (!saved.ok) { setLifeWarning('Evento registrado; não foi possível confirmar os efeitos. Recarregue a carreira antes de continuar.'); return; }
+      setPlayer((prev) => ({ ...prev, ...clock, officePerformance: next.officePerformance, household: next.household }));
+      applyRelationshipInteraction(player, {
+        entityId: 'npc:MARIANA', entityType: 'NPC', name: 'Mariana Duarte', role: 'Secretária • Ramos & Associados',
+        gameDate: currentGameDateLabel(player), kind: 'OFFICE_EVENT', title: event.title, description: choice.outcome,
+        scope: 'WORKPLACE', intensity: 22,
+        dimensions: { affinity: choice.marianaAffinity, professionalTrust: choice.marianaTrust },
+        bond: 'PROFESSIONAL',
+      });
+      setLifeWarning(choice.outcome);
+    } finally { officeEventInFlightRef.current = false; }
   };
 
   const handlePeriodicInternReview = () => {
