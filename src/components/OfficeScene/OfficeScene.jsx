@@ -99,6 +99,7 @@ export function OfficeScene({
   onOpenCityWorldMap,
   onOpenPlayerHome,
   onCompleteOfficeTask,
+  onSaveOfficeTaskProgress,
   onRegisterArrival,
   onRegisterDeparture,
   onHandleOfficeEvent,
@@ -548,6 +549,7 @@ export function OfficeScene({
                 <InternshipCareerPanel
                   player={player}
                   onCompleteTask={onCompleteOfficeTask}
+                  onSaveTaskProgress={onSaveOfficeTaskProgress}
                   onRegisterArrival={onRegisterArrival}
                   onRegisterDeparture={onRegisterDeparture}
                   onHandleOfficeEvent={onHandleOfficeEvent}
