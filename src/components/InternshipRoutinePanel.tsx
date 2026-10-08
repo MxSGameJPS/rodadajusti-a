@@ -115,6 +115,24 @@ export const InternshipRoutinePanel: React.FC<Props> = ({ player, onRegisterArri
             </div>
           )}
 
+          {state.meetings.length > 0 && (
+            <div className="rounded-xl border border-[#29292E] bg-[#0B0B0D] p-4">
+              <strong className="text-[9px] uppercase tracking-[.14em] text-[#D8BC7B]">Histórico de avaliações com Dr. Roberto</strong>
+              <div className="mt-3 space-y-2">
+                {state.meetings.slice(-5).reverse().map((meeting) => (
+                  <article key={meeting.id} className="rounded-lg border border-[#252529] bg-[#111114] p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <strong className="text-[11px] text-[#E6E1D7]">{meeting.title}</strong>
+                      <span className="font-mono text-xs font-bold text-[#D9C184]">{meeting.score}/100</span>
+                    </div>
+                    <span className="mt-1 block text-[10px] text-[#85838A]">{meeting.date}</span>
+                    <p className="mt-2 text-[10px] leading-5 text-[#ACA8A0]">{meeting.summary}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="rounded-xl border border-[#29292E] bg-[#0B0B0D] p-4">
             <div className="flex items-center gap-2"><Clock3 size={15} className="text-[#C5A059]" /><strong className="text-xs text-[#E0DDD6]">Como sua rotina é avaliada</strong></div>
             <p className="mt-2 text-[10px] leading-relaxed text-[#898990]">Avaliação a cada cinco dias registrados. A nota utiliza a média de Técnica, Diligência, Ética, Prazos e Confiança. Nos últimos dez registros, são descontados dois pontos por atraso e seis por falta não justificada.</p>
