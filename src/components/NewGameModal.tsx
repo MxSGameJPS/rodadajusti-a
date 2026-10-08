@@ -73,6 +73,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
   const [isOfficeWelcomeOpen, setIsOfficeWelcomeOpen] = useState(Boolean(resumePlayer));
   const [isActOneIntroOpen, setIsActOneIntroOpen] = useState(!resumePlayer);
   const [introCheckpointReady, setIntroCheckpointReady] = useState(Boolean(resumePlayer));
+  const [introCheckpointError, setIntroCheckpointError] = useState('');
 
   useEffect(() => {
     if (!isOpen || didHydrateAuthName || isOfficeWelcomeOpen || !supabase) return;
@@ -100,7 +101,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
       if (!active || !user) return;
       const { data, error: checkpointError } = await supabase.from('player_onboarding').select('city,state,intro_seen').eq('user_id', user.id).maybeSingle();
       if (!active) return;
-      if (checkpointError) { setAddressError('Não foi possível consultar seu progresso. Atualize a página.'); return; }
+      if (checkpointError) { setIntroCheckpointError('Não foi possível consultar seu progresso. Atualize a página.'); return; }
       if (data) {
         setCity(data.city);
         setState(data.state);
@@ -194,6 +195,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
     }
   };
 
+  if (introCheckpointError) return <div className="fixed inset-0 z-[245] flex flex-col items-center justify-center gap-4 bg-[#08090B] p-5 text-[#D4B36D]" role="alert"><p>{introCheckpointError}</p><button type="button" onClick={() => window.location.reload()} className="rounded border border-[#D4B36D] px-4 py-2">Tentar novamente</button></div>;
   if (!introCheckpointReady && !resumePlayer) return <div className="fixed inset-0 z-[245] flex items-center justify-center bg-[#08090B] text-[#D4B36D]" role="status">Preparando sua carreira...</div>;
 
   if (isActOneIntroOpen) {
@@ -207,7 +209,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
             if (!supabase) return;
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
-            const { error: saveError } = await supabase.from('player_onboarding').update({ intro_seen: true }).eq('user_id', user.id);
+            const { error: saveError } = await supabase.from('player_onboarding').update({ intro_seen: true }).eq('user_id', user.id).select('user_id').single();
             if (saveError) { window.alert('Não foi possível salvar sua introdução. Tente novamente.'); return; }
             setIsActOneIntroOpen(false);
           })();
