@@ -71,6 +71,22 @@ export async function persistInternshipRoutine(player: PlayerProfile, state = re
 }
 
 
+/** Commits a routine snapshot before the UI awards attendance or displays a briefing. */
+export async function commitInternshipRoutine(player: PlayerProfile, state: InternshipRoutineState): Promise<boolean> {
+  if (!eligible(player) || !supabase) return false;
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) return false;
+  const { error } = await supabase.from('internship_routines')
+    .upsert(row(player, user.id, state), { onConflict: 'career_id' });
+  if (error) {
+    console.warn('[internship] commit', error.message);
+    return false;
+  }
+  saveInternshipRoutine(player, state);
+  return true;
+}
+
+
 export async function loadSeniorPortfolio(player: PlayerProfile) {
   if (!eligible(player) || !supabase) return { portfolio: [] as SeniorPortfolioMatter[], decisions: [] as SeniorPortfolioDecision[] };
   const { data, error } = await supabase.from('internship_routines').select('senior_portfolio,senior_decisions').eq('career_id', player.cloudCareerId!).maybeSingle();
