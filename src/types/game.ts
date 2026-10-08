@@ -559,6 +559,8 @@ export interface PlayerProfile {
   onboardingStage?: 'WELCOME_PENDING' | 'COMPLETE';
   welcomeDialogueStep?: number;
   officeTutorialSeen?: boolean;
+  officeTaskProgress?: Record<string, { stepIndex: number; completedStepIds: string[] }>;
+  processedOfficeReviewIds?: string[];
   homeCity?: string;
   homeState?: string;
   gameCurrentDay: number;
