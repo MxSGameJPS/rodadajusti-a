@@ -779,6 +779,8 @@ export default function App() {
       name: setup.name,
       initialFocus: setup.initialFocus,
       onboardingStage: 'WELCOME_PENDING',
+      welcomeDialogueStep: 0,
+      officeTutorialSeen: false,
       relationshipStatus: setup.relationshipStatus,
       partnerName: setup.partnerName,
       homeCity: setup.city,
@@ -828,6 +830,24 @@ export default function App() {
     saveCareerOrigin(normalizeCareerOrigin(setup.city, setup.state));
     setSelectedCaseToBrief(null);
     setCurrentView('HUB');
+    return true;
+  };
+
+  const handleWelcomeAdvance = async (nextStep: number): Promise<boolean> => {
+    if (!player.name || player.onboardingStage !== 'WELCOME_PENDING') return false;
+    const next: PlayerProfile = { ...player, welcomeDialogueStep: nextStep };
+    const saved = await persistPlayerCloudSave(next);
+    if (!saved.ok) return false;
+    setPlayer(next);
+    return true;
+  };
+
+  const handleOfficeTourComplete = async (): Promise<boolean> => {
+    if (!player.name) return false;
+    const next: PlayerProfile = { ...player, officeTutorialSeen: true };
+    const result = await persistPlayerCloudSave(next);
+    if (!result.ok) return false;
+    setPlayer(next);
     return true;
   };
 
@@ -2802,6 +2822,7 @@ export default function App() {
       {currentView === 'HUB' && !isMobileFrame ? (
         <OfficeScene
           player={player}
+          onOfficeTourComplete={handleOfficeTourComplete}
           onSelectCaseToView={(c) => setSelectedCaseToBrief(c)}
           onResumeActiveCase={() => setCurrentView('INVESTIGATION_MAP')}
           onOpenCareerModal={() => setIsCareerModalOpen(true)}
@@ -2908,7 +2929,7 @@ export default function App() {
         </div>
       )}
 
-      <NewGameModal isOpen={isNewGameModalOpen} onStartNewGame={handleStartNewGame} onWelcomeComplete={handleWelcomeFinished} resumePlayer={player.onboardingStage === 'WELCOME_PENDING' ? player : null} />
+      <NewGameModal isOpen={isNewGameModalOpen} onStartNewGame={handleStartNewGame} onWelcomeComplete={handleWelcomeFinished} onWelcomeAdvance={handleWelcomeAdvance} resumePlayer={player.onboardingStage === 'WELCOME_PENDING' ? player : null} />
 
       <ResidenceSetupModal
         player={player}
