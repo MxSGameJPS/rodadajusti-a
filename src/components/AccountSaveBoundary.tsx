@@ -8,7 +8,7 @@ const WORKING_SAVE_KEY = 'rota_da_justica_save_v1';
 // os módulos legados. A fonte de verdade após autenticação é game_saves.
 const ACTIVE_ACCOUNT_KEY = 'rota_da_justica_active_account_v1';
 
-async function activateSessionStorage(session: Session | null) {
+async function activateSessionStorage(session: Session | null, isCurrent: () => boolean) {
   const userId = session?.user?.id;
   if (!userId) {
     window.localStorage.removeItem(WORKING_SAVE_KEY);
@@ -28,6 +28,7 @@ async function activateSessionStorage(session: Session | null) {
     .limit(1)
     .maybeSingle();
   if (error) throw error;
+  if (!isCurrent()) return;
   if (data?.game_state && typeof data.game_state === 'object') {
     window.localStorage.setItem(WORKING_SAVE_KEY, JSON.stringify(data.game_state));
   }
@@ -59,7 +60,7 @@ export function AccountSaveBoundary({ children }: AccountSaveBoundaryProps) {
       setReady(false);
       setLoadError('');
       try {
-        await activateSessionStorage(session);
+        await activateSessionStorage(session, () => active && current === generation);
         if (active && current === generation) setReady(true);
       } catch (error) {
         if (active && current === generation) setLoadError(error instanceof Error ? error.message : 'Não foi possível carregar sua carreira.');
