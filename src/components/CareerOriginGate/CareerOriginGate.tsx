@@ -3,8 +3,6 @@ import { Loader2, MapPin, Navigation, ShieldCheck } from 'lucide-react';
 import {
   normalizeCareerOrigin,
   patchCareerOriginIntoExistingPlayerSave,
-  readCareerOrigin,
-  readCareerOriginFromPlayerSave,
   saveCareerOrigin,
 } from '../../lib/careerOrigin';
 import {
@@ -14,6 +12,7 @@ import {
   saveWorldMapProfile,
 } from '../../lib/worldMap';
 import styles from './CareerOriginGate.module.css';
+import { supabase } from '../../lib/supabase';
 
 const BRAZIL_STATES = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS',
@@ -29,52 +28,23 @@ export const CareerOriginGate: React.FC = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const existing = readCareerOrigin();
-    if (existing) {
-      patchCareerOriginIntoExistingPlayerSave(existing);
-      return;
-    }
-
-    const fromPlayer = readCareerOriginFromPlayerSave();
-    if (fromPlayer) {
-      saveCareerOrigin(fromPlayer);
-      return;
-    }
-
-    setIsOpen(true);
-  }, []);
-
-  useEffect(() => {
     let active = true;
-    let syncing = false;
-
-    const syncOriginToCareer = async () => {
-      if (!active || syncing) return;
-      const origin = readCareerOrigin();
+    void (async () => {
+      if (!supabase) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!active || !user) return;
       const player = readSavedPlayerForWorldMap();
-      if (!origin || !player?.name?.trim()) return;
-
-      patchCareerOriginIntoExistingPlayerSave(origin);
-      if (readWorldMapProfile(player)) return;
-
-      syncing = true;
-      try {
-        const geocoded = await geocodeBrazilianCity(origin.city, origin.state);
-        if (!active) return;
-        saveWorldMapProfile(player, { ...geocoded, source: 'PLAYER_PROFILE' });
-      } catch {
-        // O painel do mapa ainda oferece configuração manual se a geocodificação ficar indisponível.
-      } finally {
-        syncing = false;
-      }
-    };
-
-    void syncOriginToCareer();
-    const interval = window.setInterval(() => void syncOriginToCareer(), 1200);
-    return () => {
-      active = false;
-      window.clearInterval(interval);
-    };
+      if (player?.name?.trim()) return;
+      const { data, error: loadError } = await supabase.from('player_onboarding')
+        .select('city,state').eq('user_id', user.id).maybeSingle();
+      if (!active) return;
+      if (loadError) { setError('Não foi possível consultar a cidade inicial. Recarregue a página.'); setIsOpen(true); return; }
+      if (data?.city && data?.state) {
+        setCity(data.city); setState(data.state);
+        saveCareerOrigin(normalizeCareerOrigin(data.city, data.state));
+      } else setIsOpen(true);
+    })();
+    return () => { active = false; };
   }, []);
 
   if (!isOpen) return null;
@@ -89,6 +59,11 @@ export const CareerOriginGate: React.FC = () => {
     setError('');
     try {
       const geocoded = await geocodeBrazilianCity(cleanCity, cleanState);
+      if (!supabase) throw new Error('Serviço indisponível.');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Sessão expirada. Faça login novamente.');
+      const { error: saveError } = await supabase.from('player_onboarding').upsert({ user_id: user.id, city: cleanCity, state: cleanState }, { onConflict: 'user_id' });
+      if (saveError) throw saveError;
       const origin = normalizeCareerOrigin(cleanCity, cleanState);
       saveCareerOrigin(origin);
       patchCareerOriginIntoExistingPlayerSave(origin);
