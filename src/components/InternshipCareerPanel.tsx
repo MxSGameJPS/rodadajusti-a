@@ -155,6 +155,7 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
         onClose={() => setSelectedTask(null)}
         onComplete={onCompleteTask}
         savedProgress={selectedTask ? player.officeTaskProgress?.[selectedTask.id] : undefined}
+        variationSeed={player.avatarSeed}
         onSaveProgress={onSaveTaskProgress}
       />
 
