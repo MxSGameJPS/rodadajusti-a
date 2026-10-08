@@ -24,3 +24,14 @@ Pós-vídeo, introdução narrativa, cidade/UF, residência, área jurídica, ac
 Executar localmente: `npm run lint` e `npm run build`; testar contas A/B no mesmo navegador, completar a origem, cancelar troca de município, validar endereço, assinar contrato, recarregar durante Mariana, retomar com segundo navegador, concluir o diálogo, verificar que não repete e checar `careers.main_area` e `game_saves.game_state.onboardingStage` no banco.
 
 Status: **IMPLEMENTADO — TESTE FUNCIONAL PENDENTE**. Não marcar homologada sem build e testes em produção.
+
+## Complementos aplicados
+- Segunda migração: `supabase/migrations/20261008094000_add_player_onboarding_intro_checkpoint.sql` (aplicada), coluna `intro_seen`, para não reiniciar a narrativa depois de concluída na mesma conta.
+- Contrato agora mostra o nome do jogador, supervisão, valor da bolsa e natureza fictícia; o aceite exige marcação explícita.
+- Quando há alteração da cidade no formulário de residência, exige confirmação e atualiza `player_onboarding` antes de criar a carreira.
+- Após criar a carreira em nuvem, a cidade-base volta a inicializar o perfil do mapa.
+- `careers.main_area` é sincronizada na inserção e nas atualizações.
+- Falhas na leitura do checkpoint exibem ação de tentar novamente, sem iniciar etapas com estado desconhecido.
+- Schema e RLS de `player_onboarding` conferidos diretamente por SQL no projeto remoto.
+
+**Nota:** ambiente de execução desta conversa não conseguiu acessar o servidor GitHub para clonar o repositório (`Could not resolve host: github.com`), portanto build/lint ainda não foram executados e a etapa depende do teste do proprietário.
