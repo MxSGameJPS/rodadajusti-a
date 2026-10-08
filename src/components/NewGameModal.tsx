@@ -7,6 +7,7 @@ import { CelebrationBurst } from './CelebrationBurst/CelebrationBurst';
 import { geocodeBrazilianAddress, type WorldAddressProfile } from '../lib/worldMap';
 import { OfficeWelcomeDialog } from './OfficeWelcomeDialog';
 import { ActOneIntroSequence } from './ActOneIntroSequence';
+import { CAREER_ORIGIN_UPDATED_EVENT, type CareerOrigin } from '../lib/careerOrigin';
 
 export interface NewGameSetup {
   name: string;
@@ -74,6 +75,21 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
   const [isActOneIntroOpen, setIsActOneIntroOpen] = useState(!resumePlayer);
   const [introCheckpointReady, setIntroCheckpointReady] = useState(Boolean(resumePlayer));
   const [introCheckpointError, setIntroCheckpointError] = useState('');
+
+  useEffect(() => {
+    if (!isOpen || resumePlayer) return;
+    const updateOrigin = (event: Event) => {
+      const origin = (event as CustomEvent<CareerOrigin>).detail;
+      if (!origin?.city || !origin?.state) return;
+      setCity(origin.city);
+      setState(origin.state);
+      setOriginalCity(origin.city);
+      setOriginalState(origin.state);
+      setValidatedAddress(null);
+    };
+    window.addEventListener(CAREER_ORIGIN_UPDATED_EVENT, updateOrigin);
+    return () => window.removeEventListener(CAREER_ORIGIN_UPDATED_EVENT, updateOrigin);
+  }, [isOpen, resumePlayer]);
 
   useEffect(() => {
     if (!isOpen || didHydrateAuthName || isOfficeWelcomeOpen || !supabase) return;
