@@ -457,11 +457,16 @@ export function buildMarianaArrivalDialogues(player: PlayerProfile, taskTitles: 
   const greeting = attendance?.status === 'LATE'
     ? `Você chegou com ${attendance.lateMinutes} minutos de atraso. Eu registrei seu horário. Tente organizar melhor o deslocamento, porque o Dr. Roberto acompanha pontualidade junto com as entregas.`
     : 'Bom dia. Sua entrada já está registrada. O Dr. Roberto deixou algumas prioridades para o seu expediente e eu organizei a ordem do que precisa de atenção hoje.';
+  const firstDay = readInternshipRoutine(player).attendance.filter((record) => record.status !== 'OFF_DAY').length === 1;
+  const introduction = firstDay
+    ? 'Este é seu primeiro expediente. Comece pela Agenda, leia suas prioridades e escolha uma atividade supervisionada. Se tiver dúvidas, consulte o Dr. Roberto antes de avançar.'
+    : 'Confira a Agenda no início de cada expediente e planeje suas tarefas supervisionadas.';
   const workload = taskTitles.length
     ? `Para hoje, suas prioridades são: ${taskTitles.join('; ')}. Você não precisa fazer tudo ao mesmo tempo; observe os prazos e escolha a ordem com cuidado.`
     : 'Não há uma nova atividade supervisionada pendente para hoje. Aproveite o expediente para acompanhar casos, revisar pendências e manter sua rotina organizada.';
   return [
     { eyebrow: attendance?.status === 'LATE' ? 'Chegada registrada' : 'Bom dia', text: greeting },
+    { eyebrow: firstDay ? 'Seu primeiro expediente' : 'Organize o dia', text: introduction },
     { eyebrow: 'Prioridades do expediente', text: workload },
     { eyebrow: 'Rotina profissional', text: player.careerTier === 'ESTAGIARIO_SENIOR'
       ? 'Como Estagiário Sênior, você terá mais autonomia. Nem toda demanda virá com instruções detalhadas, então organização e iniciativa passam a pesar ainda mais.'
