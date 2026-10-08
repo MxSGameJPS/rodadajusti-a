@@ -44,3 +44,9 @@ Projeto confirmado: `rotadajustica` (`ibbfwxqpowcwpuasxxdl`), conector Rota.
 - O Advisor também relata `auth_leaked_password_protection`, três tabelas com RLS sem políticas e uma função com `search_path` mutável. Não alteradas nesta etapa por exigirem estudo de dependências.
 - Este conector permite SQL, migrações e Advisors. Ele **não expõe ações de configuração dos templates de e-mail, SMTP, URLs de redirect e políticas do Auth**; esses itens requerem configuração no painel/API administrativa apropriada.
 - **Não foram realizados testes reais de entrega de e-mails, signup ou recuperação**, nem build de produção nesta validação. Ainda não homologado para teste aberto.
+
+## Limpeza de contas solicitada — 2026-10-08
+- Operação executada exclusivamente no projeto Supabase `rotadajustica` (`ibbfwxqpowcwpuasxxdl`): `DELETE FROM auth.users` dentro de transação, com cascatas conforme chaves estrangeiras.
+- Antes: 8 usuários, 1 carreira, 1 save. Depois, conferência SQL: `auth.users` 0, `public.profiles` 0, `public.careers` 0, `public.game_saves` 0, `auth.sessions` 0.
+- Confirmado antes da limpeza: conta de teste recém-criada estava com `email_confirmed_at` preenchido sem confirmação recebida pelo usuário. **Investigar configuração de confirmação obrigatória no Supabase Auth**; mudança não foi feita por SQL.
+- Foi uma operação de limpeza de dados de ambiente para reiniciar testes, **não uma migração de esquema** e portanto não deve ser reproduzida automaticamente por deploy.
