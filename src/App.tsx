@@ -1180,8 +1180,12 @@ export default function App() {
     ]);
   };
 
+  const arrivalInFlightRef = React.useRef(false);
   const handleRegisterInternArrival = async () => {
     if (player.careerTier !== 'ESTAGIARIO' && player.careerTier !== 'ESTAGIARIO_SENIOR') return;
+    if (arrivalInFlightRef.current) return;
+    arrivalInFlightRef.current = true;
+    try {
     const prepared = prepareOfficeArrival(player);
     if (!prepared.allowed) {
       if (prepared.reason !== 'ALREADY_REGISTERED') setLifeWarning('O registro de entrada está disponível apenas durante o expediente do escritório, das 08h às 14h, em dias úteis.');
@@ -1210,12 +1214,13 @@ export default function App() {
       const titles = tasks.filter((task) => assignedIds.includes(task.id)).map((task) => task.title);
       setMarianaArrivalDialogues(buildMarianaArrivalDialogues(player, titles));
     }
+    } finally { arrivalInFlightRef.current = false; }
   };
 
   const handleRegisterInternDeparture = () => {
+    const previousDeparture = getTodayAttendance(player)?.departureMinute;
     const result = registerOfficeDeparture(player);
-    if (result.record?.departureMinute != null && result.record.departureMinute !== null) {
-      const previousDeparture = getTodayAttendance(player)?.departureMinute;
+    if (result.record?.departureMinute != null) {
       if (previousDeparture == null) {
         const assessment = assessEarlyDeparture(player, result.record.departureMinute);
         if (assessment) applyRoutineDiscipline(assessment);
@@ -3224,8 +3229,14 @@ export default function App() {
           dialogues={marianaArrivalDialogues}
           finalActionLabel="Começar expediente"
           onComplete={() => {
-            markDailyBriefingReceived(player);
-            setMarianaArrivalDialogues(null);
+            void (async () => {
+              const routine = readInternshipRoutine(player);
+              const day = `${player.gameCurrentYear}-${String(player.gameCurrentMonth).padStart(2, '0')}-${String(player.gameCurrentDay).padStart(2, '0')}`;
+              const state = { ...routine, greetedWorkdays: [...new Set([...routine.greetedWorkdays, day])].slice(-60) };
+              const ok = await commitInternshipRoutine(player, state);
+              if (!ok) { setLifeWarning('Não foi possível registrar a conclusão da conversa da Mariana. Tente novamente.'); return; }
+              setMarianaArrivalDialogues(null);
+            })();
           }}
         />
       )}
