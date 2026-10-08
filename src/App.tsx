@@ -1306,22 +1306,34 @@ export default function App() {
     setSupervisorReviewDialogues(buildSupervisorReviewDialogues(player, review));
   };
 
-  const handleCompleteSupervisorReview = () => {
+  const supervisorReviewInFlight = React.useRef(false);
+  const handleCompleteSupervisorReview = async () => {
     const review = periodicSupervisorReview;
-    if (!review) return;
-    recordPeriodicReview(player, review);
-    const trustDelta = review.score >= 75 ? 3 : review.score >= 60 ? 1 : -4;
-    setPlayer((prev) => ({
-      ...prev,
-      officePerformance: applyRoutinePerformance(prev.officePerformance, { supervisorTrust: trustDelta, diligence: review.score < 60 ? -1 : 1 }),
-    }));
-    applyRelationshipInteraction(player, {
-      entityId: 'npc:ROBERTO', entityType: 'NPC', name: 'Dr. Roberto Ramos', role: 'Sócio responsável • Ramos & Associados',
-      gameDate: review.date, kind: 'PERFORMANCE_REVIEW', title: review.title, description: review.summary,
-      scope: 'WORKPLACE', intensity: 36, dimensions: { professionalTrust: trustDelta, professionalRespect: review.score >= 60 ? 2 : -2, conflict: review.score < 60 ? 3 : 0 }, bond: 'PROFESSIONAL',
-    });
-    setPeriodicSupervisorReview(null);
-    setSupervisorReviewDialogues(null);
+    if (!review || supervisorReviewInFlight.current) return;
+    if (player.processedOfficeReviewIds?.includes(review.id)) {
+      setPeriodicSupervisorReview(null); setSupervisorReviewDialogues(null); return;
+    }
+    supervisorReviewInFlight.current = true;
+    try {
+      const trustDelta = review.score >= 75 ? 3 : review.score >= 60 ? 1 : -4;
+      const nextPerformance = applyRoutinePerformance(player.officePerformance, { supervisorTrust: trustDelta, diligence: review.score < 60 ? -1 : 1 });
+      const next: PlayerProfile = { ...player, officePerformance: nextPerformance,
+        processedOfficeReviewIds: [...(player.processedOfficeReviewIds || []), review.id].slice(-60) };
+      const saved = await persistPlayerCloudSave(next);
+      if (!saved.ok) { setLifeWarning('Falha ao salvar a avaliação profissional. Tente novamente.'); return; }
+      const routine = readInternshipRoutine(player);
+      const state = { ...routine, meetings: routine.meetings.some((item) => item.id === review.id) ? routine.meetings : [...routine.meetings, review] };
+      const routineSaved = await commitInternshipRoutine(player, state);
+      if (!routineSaved) { setLifeWarning('A nota foi salva, mas a reunião não foi sincronizada. Tente novamente.'); return; }
+      setPlayer((prev) => ({ ...prev, officePerformance: nextPerformance,
+        processedOfficeReviewIds: next.processedOfficeReviewIds }));
+      applyRelationshipInteraction(player, {
+        entityId: 'npc:ROBERTO', entityType: 'NPC', name: 'Dr. Roberto Ramos', role: 'Sócio responsável • Ramos & Associados',
+        gameDate: review.date, kind: 'PERFORMANCE_REVIEW', title: review.title, description: review.summary,
+        scope: 'WORKPLACE', intensity: 36, dimensions: { professionalTrust: trustDelta, professionalRespect: review.score >= 60 ? 2 : -2, conflict: review.score < 60 ? 3 : 0 }, bond: 'PROFESSIONAL',
+      });
+      setPeriodicSupervisorReview(null); setSupervisorReviewDialogues(null);
+    } finally { supervisorReviewInFlight.current = false; }
   };
 
   const handleSeniorPortfolioReview = async (matterId: string) => {
