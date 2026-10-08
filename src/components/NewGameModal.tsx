@@ -60,6 +60,8 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
   const [street, setStreet] = useState(resumePlayer?.household?.residence?.street || '');
   const [number, setNumber] = useState(resumePlayer?.household?.residence?.number || '');
   const [city, setCity] = useState(resumePlayer?.homeCity || '');
+  const [originalCity, setOriginalCity] = useState('');
+  const [originalState, setOriginalState] = useState('');
   const [state, setState] = useState((resumePlayer?.homeState || '').toUpperCase());
   const [validatedAddress, setValidatedAddress] = useState<WorldAddressProfile | null>(null);
   const [addressError, setAddressError] = useState('');
@@ -98,6 +100,8 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
       if (!active || !data) return;
       setCity(data.city);
       setState(data.state);
+      setOriginalCity(data.city);
+      setOriginalState(data.state);
     })();
     return () => { active = false; };
   }, [isOpen, resumePlayer]);
@@ -140,6 +144,8 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
     if (isAcceptingOffer || validatingAddress) return;
     try {
       if (relationshipStatus !== 'SINGLE' && !partnerName.trim()) throw new Error('Informe o nome do parceiro ou parceira.');
+      const changedCity = originalCity && (city.trim().toLocaleLowerCase('pt-BR') !== originalCity.toLocaleLowerCase('pt-BR') || state.trim().toUpperCase() !== originalState);
+      if (changedCity && !window.confirm('A residência está em uma cidade diferente da escolhida para iniciar a carreira. Deseja alterar a cidade-base para este endereço?')) return;
       const addressProfile = await validateResidence();
       setIsAcceptingOffer(true);
       const created = await onStartNewGame({
@@ -150,6 +156,10 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
         initialFocus: selectedFocus,
       });
       if (!created) throw new Error('Não foi possível registrar a contratação. Tente novamente.');
+      if (supabase) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) await supabase.from('player_onboarding').upsert({ user_id: user.id, city: city.trim(), state: state.trim().toUpperCase() }, { onConflict: 'user_id' });
+      }
       sound.playVictory();
       setIsOfficeWelcomeOpen(true);
     } catch (error) {
