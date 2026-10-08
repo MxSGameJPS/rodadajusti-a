@@ -17,6 +17,9 @@ interface NpcGuidanceDialogProps {
   dialogues: NpcGuidanceStep[];
   finalActionLabel: string;
   onComplete: () => void;
+  initialStep?: number;
+  onStepChange?: (nextStep: number) => Promise<boolean>;
+  isBusy?: boolean;
 }
 
 export const NpcGuidanceDialog: React.FC<NpcGuidanceDialogProps> = ({
@@ -29,8 +32,13 @@ export const NpcGuidanceDialog: React.FC<NpcGuidanceDialogProps> = ({
   dialogues,
   finalActionLabel,
   onComplete,
+  initialStep = 0,
+  onStepChange,
+  isBusy = false,
 }) => {
-  const [stepIndex, setStepIndex] = useState(0);
+  const [stepIndex, setStepIndex] = useState(initialStep);
+  const [savingStep, setSavingStep] = useState(false);
+  const [stepError, setStepError] = useState('');
   const [visibleCharacters, setVisibleCharacters] = useState(0);
 
   const currentDialogue = dialogues[stepIndex] || dialogues[0];
@@ -41,9 +49,9 @@ export const NpcGuidanceDialog: React.FC<NpcGuidanceDialogProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    setStepIndex(0);
+    setStepIndex(Math.max(0, Math.min(initialStep, dialogues.length - 1)));
     setVisibleCharacters(0);
-  }, [isOpen, dialogues]);
+  }, [isOpen, dialogues, initialStep]);
 
   useEffect(() => {
     if (!isOpen || !currentDialogue || isTextComplete) return;
@@ -63,7 +71,8 @@ export const NpcGuidanceDialog: React.FC<NpcGuidanceDialogProps> = ({
 
   if (!isOpen || !currentDialogue || dialogues.length === 0) return null;
 
-  const handleAdvance = () => {
+  const handleAdvance = async () => {
+    if (savingStep || isBusy) return;
     sound.playClick();
 
     if (!isTextComplete) {
@@ -76,6 +85,14 @@ export const NpcGuidanceDialog: React.FC<NpcGuidanceDialogProps> = ({
       return;
     }
 
+    if (onStepChange) {
+      setSavingStep(true); setStepError('');
+      try {
+        const ok = await onStepChange(stepIndex + 1);
+        if (!ok) { setStepError('Falha ao salvar o diálogo. Tente novamente.'); return; }
+      } catch { setStepError('Sem conexão para salvar o diálogo. Tente novamente.'); return; }
+      finally { setSavingStep(false); }
+    }
     setStepIndex((current) => current + 1);
     setVisibleCharacters(0);
   };
@@ -161,6 +178,7 @@ export const NpcGuidanceDialog: React.FC<NpcGuidanceDialogProps> = ({
               </div>
             </div>
 
+            {stepError && <p role="alert" className="px-5 py-2 text-xs text-[#FCA5A5]">{stepError}</p>}
             <div className="flex items-center justify-between gap-4 border-t border-[#2B2926] bg-[#0D0D0F] px-5 py-4 sm:px-6">
               <p className="hidden text-[11px] text-[#77737A] sm:block">
                 {isTextComplete ? 'Continue quando estiver pronto(a).' : 'Clique para exibir a fala completa.'}
@@ -168,7 +186,8 @@ export const NpcGuidanceDialog: React.FC<NpcGuidanceDialogProps> = ({
 
               <button
                 type="button"
-                onClick={handleAdvance}
+                disabled={savingStep || isBusy}
+                onClick={() => void handleAdvance()}
                 className="ml-auto inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#C5A059] px-5 py-3 text-xs font-extrabold uppercase tracking-[0.12em] text-[#111113] shadow-lg shadow-[#C5A059]/15 transition hover:bg-[#D8B56B] active:scale-[0.98] sm:min-w-[210px]"
               >
                 {isLastStep && isTextComplete ? (
