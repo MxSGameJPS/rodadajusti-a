@@ -43,3 +43,6 @@ Status: **IMPLEMENTADO — TESTE FUNCIONAL PENDENTE**. Não marcar homologada se
 - `UPDATE ... .single()` retornava 406 quando nenhuma linha era atualizada.
 - Corrigido na `main` para `upsert` por `user_id`, com `city`, `state`, `intro_seen=true`.
 - Não exige migração adicional. Aguardando reteste após deploy.
+
+## Correção: capítulo 4 exigia cidade prematuramente
+O checkpoint `intro_seen` ocorre ANTES de escolher cidade/UF; a tela ficava presa no alerta 'Confirme sua cidade inicial antes de prosseguir'. Migração `20261008100000_allow_intro_checkpoint_without_location.sql` aplicada para permitir `city/state` nulos em conjunto. O fluxo grava apenas `{user_id,intro_seen:true}` ao terminar narrativa. `CareerOriginGate` permanece responsável por recolher cidade/UF e completar a linha posteriormente. `NewGameModal` ignora coordenadas nulas ao hidratar. Teste em navegador ainda pendente.
