@@ -561,6 +561,7 @@ export interface PlayerProfile {
   officeTutorialSeen?: boolean;
   officeTaskProgress?: Record<string, { stepIndex: number; completedStepIds: string[] }>;
   processedOfficeReviewIds?: string[];
+  handledOfficeEventKeys?: string[];
   homeCity?: string;
   homeState?: string;
   gameCurrentDay: number;
