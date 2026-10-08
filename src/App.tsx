@@ -1495,18 +1495,38 @@ export default function App() {
 
     if (!task) return false;
 
-    const projectedProfile: PlayerProfile = {
-      ...player, ...gameClockFields(player, taskMinutes),
-      xp: player.xp + task.xpReward,
-      money: player.money + task.moneyReward,
-      officePerformance: performance,
-    };
-    const projectedSave = await persistPlayerCloudSave(projectedProfile);
-    if (!projectedSave.ok) {
-      setLifeWarning('Não foi possível salvar a entrega no Supabase. Tente novamente.');
-      return false;
+    const nextXp = player.xp + task.xpReward;
+    const nextMoney = player.money + task.moneyReward;
+    let nextTier = player.careerTier;
+    let promotionNarrative: InternPromotionNarrative | null = null;
+
+    if (player.careerTier === 'ESTAGIARIO') {
+      const projectedPlayer = { ...player, xp: nextXp, money: nextMoney, officePerformance: performance };
+      promotionNarrative = buildInternPromotionNarrative(projectedPlayer);
+      if (promotionNarrative.eligible) nextTier = 'ESTAGIARIO_SENIOR';
+      else {
+        const status = getInternPromotionStatus({
+          casesSolved: player.casesSolved,
+          xp: nextXp,
+          performance,
+          discipline: player.officeDiscipline,
+        });
+        if (status.progressPercent >= 67) setPromotionReviewDialogues(promotionNarrative.dialogues);
+      }
     }
 
+    const clock = gameClockFields(player, taskMinutes);
+    const finalProfile: PlayerProfile = {
+      ...player,
+      ...clock,
+      xp: nextXp,
+      money: nextMoney,
+      careerTier: nextTier,
+      officePerformance: performance,
+      officeTaskProgress: Object.fromEntries(Object.entries(player.officeTaskProgress || {}).filter(([id]) => id !== taskId)),
+    };
+    const saved = await persistPlayerCloudSave(finalProfile);
+    if (!saved.ok) { setLifeWarning('A entrega não foi registrada no Supabase. Tente novamente.'); return false; }
     applyRelationshipInteraction(player, {
       entityId: 'npc:ROBERTO',
       entityType: 'NPC',
@@ -1540,34 +1560,8 @@ export default function App() {
       bond: 'PROFESSIONAL',
     });
 
-    const nextXp = player.xp + task.xpReward;
-    const nextMoney = player.money + task.moneyReward;
-    let nextTier = player.careerTier;
-    let promotionNarrative: InternPromotionNarrative | null = null;
-
-    if (player.careerTier === 'ESTAGIARIO') {
-      const projectedPlayer = { ...player, xp: nextXp, money: nextMoney, officePerformance: performance };
-      promotionNarrative = buildInternPromotionNarrative(projectedPlayer);
-      if (promotionNarrative.eligible) nextTier = 'ESTAGIARIO_SENIOR';
-      else {
-        const status = getInternPromotionStatus({
-          casesSolved: player.casesSolved,
-          xp: nextXp,
-          performance,
-          discipline: player.officeDiscipline,
-        });
-        if (status.progressPercent >= 67) setPromotionReviewDialogues(promotionNarrative.dialogues);
-      }
-    }
-
-    setPlayer((prev) => ({
-      ...prev,
-      ...gameClockFields(prev, taskMinutes),
-      xp: nextXp,
-      money: nextMoney,
-      careerTier: nextTier,
-      officePerformance: performance,
-    }));
+    setPlayer((prev) => ({ ...prev, ...clock, xp: nextXp, money: nextMoney, careerTier: nextTier, officePerformance: performance,
+      officeTaskProgress: Object.fromEntries(Object.entries(prev.officeTaskProgress || {}).filter(([id]) => id !== taskId)) }));
 
     if (nextTier === 'ESTAGIARIO_SENIOR' && player.careerTier === 'ESTAGIARIO' && promotionNarrative) {
       setInternPromotionNarrative(promotionNarrative);
