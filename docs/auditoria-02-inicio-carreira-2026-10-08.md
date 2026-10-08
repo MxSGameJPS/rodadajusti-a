@@ -37,3 +37,9 @@ Status: **IMPLEMENTADO — TESTE FUNCIONAL PENDENTE**. Não marcar homologada se
 **Nota:** ambiente de execução desta conversa não conseguiu acessar o servidor GitHub para clonar o repositório (`Could not resolve host: github.com`), portanto build/lint ainda não foram executados e a etapa depende do teste do proprietário.
 
 - Sincronização imediata com `CAREER_ORIGIN_UPDATED_EVENT`: o formulário de contrato recebe a cidade/UF confirmadas mesmo quando montou antes da conclusão do modal de origem.
+
+## Correção do erro 406 no checkpoint — 2026-10-08
+- Diagnóstico no banco: a conta afetada existe em `auth.users`, mas não tinha registro em `player_onboarding`.
+- `UPDATE ... .single()` retornava 406 quando nenhuma linha era atualizada.
+- Corrigido na `main` para `upsert` por `user_id`, com `city`, `state`, `intro_seen=true`.
+- Não exige migração adicional. Aguardando reteste após deploy.
