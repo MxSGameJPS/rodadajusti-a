@@ -571,7 +571,18 @@ export default function App() {
 
   useEffect(() => {
     if (!player.name || !player.cloudCareerId) return;
-    void hydrateInternshipRoutine(player);
+    let active = true;
+    void hydrateInternshipRoutine(player).then((routine) => {
+      if (!active || !isInternCareer(player)) return;
+      const day = [player.gameCurrentYear, String(player.gameCurrentMonth).padStart(2, '0'), String(player.gameCurrentDay).padStart(2, '0')].join('-');
+      const today = routine.attendance.find((entry) => entry.date === day);
+      if (!today || routine.greetedWorkdays.includes(day) || !getWorkSchedule(player).workday) return;
+      const tasks = getTasksForTier(player.careerTier);
+      const assignedIds = getDailyTaskIds(player, tasks.map((task) => task.id));
+      const titles = tasks.filter((task) => assignedIds.includes(task.id)).map((task) => task.title);
+      setMarianaArrivalDialogues(buildMarianaArrivalDialogues(player, titles));
+    });
+    return () => { active = false; };
   }, [player.cloudCareerId, player.name]);
 
   useEffect(() => {
