@@ -1314,6 +1314,10 @@ export default function App() {
     const review = periodicSupervisorReview;
     if (!review || supervisorReviewInFlight.current) return;
     if (player.processedOfficeReviewIds?.includes(review.id)) {
+      const routine = readInternshipRoutine(player);
+      const next = { ...routine, meetings: routine.meetings.some((item) => item.id === review.id) ? routine.meetings : [...routine.meetings, review] };
+      const saved = await commitInternshipRoutine(player, next);
+      if (!saved) { setLifeWarning('Não foi possível concluir a sincronização desta reunião. Tente novamente.'); return; }
       setPeriodicSupervisorReview(null); setSupervisorReviewDialogues(null); return;
     }
     supervisorReviewInFlight.current = true;
