@@ -40,3 +40,6 @@ Não houve migrações de esquema. `officeTaskProgress`, `processedOfficeReviewI
 
 ### Compatibilidade com reuniões antigas
 A periodicidade considera agora também reuniões preexistentes com IDs legados `review:YYYY-MM-DD`, impedindo que a alteração para `review:cycle:N` gere novas avaliações para ciclos já pontuados.
+
+### Exibição de justificativas
+O painel de ponto passa a distinguir ausências já justificadas, exibindo confirmação e ocultando o botão de nova solicitação para a mesma data. A política de mérito de aprovação permanece legado e requer definição específica antes de substituir o fluxo automático.
