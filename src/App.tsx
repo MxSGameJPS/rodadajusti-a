@@ -133,7 +133,6 @@ import {
   type OfficeEventChoiceId,
   buildMarianaArrivalDialogues,
   hasReceivedDailyBriefing,
-  markDailyBriefingReceived,
   getDailyTaskIds,
   assessArrivalDiscipline,
   assessEarlyDeparture,
