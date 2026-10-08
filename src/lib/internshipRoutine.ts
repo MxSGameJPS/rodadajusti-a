@@ -272,7 +272,7 @@ export function getDailyOfficeEvent(player: PlayerProfile) {
   if (!schedule.workday) return null;
   const key = `event:${dateKey(player)}`;
   const state = readInternshipRoutine(player);
-  if (state.handledEventKeys.includes(key)) return null;
+  if (state.handledEventKeys.includes(key) || player.handledOfficeEventKeys?.includes(key)) return null;
   const roll = hash(`${key}:${player.avatarSeed}`) % 100;
   if (roll >= 42) return null;
   const events = [
