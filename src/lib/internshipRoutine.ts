@@ -39,6 +39,7 @@ export interface InternshipRoutineState {
   lastTaskDeliveryKey: string | null;
   dailyTaskKeys: Record<string, string[]>;
   greetedWorkdays: string[];
+  briefingProgress?: Record<string, number>;
   excusedAbsenceKeys: string[];
   handledSeniorPriorityKeys: string[];
   processedDisciplineKeys: string[];
@@ -80,7 +81,7 @@ function hash(value: string) {
 export function readInternshipRoutine(player: PlayerProfile): InternshipRoutineState {
   try {
     const raw = localStorage.getItem(storageKey(player));
-    if (!raw) return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [], handledSeniorPriorityKeys: [], processedDisciplineKeys: [] };
+    if (!raw) return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], briefingProgress: {}, excusedAbsenceKeys: [], handledSeniorPriorityKeys: [], processedDisciplineKeys: [] };
     const parsed = JSON.parse(raw);
     return {
       attendance: Array.isArray(parsed.attendance) ? parsed.attendance.slice(-90) : [],
@@ -89,6 +90,7 @@ export function readInternshipRoutine(player: PlayerProfile): InternshipRoutineS
       lastTaskDeliveryKey: typeof parsed.lastTaskDeliveryKey === 'string' ? parsed.lastTaskDeliveryKey : null,
       dailyTaskKeys: parsed.dailyTaskKeys && typeof parsed.dailyTaskKeys === 'object' ? parsed.dailyTaskKeys : {},
       greetedWorkdays: Array.isArray(parsed.greetedWorkdays) ? parsed.greetedWorkdays.slice(-60) : [],
+      briefingProgress: parsed.briefingProgress && typeof parsed.briefingProgress === 'object' ? parsed.briefingProgress : {},
       excusedAbsenceKeys: Array.isArray(parsed.excusedAbsenceKeys) ? parsed.excusedAbsenceKeys.slice(-60) : [],
       handledSeniorPriorityKeys: Array.isArray(parsed.handledSeniorPriorityKeys) ? parsed.handledSeniorPriorityKeys.slice(-120) : [],
       processedDisciplineKeys: Array.isArray(parsed.processedDisciplineKeys) ? parsed.processedDisciplineKeys.slice(-120) : [],
