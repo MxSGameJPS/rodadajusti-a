@@ -7,7 +7,7 @@ interface InternOfficeTaskModalProps {
   isOpen: boolean;
   task: OfficeStageTask | null;
   onClose: () => void;
-  onComplete: (taskId: string) => void;
+  onComplete: (taskId: string) => Promise<boolean>;
 }
 
 export const InternOfficeTaskModal: React.FC<InternOfficeTaskModalProps> = ({
@@ -17,12 +17,15 @@ export const InternOfficeTaskModal: React.FC<InternOfficeTaskModalProps> = ({
   onComplete,
 }) => {
   const [stepIndex, setStepIndex] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [selectedOptionId, setSelectedOptionId] = useState('');
   const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
 
   useEffect(() => {
     setStepIndex(0);
+    setSubmitError('');
     setSelectedOptionId('');
     setFeedback(null);
     setCompletedSteps([]);
@@ -53,13 +56,19 @@ export const InternOfficeTaskModal: React.FC<InternOfficeTaskModalProps> = ({
     setFeedback({ kind: 'error', text: currentStep.retryFeedback });
   };
 
-  const handleAdvance = () => {
-    if (!currentStepSolved) return;
+  const handleAdvance = async () => {
+    if (!currentStepSolved || submitting) return;
 
     if (isLastStep) {
-      sound.playVictory();
-      onComplete(task.id);
-      onClose();
+      setSubmitting(true);
+      setSubmitError('');
+      try {
+        const saved = await onComplete(task.id);
+        if (!saved) { setSubmitError('A entrega não pôde ser registrada. Revise os requisitos e tente novamente.'); return; }
+        sound.playVictory();
+        onClose();
+      } catch { setSubmitError('Sem conexão para concluir a entrega. Tente novamente.'); }
+      finally { setSubmitting(false); }
       return;
     }
 
@@ -162,7 +171,8 @@ export const InternOfficeTaskModal: React.FC<InternOfficeTaskModalProps> = ({
                 <RotateCcw size={13} /> Tentar novamente
               </button>
             ) : currentStepSolved ? (
-              <button type="button" onClick={handleAdvance} className="rounded-lg bg-[#C5A059] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#0A0A0B] hover:bg-[#D4B475]">
+              <button type="button" disabled={submitting}
+                onClick={() => void handleAdvance()} className="rounded-lg bg-[#C5A059] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#0A0A0B] hover:bg-[#D4B475]">
                 {isLastStep ? 'Entregar ao Dr. Roberto' : 'Próxima etapa'}
               </button>
             ) : (
