@@ -86,7 +86,7 @@ import { addGameDays, addGameMonths, formatGameDate, getTodayGameDate, normalize
 import { advanceGameClock, DEFAULT_GAME_START_MINUTES, normalizeGameMinutes } from './lib/gameTime';
 import { sound } from './utils/sound';
 import { normalizeCareerOrigin, saveCareerOrigin } from './lib/careerOrigin';
-import { saveWorldMapProfile, type WorldAddressProfile, type WorldMapProfile } from './lib/worldMap';
+import { geocodeBrazilianCity, saveWorldMapProfile, type WorldAddressProfile, type WorldMapProfile } from './lib/worldMap';
 import {
   establishmentGameplayAction,
   type WorldEstablishment,
@@ -822,6 +822,9 @@ export default function App() {
     const savedProfile: PlayerProfile = { ...freshProfile, cloudCareerId: result.careerId };
     setPlayer(savedProfile);
     seedCoreRelationships(savedProfile);
+    void geocodeBrazilianCity(setup.city, setup.state).then((profile) => {
+      saveWorldMapProfile(savedProfile, { ...profile, source: 'PLAYER_PROFILE' });
+    }).catch(() => { /* O mapa poderá geocodificar novamente quando necessário. */ });
     saveCareerOrigin(normalizeCareerOrigin(setup.city, setup.state));
     setSelectedCaseToBrief(null);
     setCurrentView('HUB');
