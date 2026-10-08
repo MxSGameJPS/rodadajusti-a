@@ -9,7 +9,7 @@ function eligible(player: PlayerProfile) {
 }
 
 function emptyState(): InternshipRoutineState {
-  return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], excusedAbsenceKeys: [], handledSeniorPriorityKeys: [], processedDisciplineKeys: [] };
+  return { attendance: [], meetings: [], handledEventKeys: [], lastTaskDeliveryKey: null, dailyTaskKeys: {}, greetedWorkdays: [], briefingProgress: {}, excusedAbsenceKeys: [], handledSeniorPriorityKeys: [], processedDisciplineKeys: [] };
 }
 
 export interface InternshipCloudState { routine: InternshipRoutineState; seniorPortfolio: SeniorPortfolioMatter[]; seniorDecisions: SeniorPortfolioDecision[]; }
@@ -23,6 +23,7 @@ function fromRow(row: any): InternshipCloudState {
     handledEventKeys: Array.isArray(row.handled_event_keys) ? row.handled_event_keys : [],
     dailyTaskKeys: row.daily_task_keys && typeof row.daily_task_keys === 'object' ? row.daily_task_keys : {},
     greetedWorkdays: Array.isArray(row.greeted_workdays) ? row.greeted_workdays : [],
+    briefingProgress: row.senior_state?.briefingProgress && typeof row.senior_state.briefingProgress === 'object' ? row.senior_state.briefingProgress : {},
     excusedAbsenceKeys: Array.isArray(row.excused_absence_keys) ? row.excused_absence_keys : [],
     handledSeniorPriorityKeys: Array.isArray(row.senior_state?.handledSeniorPriorityKeys) ? row.senior_state.handledSeniorPriorityKeys : [],
     processedDisciplineKeys: Array.isArray(row.senior_state?.processedDisciplineKeys) ? row.senior_state.processedDisciplineKeys : [],
@@ -41,7 +42,7 @@ function row(player: PlayerProfile, userId: string, state: InternshipRoutineStat
     daily_task_keys: state.dailyTaskKeys,
     greeted_workdays: state.greetedWorkdays,
     excused_absence_keys: state.excusedAbsenceKeys,
-    senior_state: { lastTaskDeliveryKey: state.lastTaskDeliveryKey, handledSeniorPriorityKeys: state.handledSeniorPriorityKeys, processedDisciplineKeys: state.processedDisciplineKeys },
+    senior_state: { briefingProgress: state.briefingProgress || {}, lastTaskDeliveryKey: state.lastTaskDeliveryKey, handledSeniorPriorityKeys: state.handledSeniorPriorityKeys, processedDisciplineKeys: state.processedDisciplineKeys },
     updated_at: new Date().toISOString(),
   };
 }
