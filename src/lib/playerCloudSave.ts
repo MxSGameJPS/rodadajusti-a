@@ -51,6 +51,7 @@ export async function persistPlayerCloudSave(player: PlayerProfile): Promise<{ o
   await supabase.from('careers').update({
     character_name: player.name,
     career_stage: player.careerTier,
+    main_area: player.initialFocus || null,
     academic_degree: player.academicDegree,
     xp: Math.max(0, Math.floor(player.xp || 0)),
     reputation: Math.max(0, Math.min(100, Math.floor(player.reputation || 0))),
