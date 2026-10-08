@@ -557,6 +557,8 @@ export interface PlayerProfile {
   cloudCareerId?: string | null;
   initialFocus?: 'civil' | 'consumidor' | 'empresarial';
   onboardingStage?: 'WELCOME_PENDING' | 'COMPLETE';
+  welcomeDialogueStep?: number;
+  officeTutorialSeen?: boolean;
   homeCity?: string;
   homeState?: string;
   gameCurrentDay: number;
