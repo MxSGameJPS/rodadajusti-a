@@ -72,6 +72,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
   const [isAcceptingOffer, setIsAcceptingOffer] = useState(false);
   const [isOfficeWelcomeOpen, setIsOfficeWelcomeOpen] = useState(Boolean(resumePlayer));
   const [isActOneIntroOpen, setIsActOneIntroOpen] = useState(!resumePlayer);
+  const [introCheckpointReady, setIntroCheckpointReady] = useState(Boolean(resumePlayer));
 
   useEffect(() => {
     if (!isOpen || didHydrateAuthName || isOfficeWelcomeOpen || !supabase) return;
@@ -97,12 +98,17 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
     void (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!active || !user) return;
-      const { data } = await supabase.from('player_onboarding').select('city,state').eq('user_id', user.id).maybeSingle();
-      if (!active || !data) return;
-      setCity(data.city);
-      setState(data.state);
-      setOriginalCity(data.city);
-      setOriginalState(data.state);
+      const { data, error: checkpointError } = await supabase.from('player_onboarding').select('city,state,intro_seen').eq('user_id', user.id).maybeSingle();
+      if (!active) return;
+      if (checkpointError) { setAddressError('Não foi possível consultar seu progresso. Atualize a página.'); return; }
+      if (data) {
+        setCity(data.city);
+        setState(data.state);
+        setOriginalCity(data.city);
+        setOriginalState(data.state);
+        setIsActOneIntroOpen(!data.intro_seen);
+      }
+      setIntroCheckpointReady(true);
     })();
     return () => { active = false; };
   }, [isOpen, resumePlayer]);
@@ -188,6 +194,8 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
     }
   };
 
+  if (!introCheckpointReady && !resumePlayer) return <div className="fixed inset-0 z-[245] flex items-center justify-center bg-[#08090B] text-[#D4B36D]" role="status">Preparando sua carreira...</div>;
+
   if (isActOneIntroOpen) {
     return (
       <ActOneIntroSequence
@@ -195,7 +203,14 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
         playerName={normalizedPlayerName}
         city={city.trim()}
         onComplete={() => {
-          setIsActOneIntroOpen(false);
+          void (async () => {
+            if (!supabase) return;
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            const { error: saveError } = await supabase.from('player_onboarding').update({ intro_seen: true }).eq('user_id', user.id);
+            if (saveError) { window.alert('Não foi possível salvar sua introdução. Tente novamente.'); return; }
+            setIsActOneIntroOpen(false);
+          })();
         }}
       />
     );
