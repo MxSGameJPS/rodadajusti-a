@@ -35,7 +35,8 @@ import { getDailyTaskIds, type OfficeEventChoiceId } from '../lib/internshipRout
 
 interface InternshipCareerPanelProps {
   player: PlayerProfile;
-  onCompleteTask: (taskId: string) => void;
+  onCompleteTask: (taskId: string) => Promise<boolean>;
+  onSaveTaskProgress: (taskId: string, progress: { stepIndex: number; completedStepIds: string[] }) => Promise<boolean>;
   onRegisterArrival: () => void;
   onRegisterDeparture: () => void;
   onHandleOfficeEvent: (choiceId: OfficeEventChoiceId) => void;
@@ -81,7 +82,7 @@ function buildMarianaTaskGuidance(task: OfficeStageTask, isSenior: boolean): Npc
   ];
 }
 
-export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview, onRequestAbsenceJustification, onChooseSeniorPriority, seniorPortfolio = [], onSeniorPortfolioAction, onSeniorPortfolioReview, onSeniorPortfolioDecision, onSeniorOabReadinessReview, seniorCareerRecall, oabPreparation, onOabStudy, onOabQuickMock, onOabFinalExam }) => {
+export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ player, onCompleteTask, onSaveTaskProgress, onRegisterArrival, onRegisterDeparture, onHandleOfficeEvent, onOpenReview, onRequestAbsenceJustification, onChooseSeniorPriority, seniorPortfolio = [], onSeniorPortfolioAction, onSeniorPortfolioReview, onSeniorPortfolioDecision, onSeniorOabReadinessReview, seniorCareerRecall, oabPreparation, onOabStudy, onOabQuickMock, onOabFinalExam }) => {
   const [selectedTask, setSelectedTask] = useState<OfficeStageTask | null>(null);
   const [pendingTask, setPendingTask] = useState<OfficeStageTask | null>(null);
   const [isTaskGuidanceOpen, setIsTaskGuidanceOpen] = useState(false);
@@ -153,6 +154,8 @@ export const InternshipCareerPanel: React.FC<InternshipCareerPanelProps> = ({ pl
         task={selectedTask}
         onClose={() => setSelectedTask(null)}
         onComplete={onCompleteTask}
+        savedProgress={selectedTask ? player.officeTaskProgress?.[selectedTask.id] : undefined}
+        onSaveProgress={onSaveTaskProgress}
       />
 
       <section className="mb-5 overflow-hidden rounded-2xl border border-[#C5A059]/30 bg-[#0D0D0F] shadow-xl">
