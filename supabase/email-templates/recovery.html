@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rota da Justiça</title></head>
+<body style="margin:0;padding:0;background:#080c12;font-family:Arial,Helvetica,sans-serif;color:#eae5d9">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#080c12"><tr><td align="center" style="padding:40px 14px">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;border:1px solid #393226;background:#11161e;border-radius:18px;overflow:hidden">
+<tr><td style="height:6px;background:#b99a59;font-size:1px">&nbsp;</td></tr>
+<tr><td align="center" style="padding:42px 30px 14px">
+<div style="font-size:12px;letter-spacing:4px;color:#c9a865;font-weight:700">⚖ ROTA DA JUSTIÇA</div>
+<div style="margin-top:10px;color:#8895a5;font-size:11px;letter-spacing:2px">SIMULAÇÃO • INVESTIGAÇÃO • CARREIRA</div>
+</td></tr>
+<tr><td style="padding:20px 42px 0">
+<p style="font-size:15px;color:#c6ced5;margin:0 0 16px">Olá, {{ if .Data.full_name }}{{ .Data.full_name }}{{ else }}futuro(a) jurista{{ end }}!</p>
+<h1 style="font-family:Georgia,'Times New Roman',serif;font-size:33px;line-height:1.2;margin:0 0 20px;color:#ffffff;font-weight:600">Vamos recuperar seu acesso.</h1>
+<p style="font-size:16px;line-height:1.8;color:#afb9c5;margin:0">Recebemos uma solicitação para redefinir a senha de acesso à sua carreira.</p>
+</td></tr>
+<tr><td align="center" style="padding:34px 30px">
+<table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="#c9a865" style="border-radius:8px">
+<a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:18px 28px;font-size:13px;letter-spacing:1.2px;font-weight:bold;text-decoration:none;color:#0c1016">REDEFINIR MINHA SENHA</a>
+</td></tr></table>
+</td></tr>
+<tr><td style="padding:0 42px 30px"><p style="font-size:13px;line-height:1.7;color:#8793a2;margin:0">Se você não solicitou a recuperação, pode ignorar esta mensagem. Sua senha atual continuará válida.</p>
+<p style="font-size:12px;line-height:1.7;color:#788594;overflow-wrap:anywhere">Se o botão não funcionar, copie o link a seguir no navegador:<br><a href="{{ .ConfirmationURL }}" style="color:#c9a865;word-break:break-all">{{ .ConfirmationURL }}</a></p></td></tr>
+<tr><td style="background:#0c1016;border-top:1px solid #2b303a;padding:28px 36px;text-align:center">
+<div style="font-size:13px;font-weight:bold;letter-spacing:2px;color:#d2b476">ROTA DA JUSTIÇA</div>
+<p style="font-size:11px;line-height:1.8;color:#7b8590;margin:10px 0 0">Uma experiência Social Jurídico.<br>Esta é uma mensagem automática de segurança da sua conta.</p>
+</td></tr>
+</table>
+<p style="color:#606b77;font-size:11px;line-height:1.6;max-width:570px;margin:22px auto 0;text-align:center">Rota da Justiça • Não responda a este e-mail.</p>
+</td></tr></table>
+</body></html>
