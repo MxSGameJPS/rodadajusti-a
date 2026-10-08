@@ -8,6 +8,8 @@ interface InternOfficeTaskModalProps {
   task: OfficeStageTask | null;
   onClose: () => void;
   onComplete: (taskId: string) => Promise<boolean>;
+  savedProgress?: { stepIndex: number; completedStepIds: string[] };
+  onSaveProgress?: (taskId: string, next: { stepIndex: number; completedStepIds: string[] }) => Promise<boolean>;
 }
 
 export const InternOfficeTaskModal: React.FC<InternOfficeTaskModalProps> = ({
@@ -15,20 +17,23 @@ export const InternOfficeTaskModal: React.FC<InternOfficeTaskModalProps> = ({
   task,
   onClose,
   onComplete,
+  savedProgress,
+  onSaveProgress,
 }) => {
   const [stepIndex, setStepIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [checkpointing, setCheckpointing] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [selectedOptionId, setSelectedOptionId] = useState('');
   const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
 
   useEffect(() => {
-    setStepIndex(0);
+    setStepIndex(Math.max(0, Math.min(savedProgress?.stepIndex || 0, Math.max(0, (task?.challengeSteps.length || 1) - 1))));
+    setCompletedSteps(savedProgress?.completedStepIds || []);
     setSubmitError('');
     setSelectedOptionId('');
     setFeedback(null);
-    setCompletedSteps([]);
   }, [task?.id, isOpen]);
 
   const currentStep = task?.challengeSteps[stepIndex] || null;
@@ -42,13 +47,20 @@ export const InternOfficeTaskModal: React.FC<InternOfficeTaskModalProps> = ({
 
   if (!isOpen || !task || !currentStep) return null;
 
-  const handleValidate = () => {
-    if (!selectedOptionId || currentStepSolved) return;
+  const handleValidate = async () => {
+    if (!selectedOptionId || currentStepSolved || checkpointing) return;
     sound.playPaper();
 
     if (selectedOptionId === currentStep.correctOptionId) {
-      setCompletedSteps((current) => current.includes(currentStep.id) ? current : [...current, currentStep.id]);
-      setFeedback({ kind: 'success', text: currentStep.successFeedback });
+      const nextSteps = completedSteps.includes(currentStep.id) ? completedSteps : [...completedSteps, currentStep.id];
+      setCheckpointing(true);
+      try {
+        if (onSaveProgress && !(await onSaveProgress(task.id, { stepIndex, completedStepIds: nextSteps }))) { setSubmitError('Não foi possível salvar sua resposta. Tente novamente.'); return; }
+        setCompletedSteps(nextSteps);
+        setFeedback({ kind: 'success', text: currentStep.successFeedback });
+        setSubmitError('');
+      } catch { setSubmitError('Falha de conexão ao salvar a resposta.'); }
+      finally { setCheckpointing(false); }
       return;
     }
 
@@ -57,7 +69,7 @@ export const InternOfficeTaskModal: React.FC<InternOfficeTaskModalProps> = ({
   };
 
   const handleAdvance = async () => {
-    if (!currentStepSolved || submitting) return;
+    if (!currentStepSolved || submitting || checkpointing) return;
 
     if (isLastStep) {
       setSubmitting(true);
@@ -72,9 +84,15 @@ export const InternOfficeTaskModal: React.FC<InternOfficeTaskModalProps> = ({
       return;
     }
 
-    setStepIndex((current) => current + 1);
-    setSelectedOptionId('');
-    setFeedback(null);
+    setCheckpointing(true);
+    try {
+      if (onSaveProgress && !(await onSaveProgress(task.id, { stepIndex: stepIndex + 1, completedStepIds: completedSteps }))) { setSubmitError('Não foi possível registrar esta etapa.'); return; }
+      setStepIndex((current) => current + 1);
+      setSelectedOptionId('');
+      setFeedback(null);
+      setSubmitError('');
+    } catch { setSubmitError('Falha de conexão ao salvar sua etapa.'); }
+    finally { setCheckpointing(false); }
   };
 
   const handleRetry = () => {
@@ -163,6 +181,7 @@ export const InternOfficeTaskModal: React.FC<InternOfficeTaskModalProps> = ({
           )}
         </div>
 
+        {submitError && <p role="alert" className="px-5 py-2 text-sm text-[#FCA5A5]">{submitError}</p>}
         <div className="flex flex-col gap-2 border-t border-[#2A2A2E] bg-[#151517] p-4 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-[10px] leading-relaxed text-[#77777E]">Dr. Roberto avalia o raciocínio da atividade, não apenas o clique no botão.</span>
           <div className="flex gap-2">
@@ -171,12 +190,12 @@ export const InternOfficeTaskModal: React.FC<InternOfficeTaskModalProps> = ({
                 <RotateCcw size={13} /> Tentar novamente
               </button>
             ) : currentStepSolved ? (
-              <button type="button" disabled={submitting}
+              <button type="button" disabled={submitting || checkpointing}
                 onClick={() => void handleAdvance()} className="rounded-lg bg-[#C5A059] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#0A0A0B] hover:bg-[#D4B475]">
                 {isLastStep ? 'Entregar ao Dr. Roberto' : 'Próxima etapa'}
               </button>
             ) : (
-              <button type="button" disabled={!selectedOptionId} onClick={handleValidate} className="rounded-lg bg-[#C5A059] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#0A0A0B] hover:bg-[#D4B475] disabled:cursor-not-allowed disabled:opacity-40">
+              <button type="button" disabled={!selectedOptionId} onClick={() => void handleValidate()} className="rounded-lg bg-[#C5A059] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#0A0A0B] hover:bg-[#D4B475] disabled:cursor-not-allowed disabled:opacity-40">
                 Confirmar decisão
               </button>
             )}
