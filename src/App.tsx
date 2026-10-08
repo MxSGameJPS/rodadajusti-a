@@ -3227,6 +3227,13 @@ export default function App() {
           contextLabel="Prioridades do expediente"
           dialogues={marianaArrivalDialogues}
           finalActionLabel="Começar expediente"
+          initialStep={readInternshipRoutine(player).briefingProgress?.[currentGameDateLabel(player)] || 0}
+          onStepChange={async (nextStep) => {
+            const routine = readInternshipRoutine(player);
+            const date = currentGameDateLabel(player);
+            const state = { ...routine, briefingProgress: { ...(routine.briefingProgress || {}), [date]: nextStep } };
+            return commitInternshipRoutine(player, state);
+          }}
           onComplete={() => {
             void (async () => {
               const routine = readInternshipRoutine(player);
