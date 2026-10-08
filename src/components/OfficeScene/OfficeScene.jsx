@@ -117,8 +117,12 @@ export function OfficeScene({
   onOabFinalExam,
   onToggleSound,
   onEnableMobileFrame,
+  onOfficeTourComplete,
 }) {
   const [drawer, setDrawer] = useState(null);
+  const [isFinishingTour, setIsFinishingTour] = useState(false);
+  const [tourError, setTourError] = useState('');
+  const showFirstOfficeTour = player.careerTier === 'ESTAGIARIO' && player.onboardingStage === 'COMPLETE' && !player.officeTutorialSeen;
   const [showJobMarket, setShowJobMarket] = useState(false);
   useEffect(() => {
     const openMarket = () => setShowJobMarket(true);
@@ -232,6 +236,19 @@ export function OfficeScene({
     setDrawer(itemId);
   };
 
+  const finishFirstOfficeTour = async () => {
+    if (isFinishingTour) return;
+    setIsFinishingTour(true);
+    setTourError('');
+    try {
+      const ok = await onOfficeTourComplete();
+      if (!ok) { setTourError('Não foi possível salvar a apresentação. Verifique a conexão e tente novamente.'); return; }
+      setDrawer('AGENDA');
+    } catch {
+      setTourError('Falha ao registrar a visita ao escritório. Tente novamente.');
+    } finally { setIsFinishingTour(false); }
+  };
+
   const openNotebook = () => {
     sound.playClick();
     window.dispatchEvent(new CustomEvent(OPEN_SOCIAL_JURIDICO_EVENT));
@@ -248,6 +265,22 @@ export function OfficeScene({
 
   return (
     <section className={styles.scene}>
+      {showFirstOfficeTour && (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center overflow-y-auto bg-[#050608]/95 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="office-tour-title">
+          <div className="w-full max-w-2xl rounded-3xl border border-[#C5A059]/35 bg-[#12151B] p-6 text-[#EDE8DF] shadow-2xl sm:p-9">
+            <span className="text-xs font-extrabold uppercase tracking-[.25em] text-[#C5A059]">Primeiro dia • Ramos & Associados</span>
+            <h2 id="office-tour-title" className="mt-3 font-serif text-3xl font-semibold">Seu escritório está pronto.</h2>
+            <p className="mt-3 text-sm leading-7 text-[#BFC5CE]">Mariana preparou um guia rápido antes de você assumir suas primeiras atividades. Os demais setores continuam disponíveis no menu lateral.</p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <article className="rounded-xl border border-[#3B424A] bg-[#1C222A] p-4"><CalendarDays size={25} className="text-[#C5A059]"/><h3 className="mt-2 font-bold">1. Agenda</h3><p className="mt-2 text-xs leading-5 text-[#BFC5CE]">Verifique o horário, registre sua chegada quando permitido e consulte as tarefas supervisionadas.</p></article>
+              <article className="rounded-xl border border-[#3B424A] bg-[#1C222A] p-4"><Files size={25} className="text-[#C5A059]"/><h3 className="mt-2 font-bold">2. Casos</h3><p className="mt-2 text-xs leading-5 text-[#BFC5CE]">Examine oportunidades e siga as instruções do supervisor antes de atuar.</p></article>
+              <article className="rounded-xl border border-[#3B424A] bg-[#1C222A] p-4"><Home size={25} className="text-[#C5A059]"/><h3 className="mt-2 font-bold">3. Vida pessoal</h3><p className="mt-2 text-xs leading-5 text-[#BFC5CE]">Administre energia, necessidades, faculdade e despesas sem descuidar do estágio.</p></article>
+            </div>
+            {tourError && <p role="alert" className="mt-4 text-sm text-[#FCA5A5]">{tourError}</p>}
+            <button type="button" disabled={isFinishingTour} onClick={() => void finishFirstOfficeTour()} className="mt-6 w-full rounded-xl bg-[#C5A059] px-6 py-4 text-sm font-extrabold uppercase tracking-wider text-[#111113] disabled:opacity-60">{isFinishingTour ? 'Salvando sua primeira visita...' : 'Entendi — abrir minha Agenda'}</button>
+          </div>
+        </div>
+      )}
       <div
         className={styles.background}
         style={{ backgroundImage: `url("${OFFICE_SCENE_BACKGROUND}")` }}
