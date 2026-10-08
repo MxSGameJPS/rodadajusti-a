@@ -68,6 +68,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
   const [validatingAddress, setValidatingAddress] = useState(false);
   const [didHydrateAuthName, setDidHydrateAuthName] = useState(!supabase || Boolean(pendingWelcomeName));
   const [selectedFocus, setSelectedFocus] = useState<InitialFocus>('civil');
+  const [acceptedInternshipTerms, setAcceptedInternshipTerms] = useState(false);
   const [isAcceptingOffer, setIsAcceptingOffer] = useState(false);
   const [isOfficeWelcomeOpen, setIsOfficeWelcomeOpen] = useState(Boolean(resumePlayer));
   const [isActOneIntroOpen, setIsActOneIntroOpen] = useState(!resumePlayer);
@@ -293,7 +294,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
                 </div>
 
                 <div className="space-y-4 font-serif text-[15px] leading-7 text-[#40382E] sm:text-base">
-                  <p>Prezado(a) acadêmico(a),</p>
+                  <p>Prezado(a) {normalizedPlayerName},</p>
                   <p>
                     Após nossa conversa, gostaríamos de convidá-lo(a) para iniciar sua trajetória profissional no
                     <strong className="font-semibold text-[#211E1A]"> Ramos & Associados Advocacia</strong>, na função de
@@ -303,6 +304,11 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
                     Durante o estágio, você participará da análise de documentos, atendimento a clientes, investigação de fatos,
                     preparação de casos e acompanhamento da rotina jurídica do escritório. Esperamos de você curiosidade, ética,
                     atenção aos detalhes e disposição para aprender.
+                  </p>
+                  <p>
+                    O estágio será supervisionado pelo Dr. Roberto Ramos, com acompanhamento da equipe do escritório.
+                    A bolsa inicial é de R$ 1.200,00 por mês no universo do jogo. Horários, presença e desempenho
+                    serão apresentados ao iniciar as atividades. Este documento é fictício e não constitui contrato de trabalho real.
                   </p>
                   <p>
                     Sua carreira será construída pelas decisões tomadas a partir daqui. Resultados, relacionamentos profissionais e
@@ -497,9 +503,13 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
                     separadamente no perfil da carreira.
                   </p>
 
+                  <label className="mx-auto mt-4 flex max-w-md items-start gap-3 text-left text-xs leading-5 text-[#665840]">
+                    <input type="checkbox" checked={acceptedInternshipTerms} onChange={(event) => setAcceptedInternshipTerms(event.target.checked)} disabled={isAcceptingOffer} className="mt-1 accent-[#8C6E3B]" />
+                    <span>Li e aceito as condições desta proposta fictícia de estágio no Ramos & Associados.</span>
+                  </label>
                   <button
                     type="submit"
-                    disabled={isAcceptingOffer || !didHydrateAuthName}
+                    disabled={isAcceptingOffer || !didHydrateAuthName || !acceptedInternshipTerms}
                     className="mx-auto mt-4 flex w-full max-w-md items-center justify-center gap-2 rounded-lg bg-[#27221B] px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[#E8CF9A] shadow-[0_16px_40px_rgba(57,43,23,.22)] transition-all hover:bg-[#1F1A14] hover:text-[#F2DCA9] disabled:cursor-wait disabled:opacity-65 active:scale-[.99]"
                   >
                     <span>{isAcceptingOffer ? 'Oportunidade aceita' : validatingAddress ? 'Validando residência' : 'Aceitar oportunidade'}</span>
