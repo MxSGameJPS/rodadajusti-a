@@ -150,7 +150,7 @@ export function AuthGate({ children }: AuthGateProps) {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (!EMAIL_REGEX.test(normalizedEmail)) {
+    if (mode !== 'recovery' && !EMAIL_REGEX.test(normalizedEmail)) {
       setError('Informe um endereço de e-mail válido.');
       return;
     }
