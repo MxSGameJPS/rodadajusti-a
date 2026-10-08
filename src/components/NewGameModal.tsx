@@ -25,6 +25,7 @@ interface NewGameModalProps {
   isOpen: boolean;
   onStartNewGame: (setup: NewGameSetup) => Promise<boolean>;
   onWelcomeComplete: () => Promise<boolean>;
+  onWelcomeAdvance: (nextStep: number) => Promise<boolean>;
   resumePlayer: import('../types/game').PlayerProfile | null;
 }
 
@@ -53,7 +54,7 @@ const FOCUS_OPTIONS: Array<{
   },
 ];
 
-export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGame, onWelcomeComplete, resumePlayer }) => {
+export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGame, onWelcomeComplete, onWelcomeAdvance, resumePlayer }) => {
   const pendingWelcomeName = resumePlayer?.name || '';
   const [playerName, setPlayerName] = useState(pendingWelcomeName || 'Novo Personagem');
   const [relationshipStatus, setRelationshipStatus] = useState<'SINGLE' | 'DATING' | 'MARRIED'>('SINGLE');
@@ -241,6 +242,11 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
       <OfficeWelcomeDialog
         isOpen
         playerName={normalizedPlayerName}
+        city={resumePlayer?.homeCity || city}
+        initialFocus={resumePlayer?.initialFocus || selectedFocus}
+        initialStep={resumePlayer?.welcomeDialogueStep || 0}
+        onAdvance={onWelcomeAdvance}
+        isCompleting={isAcceptingOffer}
         onComplete={() => void handleWelcomeComplete()}
       />
     );
