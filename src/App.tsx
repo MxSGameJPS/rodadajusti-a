@@ -62,7 +62,7 @@ import {
 import { OfficeScene } from './components/OfficeScene/OfficeScene';
 import { InternPromotionCeremonyModal } from './components/InternPromotionCeremonyModal';
 import { getSeniorDailyDesk, buildSeniorFirstDayDialogues } from './lib/seniorInternEngine';
-import { hydrateInternshipRoutine, persistInternshipRoutine, loadSeniorPortfolio, persistSeniorPortfolio, loadOabPreparation, persistOabPreparation } from './lib/internshipRoutineRepository';
+import { hydrateInternshipRoutine, persistInternshipRoutine, commitInternshipRoutine, loadSeniorPortfolio, persistSeniorPortfolio, loadOabPreparation, persistOabPreparation } from './lib/internshipRoutineRepository';
 import { advanceSeniorPortfolioDeadlines, applySeniorDecisionConsequence, buildRobertoCareerRecall, buildSeniorOabReadinessDialogues, buildSupervisorPortfolioReview, completeSeniorPortfolioAction, getSeniorProfessionalScene, portfolioDate, seniorDeadlinePenalty, markSeniorDeadlinePenalties, type SeniorLegalDecision, type SeniorPortfolioDecision, type SeniorPortfolioMatter } from './lib/seniorPortfolio';
 import { SeniorProfessionalScene } from './components/SeniorProfessionalScene';
 import { completeOabStudy, emptyOabPreparation, OAB_AREAS, oabReadiness, recordOabMock, recordFinalOabExam, unlockOabPreparation, type OabPreparationState, type OabStudyArea } from './lib/oabIntensivePreparation';
@@ -115,6 +115,7 @@ import {
   reconcileMissedWorkdays,
   recordPeriodicReview,
   registerOfficeArrival,
+  prepareOfficeArrival,
   registerOfficeDeparture,
   getOfficeAccessDecision,
   getWorkSchedule,
@@ -1179,10 +1180,16 @@ export default function App() {
     ]);
   };
 
-  const handleRegisterInternArrival = () => {
+  const handleRegisterInternArrival = async () => {
     if (player.careerTier !== 'ESTAGIARIO' && player.careerTier !== 'ESTAGIARIO_SENIOR') return;
-    const result = registerOfficeArrival(player);
-    if (!result.created) return;
+    const prepared = prepareOfficeArrival(player);
+    if (!prepared.allowed) {
+      if (prepared.reason !== 'ALREADY_REGISTERED') setLifeWarning('O registro de entrada está disponível apenas durante o expediente do escritório, das 08h às 14h, em dias úteis.');
+      return;
+    }
+    const committed = await commitInternshipRoutine(player, prepared.state);
+    if (!committed) { setLifeWarning('Não foi possível salvar sua presença no Supabase. Verifique a conexão e tente novamente.'); return; }
+    const result = { record: prepared.record, created: true };
     const delta = attendancePerformanceDelta(result.record);
     setPlayer((prev) => ({ ...prev, officePerformance: applyRoutinePerformance(prev.officePerformance, delta) }));
     const disciplineAssessment = assessArrivalDiscipline(player, result.record);
