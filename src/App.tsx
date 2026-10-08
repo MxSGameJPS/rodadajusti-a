@@ -1494,7 +1494,11 @@ export default function App() {
     return true;
   };
 
+  const officeTaskInFlightRef = React.useRef(false);
   const handleCompleteOfficeTask = async (taskId: string): Promise<boolean> => {
+    if (officeTaskInFlightRef.current) return false;
+    officeTaskInFlightRef.current = true;
+    try {
     if (player.activeCase) return false;
     if (!ensureOfficeGameplayAvailable()) return false;
     if (!ensureLifeReady()) return false;
@@ -1595,6 +1599,7 @@ export default function App() {
       setIsInternPromotionCeremonyOpen(true);
     }
     return true;
+    } finally { officeTaskInFlightRef.current = false; }
   };
 
   const handleSubmitPetition = (strategyId: string, selectedEvidenceIds: string[]) => {
