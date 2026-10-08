@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Award, ArrowRight, Briefcase, CheckCircle2, Loader2, MapPin, Scale, ShieldCheck } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { supabase } from '../lib/supabase';
@@ -17,17 +17,18 @@ export interface NewGameSetup {
   addressProfile: WorldAddressProfile;
   relationshipStatus: 'SINGLE' | 'DATING' | 'MARRIED';
   partnerName: string | null;
+  initialFocus: InitialFocus;
 }
 
 interface NewGameModalProps {
   isOpen: boolean;
-  onStartNewGame: (setup: NewGameSetup) => void;
+  onStartNewGame: (setup: NewGameSetup) => Promise<boolean>;
+  onWelcomeComplete: () => Promise<boolean>;
+  resumePlayer: import('../types/game').PlayerProfile | null;
 }
 
 type InitialFocus = 'civil' | 'consumidor' | 'empresarial';
 
-const OFFICE_WELCOME_PENDING_KEY = 'rota_office_welcome_pending_v1';
-const ACT_ONE_INTRO_SEEN_KEY = 'rota_act_one_intro_seen_v1';
 
 const FOCUS_OPTIONS: Array<{
   id: InitialFocus;
@@ -51,47 +52,23 @@ const FOCUS_OPTIONS: Array<{
   },
 ];
 
-type PendingWelcome = {
-  playerName?: string;
-  street?: string;
-  number?: string;
-  city?: string;
-  state?: string;
-  addressProfile?: WorldAddressProfile;
-};
-
-function readPendingWelcome(): PendingWelcome {
-  try {
-    const raw = localStorage.getItem(OFFICE_WELCOME_PENDING_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) as PendingWelcome;
-  } catch {
-    return {};
-  }
-}
-
-export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGame }) => {
-  const pendingWelcome = readPendingWelcome();
-  const pendingWelcomeName = typeof pendingWelcome.playerName === 'string' ? pendingWelcome.playerName.trim() : '';
+export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGame, onWelcomeComplete, resumePlayer }) => {
+  const pendingWelcomeName = resumePlayer?.name || '';
   const [playerName, setPlayerName] = useState(pendingWelcomeName || 'Novo Personagem');
   const [relationshipStatus, setRelationshipStatus] = useState<'SINGLE' | 'DATING' | 'MARRIED'>('SINGLE');
   const [partnerName, setPartnerName] = useState('');
-  const [street, setStreet] = useState(pendingWelcome.street || '');
-  const [number, setNumber] = useState(pendingWelcome.number || '');
-  const [city, setCity] = useState(pendingWelcome.city || '');
-  const [state, setState] = useState((pendingWelcome.state || '').toUpperCase());
-  const [validatedAddress, setValidatedAddress] = useState<WorldAddressProfile | null>(pendingWelcome.addressProfile || null);
+  const [street, setStreet] = useState(resumePlayer?.household?.residence?.street || '');
+  const [number, setNumber] = useState(resumePlayer?.household?.residence?.number || '');
+  const [city, setCity] = useState(resumePlayer?.homeCity || '');
+  const [state, setState] = useState((resumePlayer?.homeState || '').toUpperCase());
+  const [validatedAddress, setValidatedAddress] = useState<WorldAddressProfile | null>(null);
   const [addressError, setAddressError] = useState('');
   const [validatingAddress, setValidatingAddress] = useState(false);
   const [didHydrateAuthName, setDidHydrateAuthName] = useState(!supabase || Boolean(pendingWelcomeName));
   const [selectedFocus, setSelectedFocus] = useState<InitialFocus>('civil');
   const [isAcceptingOffer, setIsAcceptingOffer] = useState(false);
-  const [isOfficeWelcomeOpen, setIsOfficeWelcomeOpen] = useState(Boolean(pendingWelcomeName));
-  const [isActOneIntroOpen, setIsActOneIntroOpen] = useState(() => {
-    if (pendingWelcomeName) return false;
-    try { return localStorage.getItem(ACT_ONE_INTRO_SEEN_KEY) !== '1'; } catch { return true; }
-  });
-  const startTimerRef = useRef<number | null>(null);
+  const [isOfficeWelcomeOpen, setIsOfficeWelcomeOpen] = useState(Boolean(resumePlayer));
+  const [isActOneIntroOpen, setIsActOneIntroOpen] = useState(!resumePlayer);
 
   useEffect(() => {
     if (!isOpen || didHydrateAuthName || isOfficeWelcomeOpen || !supabase) return;
@@ -111,12 +88,20 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
     };
   }, [didHydrateAuthName, isOfficeWelcomeOpen, isOpen]);
 
-  useEffect(
-    () => () => {
-      if (startTimerRef.current !== null) window.clearTimeout(startTimerRef.current);
-    },
-    [],
-  );
+  useEffect(() => {
+    if (!isOpen || resumePlayer || !supabase) return;
+    let active = true;
+    void (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!active || !user) return;
+      const { data } = await supabase.from('player_onboarding').select('city,state').eq('user_id', user.id).maybeSingle();
+      if (!active || !data) return;
+      setCity(data.city);
+      setState(data.state);
+    })();
+    return () => { active = false; };
+  }, [isOpen, resumePlayer]);
+
 
   if (!isOpen) return null;
 
@@ -153,63 +138,40 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (isAcceptingOffer || validatingAddress) return;
-
     try {
+      if (relationshipStatus !== 'SINGLE' && !partnerName.trim()) throw new Error('Informe o nome do parceiro ou parceira.');
       const addressProfile = await validateResidence();
-
-      sound.playVictory();
       setIsAcceptingOffer(true);
-      startTimerRef.current = window.setTimeout(() => {
-        try {
-          localStorage.setItem(
-            OFFICE_WELCOME_PENDING_KEY,
-            JSON.stringify({
-              playerName: normalizedPlayerName,
-              street: street.trim(),
-              number: number.trim(),
-              city: city.trim(),
-              state: state.trim().toUpperCase(),
-              addressProfile,
-            }),
-          );
-        } catch {
-          // O onboarding continua funcionando mesmo sem persistência local.
-        }
-
-        setIsAcceptingOffer(false);
-        setIsOfficeWelcomeOpen(true);
-      }, 1900);
+      const created = await onStartNewGame({
+        name: normalizedPlayerName,
+        street: street.trim(), number: number.trim(), city: city.trim(),
+        state: state.trim().toUpperCase(), addressProfile,
+        relationshipStatus, partnerName: relationshipStatus === 'SINGLE' ? null : partnerName.trim(),
+        initialFocus: selectedFocus,
+      });
+      if (!created) throw new Error('Não foi possível registrar a contratação. Tente novamente.');
+      sound.playVictory();
+      setIsOfficeWelcomeOpen(true);
     } catch (error) {
-      setAddressError(error instanceof Error ? error.message : 'Não foi possível validar sua residência.');
+      setAddressError(error instanceof Error ? error.message : 'Não foi possível registrar a contratação.');
+    } finally {
+      setIsAcceptingOffer(false);
     }
   };
 
-  const handleWelcomeComplete = () => {
+  const handleWelcomeComplete = async () => {
+    if (isAcceptingOffer) return;
+    setIsAcceptingOffer(true);
     try {
-      localStorage.removeItem(OFFICE_WELCOME_PENDING_KEY);
-    } catch {
-      // ignore
-    }
-
-    const addressProfile = validatedAddress || pendingWelcome.addressProfile;
-    if (!addressProfile || addressProfile.mapPointMode !== 'STREET_RANDOMIZED') {
+      const ok = await onWelcomeComplete();
+      if (!ok) throw new Error('Falha ao salvar a conclusão da apresentação. Tente novamente.');
       setIsOfficeWelcomeOpen(false);
-      setValidatedAddress(null);
-      setAddressError('Valide novamente a rua para criar o ponto residencial aproximado e proteger a localização exata.');
-      return;
+    } catch (error) {
+      setAddressError(error instanceof Error ? error.message : 'Falha ao concluir a apresentação.');
+      window.alert('Não foi possível salvar sua carreira. Verifique a conexão e tente novamente.');
+    } finally {
+      setIsAcceptingOffer(false);
     }
-
-    setIsOfficeWelcomeOpen(false);
-    onStartNewGame({
-      name: normalizedPlayerName,
-      street: street.trim() || addressProfile.street,
-      number: number.trim() || addressProfile.number,
-      city: city.trim() || addressProfile.city,
-      state: state.trim().toUpperCase() || addressProfile.state,
-      addressProfile,
-      relationshipStatus,
-      partnerName: relationshipStatus === 'SINGLE' ? null : partnerName.trim(),
-    });
   };
 
   if (isActOneIntroOpen) {
@@ -219,7 +181,6 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
         playerName={normalizedPlayerName}
         city={city.trim()}
         onComplete={() => {
-          try { localStorage.setItem(ACT_ONE_INTRO_SEEN_KEY, '1'); } catch { /* onboarding continua */ }
           setIsActOneIntroOpen(false);
         }}
       />
@@ -231,7 +192,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
       <OfficeWelcomeDialog
         isOpen
         playerName={normalizedPlayerName}
-        onComplete={handleWelcomeComplete}
+        onComplete={() => void handleWelcomeComplete()}
       />
     );
   }
