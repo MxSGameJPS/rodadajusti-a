@@ -50,3 +50,8 @@ Projeto confirmado: `rotadajustica` (`ibbfwxqpowcwpuasxxdl`), conector Rota.
 - Antes: 8 usuários, 1 carreira, 1 save. Depois, conferência SQL: `auth.users` 0, `public.profiles` 0, `public.careers` 0, `public.game_saves` 0, `auth.sessions` 0.
 - Confirmado antes da limpeza: conta de teste recém-criada estava com `email_confirmed_at` preenchido sem confirmação recebida pelo usuário. **Investigar configuração de confirmação obrigatória no Supabase Auth**; mudança não foi feita por SQL.
 - Foi uma operação de limpeza de dados de ambiente para reiniciar testes, **não uma migração de esquema** e portanto não deve ser reproduzida automaticamente por deploy.
+
+## Homologação funcional informada pelo responsável
+O responsável pelo projeto confirmou que testou e aprovou as verificações pendentes da Etapa 1: abertura, botões, cadastro, confirmação por e-mail, login, OAuth Social Jurídico, recuperação de senha, animação pós-login e retorno de carreira no Supabase.
+
+**Status: AUDITORIA 1 — APROVADA FUNCIONALMENTE (validação informada pelo responsável).** Não constitui certificação automatizada independente. Permanece pendente a auditoria de persistência integral dos estados auxiliares locais, além da avaliação global das próximas etapas antes de liberar o teste aberto.
