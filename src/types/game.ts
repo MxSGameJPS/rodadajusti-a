@@ -555,6 +555,8 @@ export interface PlayerProfile {
   professionalExamAttempts: ProfessionalExamAttemptRecord[];
   oabRegistration: OabRegistration | null;
   cloudCareerId?: string | null;
+  initialFocus?: 'civil' | 'consumidor' | 'empresarial';
+  onboardingStage?: 'WELCOME_PENDING' | 'COMPLETE';
   homeCity?: string;
   homeState?: string;
   gameCurrentDay: number;
