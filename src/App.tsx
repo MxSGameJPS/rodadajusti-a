@@ -1459,24 +1459,24 @@ export default function App() {
       : `Você escolheu ${priority.title}. A demanda foi tratada, mas Roberto observará se prioridades mais urgentes ficaram para trás.`);
   };
 
-  const handleCompleteOfficeTask = (taskId: string) => {
-    if (player.activeCase) return;
-    if (!ensureOfficeGameplayAvailable()) return;
-    if (!ensureLifeReady()) return;
+  const handleCompleteOfficeTask = async (taskId: string): Promise<boolean> => {
+    if (player.activeCase) return false;
+    if (!ensureOfficeGameplayAvailable()) return false;
+    if (!ensureLifeReady()) return false;
     if (
       (player.careerTier === 'ESTAGIARIO' || player.careerTier === 'ESTAGIARIO_SENIOR')
       && player.household.needs.study <= 8
     ) {
       setLifeWarning('Sua rotina de estudos está crítica. Estude em casa ou na faculdade antes de assumir novas tarefas do estágio.');
       setIsPlayerHomeOpen(true);
-      return;
+      return false;
     }
 
     const completedDate = formatGameDate(getPlayerGameDate(player));
     const taskDefinition = getTasksForTier(player.careerTier).find((item) => item.id === taskId);
     const taskMinutes = Math.max(30, (taskDefinition?.challengeSteps.length || 1) * 25);
     const taskConflict = getWorkTimeConflict(player, taskMinutes, 'OFFICE');
-    if (taskConflict) { setLifeWarning(taskConflict); return; }
+    if (taskConflict) { setLifeWarning(taskConflict); return false; }
     const { performance, task } = completeOfficeTask({
       current: player.officePerformance,
       careerTier: player.careerTier,
@@ -1484,7 +1484,19 @@ export default function App() {
       completedDate,
     });
 
-    if (!task) return;
+    if (!task) return false;
+
+    const projectedProfile: PlayerProfile = {
+      ...player, ...gameClockFields(player, taskMinutes),
+      xp: player.xp + task.xpReward,
+      money: player.money + task.moneyReward,
+      officePerformance: performance,
+    };
+    const projectedSave = await persistPlayerCloudSave(projectedProfile);
+    if (!projectedSave.ok) {
+      setLifeWarning('Não foi possível salvar a entrega no Supabase. Tente novamente.');
+      return false;
+    }
 
     applyRelationshipInteraction(player, {
       entityId: 'npc:ROBERTO',
@@ -1553,6 +1565,7 @@ export default function App() {
       setPromotedTierAnnouncement('ESTAGIARIO_SENIOR');
       setIsInternPromotionCeremonyOpen(true);
     }
+    return true;
   };
 
   const handleSubmitPetition = (strategyId: string, selectedEvidenceIds: string[]) => {
