@@ -4,81 +4,34 @@ import { supabase } from '../lib/supabase';
 import { emitPlayerSaveExternalUpdated } from '../lib/playerSaveEvents';
 
 const WORKING_SAVE_KEY = 'rota_da_justica_save_v1';
-const ACCOUNT_SAVE_PREFIX = 'rota_da_justica_save_v2:';
+// O navegador conserva apenas um espelho transitório para compatibilidade com
+// os módulos legados. A fonte de verdade após autenticação é game_saves.
 const ACTIVE_ACCOUNT_KEY = 'rota_da_justica_active_account_v1';
 
-function accountSaveKey(userId: string) {
-  return `${ACCOUNT_SAVE_PREFIX}${userId}`;
-}
-
-function read(key: string) {
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function write(key: string, value: string) {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    // O jogo continua utilizável mesmo se o navegador bloquear persistência local.
-  }
-}
-
-function remove(key: string) {
-  try {
-    window.localStorage.removeItem(key);
-  } catch {
-    // noop
-  }
-}
-
 async function activateSessionStorage(session: Session | null) {
-  const nextUserId = session?.user?.id || null;
-  const previousUserId = read(ACTIVE_ACCOUNT_KEY);
-  const workingSave = read(WORKING_SAVE_KEY);
-
-  if (previousUserId && previousUserId !== nextUserId && workingSave) {
-    write(accountSaveKey(previousUserId), workingSave);
-  }
-
-  if (!nextUserId) {
-    if (previousUserId) {
-      remove(WORKING_SAVE_KEY);
-      remove(ACTIVE_ACCOUNT_KEY);
-    }
+  const userId = session?.user?.id;
+  if (!userId) {
+    window.localStorage.removeItem(WORKING_SAVE_KEY);
+    window.localStorage.removeItem(ACTIVE_ACCOUNT_KEY);
+    emitPlayerSaveExternalUpdated();
     return;
   }
 
-  let cloudSave: string | null = null;
-  if (supabase) {
-    const { data, error } = await supabase
-      .from('game_saves')
-      .select('game_state,last_saved_at')
-      .eq('user_id', nextUserId)
-      .eq('slot', 1)
-      .order('last_saved_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!error && data?.game_state && typeof data.game_state === 'object') {
-      cloudSave = JSON.stringify(data.game_state);
-    }
+  // Nunca carregar progresso de outra conta ou de um cache de navegador.
+  window.localStorage.removeItem(WORKING_SAVE_KEY);
+  const { data, error } = await supabase!
+    .from('game_saves')
+    .select('game_state,last_saved_at')
+    .eq('user_id', userId)
+    .eq('slot', 1)
+    .order('last_saved_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (data?.game_state && typeof data.game_state === 'object') {
+    window.localStorage.setItem(WORKING_SAVE_KEY, JSON.stringify(data.game_state));
   }
-
-  const scopedSave = read(accountSaveKey(nextUserId));
-  const fallback = previousUserId === nextUserId ? workingSave || scopedSave : scopedSave || (!previousUserId ? workingSave : null);
-  const selected = cloudSave || fallback;
-
-  if (selected) {
-    write(WORKING_SAVE_KEY, selected);
-    write(accountSaveKey(nextUserId), selected);
-  } else {
-    remove(WORKING_SAVE_KEY);
-  }
-
-  write(ACTIVE_ACCOUNT_KEY, nextUserId);
+  window.localStorage.setItem(ACTIVE_ACCOUNT_KEY, userId);
   emitPlayerSaveExternalUpdated();
 }
 type AccountSaveBoundaryProps = {
@@ -87,6 +40,7 @@ type AccountSaveBoundaryProps = {
 
 export function AccountSaveBoundary({ children }: AccountSaveBoundaryProps) {
   const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     if (!supabase) {
@@ -95,25 +49,39 @@ export function AccountSaveBoundary({ children }: AccountSaveBoundaryProps) {
     }
 
     let active = true;
+    let generation = 0;
+    const synchronize = async (session: Session | null) => {
+      const current = ++generation;
+      setReady(false);
+      setLoadError('');
+      try {
+        await activateSessionStorage(session);
+        if (active && current === generation) setReady(true);
+      } catch (error) {
+        if (active && current === generation) setLoadError(error instanceof Error ? error.message : 'Não foi possível carregar sua carreira.');
+      }
+    };
 
     supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
-      void activateSessionStorage(data.session).finally(() => { if (active) setReady(true); });
+      void synchronize(data.session);
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
-      void activateSessionStorage(session).finally(() => { if (active) setReady(true); });
+      void synchronize(session);
     });
 
     return () => {
       active = false;
+      generation++;
       subscription.unsubscribe();
     };
   }, []);
 
+  if (loadError) return <main role="alert" style={{padding: 32, background: '#07090D', color: '#F4F2EC', minHeight: '100vh'}}><h1>Não foi possível carregar sua carreira</h1><p>O progresso foi preservado no servidor. Verifique sua conexão antes de tentar novamente.</p><button type="button" onClick={() => window.location.reload()}>Tentar novamente</button></main>;
   if (!ready) return null;
   return <>{children}</>;
 }
