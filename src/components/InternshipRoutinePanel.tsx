@@ -48,7 +48,10 @@ export const InternshipRoutinePanel: React.FC<Props> = ({ player, onRegisterArri
                   {attendance.status === 'PRESENT' ? 'Presença regular' : attendance.status === 'LATE' ? `Atraso de ${attendance.lateMinutes} min` : 'Falta registrada'}
                 </strong>
                 <p className="mt-1 font-mono text-[10px] text-[#77777F]">Entrada {minuteLabel(attendance.arrivalMinute)} • Saída {minuteLabel(attendance.departureMinute)}</p>
-                {attendance.status === 'ABSENT' && (
+                {attendance.status === 'ABSENT' && state.excusedAbsenceKeys.includes(attendance.date) && (
+                  <p className="mt-2 text-[10px] font-bold text-[#6DD6AA]">Justificativa registrada • ausência justificada</p>
+                )}
+                {attendance.status === 'ABSENT' && !state.excusedAbsenceKeys.includes(attendance.date) && (
                   <button type="button" onClick={onRequestAbsenceJustification} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[#6C83A7]/35 bg-[#6C83A7]/10 px-3 py-2 text-[10px] font-bold text-[#AFC0DA] hover:bg-[#6C83A7]/20">
                     <MessageSquareText size={14} /> Solicitar justificativa
                   </button>
