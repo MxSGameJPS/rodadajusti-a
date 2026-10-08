@@ -16,7 +16,9 @@ import {
 import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
-type AuthMode = 'login' | 'register';
+type AuthMode = 'login' | 'register' | 'recovery';
+const STRONG_PASSWORD = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,}$/;
+const PASSWORD_HINT = 'Use pelo menos 8 caracteres, com maiúscula, minúscula, número e símbolo.';
 
 type AuthGateProps = {
   children: ReactNode;
@@ -75,6 +77,7 @@ export function AuthGate({ children }: AuthGateProps) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [oauthSubmitting, setOauthSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -88,6 +91,8 @@ export function AuthGate({ children }: AuthGateProps) {
 
     let active = true;
 
+    const recoveryFromUrl = new URLSearchParams(window.location.search).get('auth') === 'recovery';
+    if (recoveryFromUrl) { setMode('recovery'); setIsPasswordRecovery(true); }
     supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
       setSession(data.session);
@@ -96,7 +101,11 @@ export function AuthGate({ children }: AuthGateProps) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+        setMode('recovery');
+      }
       if (!active) return;
       setSession(nextSession);
       setCheckingSession(false);
@@ -146,10 +155,25 @@ export function AuthGate({ children }: AuthGateProps) {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Sua senha precisa ter pelo menos 6 caracteres.');
+    if (mode === 'recovery') {
+      if (!STRONG_PASSWORD.test(password)) { setError(PASSWORD_HINT); return; }
+      if (password !== confirmPassword) { setError('As senhas informadas não são iguais.'); return; }
+      setSubmitting(true);
+      try {
+        const { error: updateError } = await supabase.auth.updateUser({ password });
+        if (updateError) throw updateError;
+        setIsPasswordRecovery(false);
+        setMode('login');
+        setPassword(''); setConfirmPassword('');
+        window.history.replaceState({}, '', '/login');
+        setSuccessMessage('Senha atualizada. Acesse sua carreira com a nova senha.');
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch (e) { setError(getReadableAuthError(e instanceof Error ? e.message : undefined)); }
+      finally { setSubmitting(false); }
       return;
     }
+    if (mode === 'register' && !STRONG_PASSWORD.test(password)) { setError(PASSWORD_HINT); return; }
+    if (mode === 'login' && !password) { setError('Informe sua senha.'); return; }
 
     if (mode === 'register') {
       if (name.trim().length < 2) {
@@ -187,7 +211,7 @@ export function AuthGate({ children }: AuthGateProps) {
             full_name: name.trim(),
             source: 'rota-da-justica-web',
           },
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: `${window.location.origin}/login`,
         },
       });
 
@@ -234,6 +258,19 @@ export function AuthGate({ children }: AuthGateProps) {
     }
   }
 
+  async function handleResendConfirmation() {
+    resetFeedback();
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!EMAIL_REGEX.test(normalizedEmail) || !supabase) { setError('Informe seu e-mail para reenviar a confirmação.'); return; }
+    setSubmitting(true);
+    try {
+      const { error: resendError } = await supabase.auth.resend({ type: 'signup', email: normalizedEmail, options: { emailRedirectTo: `${window.location.origin}/login` } });
+      if (resendError) throw resendError;
+      setSuccessMessage('Se a confirmação estiver pendente, enviaremos um novo link ao seu e-mail.');
+    } catch (e) { setError(getReadableAuthError(e instanceof Error ? e.message : undefined)); }
+    finally { setSubmitting(false); }
+  }
+
   async function handlePasswordRecovery() {
     resetFeedback();
 
@@ -252,7 +289,7 @@ export function AuthGate({ children }: AuthGateProps) {
 
     try {
       const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-        redirectTo: window.location.origin,
+        redirectTo: `${window.location.origin}/login?auth=recovery`,
       });
 
       if (recoveryError) throw recoveryError;
@@ -269,7 +306,7 @@ export function AuthGate({ children }: AuthGateProps) {
     return <AuthLoadingScreen />;
   }
 
-  if (session) {
+  if (session && !isPasswordRecovery) {
     return <>{children}</>;
   }
 
@@ -363,15 +400,15 @@ export function AuthGate({ children }: AuthGateProps) {
             <div className="overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#0D1016]/95 shadow-[0_34px_100px_rgba(0,0,0,.5)] backdrop-blur-xl sm:rounded-[32px]">
               <div className="border-b border-white/[0.06] px-5 pb-5 pt-6 sm:px-8 sm:pb-6 sm:pt-8">
                 <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#9C8149]">
-                  {mode === 'login' ? 'Bem-vindo de volta' : 'Comece sua trajetória'}
+                  {mode === 'login' ? 'Bem-vindo de volta' : mode === 'register' ? 'Comece sua trajetória' : 'Segurança da conta'}
                 </span>
                 <h1 className="mt-2 font-serif text-3xl font-semibold tracking-[-0.025em] text-white sm:text-[34px]">
-                  {mode === 'login' ? 'Entre na sua conta' : 'Crie sua conta'}
+                  {mode === 'login' ? 'Entre na sua conta' : mode === 'register' ? 'Crie sua conta' : 'Defina sua nova senha'}
                 </h1>
                 <p className="mt-2 max-w-md text-sm leading-6 text-[#7F8793]">
                   {mode === 'login'
                     ? 'Continue de onde parou e retome sua carreira jurídica.'
-                    : 'Seu progresso começa aqui. O cadastro leva menos de um minuto.'}
+                    : mode === 'register' ? 'Seu progresso começa aqui. O cadastro leva menos de um minuto.' : 'Escolha uma senha segura para recuperar seu acesso.'}
                 </p>
               </div>
 
@@ -395,7 +432,7 @@ export function AuthGate({ children }: AuthGateProps) {
                   </div>
                 )}
 
-                <button
+                {mode !== 'recovery' && <button
                   type="button"
                   onClick={handleSocialJuridicoLogin}
                   disabled={oauthSubmitting || submitting || !isSupabaseConfigured}
@@ -408,13 +445,13 @@ export function AuthGate({ children }: AuthGateProps) {
                     {oauthSubmitting ? 'Conectando ao Social Jurídico...' : 'Continuar com Social Jurídico'}
                   </span>
                   <ArrowRight size={16} className="text-[#9A814D] transition-transform group-hover:translate-x-0.5" />
-                </button>
+                </button>}
 
-                <div className="my-5 flex items-center gap-3">
+                {mode !== 'recovery' && <div className="my-5 flex items-center gap-3">
                   <div className="h-px flex-1 bg-white/[0.06]" />
                   <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#505864]">ou use seu e-mail</span>
                   <div className="h-px flex-1 bg-white/[0.06]" />
-                </div>
+                </div>}
 
                 <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                   {mode === 'register' && (
@@ -435,7 +472,7 @@ export function AuthGate({ children }: AuthGateProps) {
                     </label>
                   )}
 
-                  <label className="block">
+                  {mode !== 'recovery' && <label className="block">
                     <span className="mb-1.5 block text-[11px] font-semibold text-[#A5ABB4]">E-mail</span>
                     <div className="group flex min-h-12 items-center rounded-2xl border border-white/[0.08] bg-white/[0.025] px-3.5 transition-colors focus-within:border-[#C5A059]/45 focus-within:bg-[#C5A059]/[0.025]">
                       <Mail size={17} className="mr-3 shrink-0 text-[#59616D] group-focus-within:text-[#B99A55]" />
@@ -450,10 +487,10 @@ export function AuthGate({ children }: AuthGateProps) {
                         className="h-full w-full bg-transparent py-3 text-sm text-[#F4F2EC] outline-none placeholder:text-[#434A54]"
                       />
                     </div>
-                  </label>
+                  </label>}
 
                   <label className="block">
-                    <span className="mb-1.5 block text-[11px] font-semibold text-[#A5ABB4]">Senha</span>
+                    <span className="mb-1.5 block text-[11px] font-semibold text-[#A5ABB4]">{mode === 'recovery' ? 'Nova senha' : 'Senha'}</span>
                     <div className="group flex min-h-12 items-center rounded-2xl border border-white/[0.08] bg-white/[0.025] px-3.5 transition-colors focus-within:border-[#C5A059]/45 focus-within:bg-[#C5A059]/[0.025]">
                       <LockKeyhole size={17} className="mr-3 shrink-0 text-[#59616D] group-focus-within:text-[#B99A55]" />
                       <input
@@ -473,7 +510,8 @@ export function AuthGate({ children }: AuthGateProps) {
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
-                    {mode === 'register' && password.length > 0 && (
+                    {mode !== 'login' && <span className="mt-2 block text-[11px] text-[#A5ABB4]">{PASSWORD_HINT}</span>}
+                    {mode !== 'login' && password.length > 0 && (
                       <div className="mt-2 flex gap-1.5" aria-label="Força da senha">
                         {[1, 2, 3, 4].map((level) => (
                           <span
@@ -485,7 +523,7 @@ export function AuthGate({ children }: AuthGateProps) {
                     )}
                   </label>
 
-                  {mode === 'register' && (
+                  {mode !== 'login' && (
                     <label className="block">
                       <span className="mb-1.5 block text-[11px] font-semibold text-[#A5ABB4]">Confirmar senha</span>
                       <div className="group flex min-h-12 items-center rounded-2xl border border-white/[0.08] bg-white/[0.025] px-3.5 transition-colors focus-within:border-[#C5A059]/45 focus-within:bg-[#C5A059]/[0.025]">
@@ -513,7 +551,7 @@ export function AuthGate({ children }: AuthGateProps) {
                         Esqueci minha senha
                       </button>
                     </div>
-                  ) : (
+                  ) : mode === 'register' ? (
                     <label className="flex cursor-pointer items-start gap-3 text-[11px] leading-5 text-[#737B86]">
                       <input
                         type="checkbox"
@@ -525,19 +563,20 @@ export function AuthGate({ children }: AuthGateProps) {
                         Concordo com os <span className="font-semibold text-[#A58A50]">Termos de Uso</span> e com a <span className="font-semibold text-[#A58A50]">Política de Privacidade</span> do Rota da Justiça.
                       </span>
                     </label>
-                  )}
+                  ) : null}
 
                   <button
                     type="submit"
                     disabled={submitting || oauthSubmitting || !isSupabaseConfigured}
                     className="group flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-[#C5A059] px-5 text-sm font-black text-[#0A0B0E] shadow-[0_15px_40px_rgba(197,160,89,.14)] transition-all hover:bg-[#D4B36D] hover:shadow-[0_18px_50px_rgba(197,160,89,.2)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {submitting ? 'Processando...' : mode === 'login' ? 'Entrar no jogo' : 'Criar minha conta'}
+                    {submitting ? 'Processando...' : mode === 'login' ? 'Entrar no jogo' : mode === 'register' ? 'Criar minha conta' : 'Atualizar senha'}
                     {!submitting && <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />}
                   </button>
                 </form>
+                {mode === 'login' && <button type="button" disabled={submitting} onClick={handleResendConfirmation} className="mt-3 w-full text-center text-xs text-[#C1A15A] hover:underline">Reenviar e-mail de confirmação</button>}
 
-                <p className="mt-6 text-center text-xs text-[#69717D]">
+                {mode !== 'recovery' && <p className="mt-6 text-center text-xs text-[#69717D]">
                   {mode === 'login' ? 'Ainda não tem uma conta?' : 'Já possui uma conta?'}{' '}
                   <button
                     type="button"
@@ -546,7 +585,7 @@ export function AuthGate({ children }: AuthGateProps) {
                   >
                     {mode === 'login' ? 'Criar conta' : 'Entrar'}
                   </button>
-                </p>
+                </p>}
               </div>
             </div>
 
