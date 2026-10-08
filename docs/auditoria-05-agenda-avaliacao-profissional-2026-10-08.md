@@ -37,3 +37,6 @@ Não houve migrações de esquema. `officeTaskProgress`, `processedOfficeReviewI
 - Testar o estágio sênior, desafios de etapa, promoções e regras de horário.
 
 **Sem homologação automática: aguarda testes do responsável e resolução dos pontos pendentes de integridade antes da liberação geral.**
+
+### Compatibilidade com reuniões antigas
+A periodicidade considera agora também reuniões preexistentes com IDs legados `review:YYYY-MM-DD`, impedindo que a alteração para `review:cycle:N` gere novas avaliações para ciclos já pontuados.
