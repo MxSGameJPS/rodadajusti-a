@@ -236,7 +236,11 @@ export function getPeriodicReview(player: PlayerProfile) {
   const state = readInternshipRoutine(player);
   const relevant = state.attendance.filter((item) => item.status !== 'OFF_DAY').slice(-10);
   if (relevant.length < 5) return null;
-  const key = `review:${relevant[relevant.length - 1].date}`;
+  // Uma avaliação ao final de cada bloco de cinco expedientes,
+  // sem gerar uma reunião nova a cada dia após o quinto registro.
+  const completedCycles = Math.floor(state.attendance.filter((item) => item.status !== 'OFF_DAY').length / 5);
+  if (completedCycles < 1) return null;
+  const key = `review:cycle:${completedCycles}`;
   if (state.meetings.some((item) => item.id === key)) return null;
   const present = relevant.filter((item) => item.status === 'PRESENT').length;
   const late = relevant.filter((item) => item.status === 'LATE').length;
