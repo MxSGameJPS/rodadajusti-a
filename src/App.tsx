@@ -457,6 +457,7 @@ export default function App() {
   const [supervisorReviewDialogues, setSupervisorReviewDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
   const [periodicSupervisorReview, setPeriodicSupervisorReview] = useState<ReturnType<typeof getPeriodicReview>>(null);
   const [marianaArrivalDialogues, setMarianaArrivalDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
+  const [officeEventOutcomeDialogues, setOfficeEventOutcomeDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
   const [routineDisciplineDialogues, setRoutineDisciplineDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
   const [absenceJustificationDialogues, setAbsenceJustificationDialogues] = useState<Array<{ eyebrow: string; text: string }> | null>(null);
 
@@ -1297,7 +1298,10 @@ export default function App() {
         dimensions: { affinity: choice.marianaAffinity, professionalTrust: choice.marianaTrust },
         bond: 'PROFESSIONAL',
       });
-      setLifeWarning(choice.outcome);
+      setOfficeEventOutcomeDialogues([
+        { eyebrow: 'Consequência da decisão', text: choice.outcome },
+        { eyebrow: 'Reflexão profissional', text: 'Mariana registrou como você reagiu a esse imprevisto. Tempo de expediente, confiança e prioridades podem mudar conforme suas escolhas.' },
+      ]);
     } finally { officeEventInFlightRef.current = false; }
   };
 
@@ -3261,6 +3265,20 @@ export default function App() {
           dialogues={routineDisciplineDialogues}
           finalActionLabel="Entendido"
           onComplete={() => setRoutineDisciplineDialogues(null)}
+        />
+      )}
+
+      {officeEventOutcomeDialogues && (
+        <NpcGuidanceDialog
+          isOpen
+          npcName="Mariana Duarte"
+          npcRole="Secretária • Ramos & Associados"
+          portraitSrc="/personagens/mariana-duarte.png"
+          portraitAlt="Mariana Duarte, secretária do escritório"
+          contextLabel="Consequências do expediente"
+          dialogues={officeEventOutcomeDialogues}
+          finalActionLabel="Voltar às atividades"
+          onComplete={() => setOfficeEventOutcomeDialogues(null)}
         />
       )}
 
