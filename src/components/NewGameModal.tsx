@@ -225,7 +225,10 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({ isOpen, onStartNewGa
             if (!supabase) return;
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
-            const { error: saveError } = await supabase.from('player_onboarding').update({ intro_seen: true }).eq('user_id', user.id).select('user_id').single();
+            const originCity = city.trim();
+            const originState = state.trim().toUpperCase();
+            if (!originCity || !originState) { window.alert('Confirme sua cidade inicial antes de prosseguir.'); return; }
+            const { error: saveError } = await supabase.from('player_onboarding').upsert({ user_id: user.id, city: originCity, state: originState, intro_seen: true }, { onConflict: 'user_id' });
             if (saveError) { window.alert('Não foi possível salvar sua introdução. Tente novamente.'); return; }
             setIsActOneIntroOpen(false);
           })();
