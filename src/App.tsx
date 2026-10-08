@@ -1220,6 +1220,8 @@ export default function App() {
     if (!hasReceivedDailyBriefing(player)) {
       const tasks = getTasksForTier(player.careerTier);
       const assignedIds = getDailyTaskIds(player, tasks.map((task) => task.id));
+      const allocationSaved = await commitInternshipRoutine(player, readInternshipRoutine(player));
+      if (!allocationSaved) setLifeWarning('A lista de tarefas foi gerada, mas não foi possível confirmar a distribuição no Supabase.');
       const titles = tasks.filter((task) => assignedIds.includes(task.id)).map((task) => task.title);
       setMarianaArrivalDialogues(buildMarianaArrivalDialogues(player, titles));
     }
