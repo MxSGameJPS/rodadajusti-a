@@ -431,7 +431,7 @@ export default function App() {
     return 'INVESTIGATION_MAP';
   });
 
-  const [isNewGameModalOpen, setIsNewGameModalOpen] = useState<boolean>(!player.name);
+  const [isNewGameModalOpen, setIsNewGameModalOpen] = useState<boolean>(!player.name || player.onboardingStage === 'WELCOME_PENDING');
   const [selectedCaseToBrief, setSelectedCaseToBrief] = useState<LegalCase | null>(null);
   const [isDossierOpen, setIsDossierOpen] = useState<boolean>(false);
   const [isCourtroomOpen, setIsCourtroomOpen] = useState<boolean>(false);
@@ -772,11 +772,13 @@ export default function App() {
     }));
   };
 
-  const handleStartNewGame = (setup: NewGameSetup) => {
+  const handleStartNewGame = async (setup: NewGameSetup): Promise<boolean> => {
     const careerStartDate = getTodayGameDate();
     const freshProfile: PlayerProfile = {
       ...INITIAL_PLAYER_STATE,
       name: setup.name,
+      initialFocus: setup.initialFocus,
+      onboardingStage: 'WELCOME_PENDING',
       relationshipStatus: setup.relationshipStatus,
       partnerName: setup.partnerName,
       homeCity: setup.city,
@@ -815,12 +817,25 @@ export default function App() {
       ...gameDateFields(careerStartDate),
       gameCurrentMinutes: DEFAULT_GAME_START_MINUTES,
     };
-    setPlayer(freshProfile);
-    seedCoreRelationships(freshProfile);
+    const result = await persistPlayerCloudSave(freshProfile);
+    if (!result.ok || !result.careerId) return false;
+    const savedProfile: PlayerProfile = { ...freshProfile, cloudCareerId: result.careerId };
+    setPlayer(savedProfile);
+    seedCoreRelationships(savedProfile);
     saveCareerOrigin(normalizeCareerOrigin(setup.city, setup.state));
-    setIsNewGameModalOpen(false);
     setSelectedCaseToBrief(null);
     setCurrentView('HUB');
+    return true;
+  };
+
+  const handleWelcomeFinished = async (): Promise<boolean> => {
+    if (!player.name || player.onboardingStage !== 'WELCOME_PENDING') return false;
+    const completed: PlayerProfile = { ...player, onboardingStage: 'COMPLETE' };
+    const result = await persistPlayerCloudSave(completed);
+    if (!result.ok) return false;
+    setPlayer(completed);
+    setIsNewGameModalOpen(false);
+    return true;
   };
 
   const handleAcceptCase = (caseItem: LegalCase) => {
@@ -2890,7 +2905,7 @@ export default function App() {
         </div>
       )}
 
-      <NewGameModal isOpen={isNewGameModalOpen} onStartNewGame={handleStartNewGame} />
+      <NewGameModal isOpen={isNewGameModalOpen} onStartNewGame={handleStartNewGame} onWelcomeComplete={handleWelcomeFinished} resumePlayer={player.onboardingStage === 'WELCOME_PENDING' ? player : null} />
 
       <ResidenceSetupModal
         player={player}
