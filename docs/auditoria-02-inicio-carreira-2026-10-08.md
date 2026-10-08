@@ -46,3 +46,8 @@ Status: **IMPLEMENTADO — TESTE FUNCIONAL PENDENTE**. Não marcar homologada se
 
 ## Correção: capítulo 4 exigia cidade prematuramente
 O checkpoint `intro_seen` ocorre ANTES de escolher cidade/UF; a tela ficava presa no alerta 'Confirme sua cidade inicial antes de prosseguir'. Migração `20261008100000_allow_intro_checkpoint_without_location.sql` aplicada para permitir `city/state` nulos em conjunto. O fluxo grava apenas `{user_id,intro_seen:true}` ao terminar narrativa. `CareerOriginGate` permanece responsável por recolher cidade/UF e completar a linha posteriormente. `NewGameModal` ignora coordenadas nulas ao hidratar. Teste em navegador ainda pendente.
+
+## Homologação funcional informada pelo responsável
+Após as correções do checkpoint de introdução e da seleção de cidade, o responsável confirmou o funcionamento e aprovou esta etapa. **Status: AUDITORIA 2 HOMOLOGADA FUNCIONALMENTE**, para o fluxo pós-login até a primeira apresentação de Mariana Duarte e assinatura do contrato.
+
+A homologação baseia-se no teste manual do responsável; não equivale à comprovação de `npm run lint`, `npm run build` ou testes automatizados. A auditoria global de persistência e das demais áreas do jogo segue independente.
