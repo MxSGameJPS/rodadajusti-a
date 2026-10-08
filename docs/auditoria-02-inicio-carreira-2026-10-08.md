@@ -35,3 +35,5 @@ Status: **IMPLEMENTADO — TESTE FUNCIONAL PENDENTE**. Não marcar homologada se
 - Schema e RLS de `player_onboarding` conferidos diretamente por SQL no projeto remoto.
 
 **Nota:** ambiente de execução desta conversa não conseguiu acessar o servidor GitHub para clonar o repositório (`Could not resolve host: github.com`), portanto build/lint ainda não foram executados e a etapa depende do teste do proprietário.
+
+- Sincronização imediata com `CAREER_ORIGIN_UPDATED_EVENT`: o formulário de contrato recebe a cidade/UF confirmadas mesmo quando montou antes da conclusão do modal de origem.
