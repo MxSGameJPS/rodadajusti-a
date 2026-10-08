@@ -114,7 +114,6 @@ import {
   markOfficeEventHandled,
   reconcileMissedWorkdays,
   recordPeriodicReview,
-  registerOfficeArrival,
   prepareOfficeArrival,
   registerOfficeDeparture,
   getOfficeAccessDecision,
