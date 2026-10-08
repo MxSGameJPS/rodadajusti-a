@@ -240,6 +240,8 @@ export function getPeriodicReview(player: PlayerProfile) {
   // sem gerar uma reunião nova a cada dia após o quinto registro.
   const completedCycles = Math.floor(state.attendance.filter((item) => item.status !== 'OFF_DAY').length / 5);
   if (completedCycles < 1) return null;
+  const priorReviews = state.meetings.filter((meeting) => meeting.id.startsWith('review:')).length;
+  if (priorReviews >= completedCycles) return null;
   const key = `review:cycle:${completedCycles}`;
   if (state.meetings.some((item) => item.id === key)) return null;
   const present = relevant.filter((item) => item.status === 'PRESENT').length;
