@@ -50,7 +50,11 @@ export function AccountSaveBoundary({ children }: AccountSaveBoundaryProps) {
 
     let active = true;
     let generation = 0;
+    let lastUserId: string | null | undefined = undefined;
     const synchronize = async (session: Session | null) => {
+      const nextUserId = session?.user?.id || null;
+      if (nextUserId === lastUserId) return;
+      lastUserId = nextUserId;
       const current = ++generation;
       setReady(false);
       setLoadError('');
@@ -69,8 +73,8 @@ export function AccountSaveBoundary({ children }: AccountSaveBoundaryProps) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!active) return;
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active || !['SIGNED_IN', 'SIGNED_OUT', 'INITIAL_SESSION', 'USER_UPDATED'].includes(event)) return;
       void synchronize(session);
     });
 
