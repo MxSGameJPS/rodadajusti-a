@@ -30,6 +30,8 @@ function hasStartedCareer() {
 
 function syncRoute(session: Session | null) {
   const path = window.location.pathname;
+  // O link de recuperação precisa concluir a troca de senha antes do redirecionamento.
+  if (new URLSearchParams(window.location.search).get('auth') === 'recovery') return;
 
   // A raiz pertence sempre à intro cinematográfica, independentemente da sessão.
   if (path === '/') return;
