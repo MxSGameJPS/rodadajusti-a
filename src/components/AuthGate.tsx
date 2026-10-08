@@ -162,12 +162,12 @@ export function AuthGate({ children }: AuthGateProps) {
       try {
         const { error: updateError } = await supabase.auth.updateUser({ password });
         if (updateError) throw updateError;
+        await supabase.auth.signOut({ scope: 'local' });
         setIsPasswordRecovery(false);
         setMode('login');
         setPassword(''); setConfirmPassword('');
         window.history.replaceState({}, '', '/login');
         setSuccessMessage('Senha atualizada. Acesse sua carreira com a nova senha.');
-        await supabase.auth.signOut({ scope: 'local' });
       } catch (e) { setError(getReadableAuthError(e instanceof Error ? e.message : undefined)); }
       finally { setSubmitting(false); }
       return;
