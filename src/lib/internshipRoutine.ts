@@ -123,6 +123,25 @@ export function getTodayAttendance(player: PlayerProfile) {
   return state.attendance.find((item) => item.date === dateKey(player)) || null;
 }
 
+export function prepareOfficeArrival(player: PlayerProfile) {
+  const access = getOfficeAccessDecision(player);
+  if (!access.allowed) return { allowed: false as const, reason: access.reason };
+  const current = readInternshipRoutine(player);
+  const key = dateKey(player);
+  if (current.attendance.some((entry) => entry.date === key)) {
+    return { allowed: false as const, reason: 'ALREADY_REGISTERED' as const };
+  }
+  const minute = player.gameCurrentMinutes || 0;
+  const schedule = getWorkSchedule(player);
+  const lateMinutes = Math.max(0, minute - schedule.startMinute);
+  const status: AttendanceStatus = lateMinutes >= 240 ? 'ABSENT' : lateMinutes > 10 ? 'LATE' : 'PRESENT';
+  const record: InternshipAttendanceRecord = {
+    date: key, status, arrivalMinute: minute, departureMinute: null, lateMinutes,
+  };
+  const state: InternshipRoutineState = { ...current, attendance: [...current.attendance, record].slice(-90) };
+  return { allowed: true as const, state, record };
+}
+
 export function registerOfficeArrival(player: PlayerProfile) {
   const schedule = getWorkSchedule(player);
   const state = readInternshipRoutine(player);
