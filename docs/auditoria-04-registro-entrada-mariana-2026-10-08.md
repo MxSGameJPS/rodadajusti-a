@@ -22,3 +22,6 @@ Nenhuma migração de esquema foi necessária. O estado adicional ocupa JSONB j�
 
 ## Homologação
 Executar `npm run lint` e `npm run build`, testar o primeiro expediente, atualizar o navegador após a segunda fala, validar ausência de duplicidade de presença e inspeção de `internship_routines.attendance` e `senior_state.briefingProgress`.
+
+## Homologação funcional — informada pelo responsável
+Em 2026-10-08 o responsável confirmou testes e aprovou o registro de entrada e o diálogo de Mariana. **AUDITORIA 4 HOMOLOGADA FUNCIONALMENTE**. Esta aprovação não substitui lint/build nem a auditoria abrangente da Agenda e das Avaliações (Auditoria 5).
