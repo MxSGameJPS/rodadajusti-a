@@ -30,3 +30,6 @@ Não foi necessária migração SQL nesta etapa: os campos `welcomeDialogueStep`
 10. Validar Supabase `game_saves.game_state.welcomeDialogueStep`, `onboardingStage`, `officeTutorialSeen`.
 
 Os testes manuais e a compilação precisam ser realizados no ambiente do jogo antes de considerar a Auditoria 3 homologada.
+
+## Homologação funcional informada pelo responsável — 2026-10-08
+O responsável testou e aprovou a apresentação de Mariana e a abertura guiada do escritório. **AUDITORIA 3 — HOMOLOGADA FUNCIONALMENTE**. Permanecem independentes as verificações automatizadas de build/lint e a auditoria do registro de presença e briefing diário (Etapa 4).
